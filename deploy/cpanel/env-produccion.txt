@@ -1,0 +1,130 @@
+# =====================================================================
+# .env de PRODUCCIÓN — odessaoil.osole.com.ar
+# =====================================================================
+#
+# Va en /home/odessaoiloso/Odessaoil/.env  (dentro del proyecto, NUNCA
+# en public_html: ahí sería descargable por HTTP).
+#
+# Los valores sensibles están vacíos a propósito. Se completan una sola
+# vez en el servidor y no vuelven a copiarse a ningún archivo del
+# repositorio, ni a un chat, ni a una captura.
+#
+# Permisos recomendados una vez cargado:  chmod 600 .env
+# =====================================================================
+
+APP_NAME="Odessa Oil"
+APP_ENV=production
+# Generar EN EL SERVIDOR con:  php artisan key:generate
+# No reutilizar la clave de desarrollo: firma las cookies de sesión.
+APP_KEY=
+APP_DEBUG=false
+APP_URL=https://odessaoil.osole.com.ar
+
+# La operación es argentina y las reglas del negocio comparan contra `today`
+# y `now()`. Con UTC, a partir de las 21:00 hora local el servidor ya está en
+# el día siguiente y rechaza un envío declarado para hoy.
+APP_TIMEZONE=America/Argentina/Buenos_Aires
+APP_LOCALE=es
+APP_FALLBACK_LOCALE=es
+APP_FAKER_LOCALE=es_AR
+
+APP_MAINTENANCE_DRIVER=file
+
+# Coste de hashing. 12 es el equilibrio razonable en hosting compartido.
+BCRYPT_ROUNDS=12
+
+# --- Registro ---------------------------------------------------------
+# `daily` rota por día y no deja un único archivo creciendo sin control.
+# En producción no se registra `debug`: llenaría el disco y puede volcar
+# datos de clientes al log.
+LOG_CHANNEL=stack
+LOG_STACK=daily
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=warning
+
+# --- Base de datos ----------------------------------------------------
+# cPanel antepone el usuario de la cuenta al nombre real, tanto en la base
+# como en el usuario: quedan como odessaoiloso_algo.
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=odessaoiloso_
+DB_USERNAME=odessaoiloso_
+DB_PASSWORD=
+
+# --- Sesión -----------------------------------------------------------
+# `database` porque en hosting compartido el sistema de archivos es lento
+# y varias instancias de PHP-FPM no comparten estado de forma fiable.
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+SESSION_ENCRYPT=true
+SESSION_PATH=/
+SESSION_DOMAIN=null
+# El sitio va por HTTPS: la cookie no debe viajar nunca en claro.
+SESSION_SECURE_COOKIE=true
+
+# --- Cache y colas ----------------------------------------------------
+CACHE_STORE=database
+QUEUE_CONNECTION=database
+BROADCAST_CONNECTION=log
+
+# --- Almacenamiento ---------------------------------------------------
+# Los documentos van a un disco privado (storage/app/documents), fuera del
+# document root. Se sirven por ruta firmada con Policy, no por URL directa.
+FILESYSTEM_DISK=local
+
+# --- Correo -----------------------------------------------------------
+# Necesario para el aviso de nuevas solicitudes de cuenta.
+#
+# Se usa la casilla noreply@, no info@: estos avisos son automáticos y
+# nadie debe contestarlos. info@ queda para que la lea una persona.
+#
+# MAIL_FROM_ADDRESS tiene que ser la MISMA casilla que MAIL_USERNAME. El
+# Exim de cPanel rechaza —o marca como spam— un remitente que no sea una
+# casilla real del dominio autenticado.
+#
+# Los valores exactos de host y puerto los da cPanel en
+# Cuentas de correo > Conectar dispositivos. Puerto 465 = SSL (smtps),
+# 587 = TLS (smtp). Si el host da problemas de certificado, `localhost`
+# funciona porque la aplicación corre en el mismo servidor.
+MAIL_MAILER=smtp
+MAIL_HOST=mail.odessaoil.osole.com.ar
+MAIL_PORT=465
+MAIL_SCHEME=smtps
+MAIL_USERNAME=noreply@odessaoil.osole.com.ar
+# Se completa a mano en el servidor. Nunca en un archivo del repositorio.
+MAIL_PASSWORD=
+MAIL_FROM_ADDRESS="noreply@odessaoil.osole.com.ar"
+MAIL_FROM_NAME="${APP_NAME}"
+
+# --- Reglas de negocio ------------------------------------------------
+# Ventana preventiva de vencimiento: "Apto - Próximo a vencer".
+ODESSA_EXPIRY_WARNING_DAYS=60
+# Vigencia por defecto cuando el servicio no define la suya.
+ODESSA_DEFAULT_VALIDITY_DAYS=365
+# Minutos de validez de una URL firmada de descarga.
+ODESSA_DOWNLOAD_TTL=5
+# Tamaño máximo de archivo subido, en KB (20 MB).
+ODESSA_UPLOAD_MAX_KB=20480
+
+# --- Herramientas de desarrollo ---------------------------------------
+# Grabador de peticiones de Inertia. Apagado: toma un lock exclusivo por
+# petición y no aporta nada en producción.
+INERTIA_DEVTOOLS_ENABLED=false
+
+# Vacío en producción: el seeder de demostración no debe ejecutarse aquí.
+DEMO_PASSWORD=
+
+# --- Ventana de recertificación ----------------------------------------
+# El equipo no puede perder la certificación mientras está en el taller:
+#     fecha límite de envío = vencimiento − reparación − margen
+# El tipo de equipo puede tener su propio tiempo de reparación; esto es
+# el valor por defecto de la operación.
+ODESSA_TURNAROUND_DAYS=30
+ODESSA_SAFETY_MARGIN_DAYS=15
+# Con cuánta antelación a la fecha límite se empieza a avisar al cliente.
+ODESSA_RECERT_NOTICE_DAYS=30
+# Día del resumen semanal para el superadministrador (1 = lunes).
+ODESSA_RECERT_DIGEST_DAY=1
+# Copia interna de todo aviso que se le manda a un cliente.
+ODESSA_RECERT_COPY_TO=info@odessaoil.osole.com.ar

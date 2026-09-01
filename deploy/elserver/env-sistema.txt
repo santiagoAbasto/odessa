@@ -1,0 +1,111 @@
+# =====================================================================
+# .env de PRODUCCION - sistema.odessaoil.com  (LatinCloud)
+# =====================================================================
+# Va en:  ~/sistema.odessaoil.com/.env
+# NO dentro de public/: ahi seria descargable por HTTP.
+# Despues de subirlo:  chmod 600 .env
+#
+# Hay CUATRO lineas marcadas con COMPLETAR. Se editan en el servidor con
+# nano: son cambios cortos, sin pegar bloques.
+# =====================================================================
+
+APP_NAME="Odessa Oil"
+APP_ENV=production
+APP_KEY=
+APP_DEBUG=false
+APP_URL=https://sistema.odessaoil.com
+
+# La operacion es argentina y las reglas comparan contra today y now().
+# Con UTC, desde las 21:00 hora local el servidor ya esta en el dia
+# siguiente y rechaza un envio declarado para hoy.
+APP_TIMEZONE=America/Argentina/Buenos_Aires
+APP_LOCALE=es
+APP_FALLBACK_LOCALE=es
+APP_FAKER_LOCALE=es_AR
+
+APP_MAINTENANCE_DRIVER=file
+BCRYPT_ROUNDS=12
+
+# --- Registro ---------------------------------------------------------
+LOG_CHANNEL=stack
+LOG_STACK=daily
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=warning
+
+# --- Base de datos ----------------------------------------------------
+# El motor NO corre en el mismo contenedor que PHP: "localhost" falla con
+# "SQLSTATE[HY000] [2002] No such file or directory" porque busca un socket
+# local que no existe. Hay que apuntar a la IP interna del servidor de base
+# que figura en el panel (Bases de Datos -> IP local).
+DB_CONNECTION=mysql
+DB_HOST=192.168.0.60
+DB_PORT=3306
+DB_DATABASE=ff972b_odessa
+DB_USERNAME=COMPLETAR_USUARIO_BASE
+DB_PASSWORD=COMPLETAR_CLAVE_BASE
+
+# --- Sesion -----------------------------------------------------------
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+SESSION_ENCRYPT=true
+SESSION_PATH=/
+SESSION_DOMAIN=null
+# El sitio tiene SSL activado: la cookie no debe viajar nunca en claro.
+SESSION_SECURE_COOKIE=true
+
+# --- Cache y colas ----------------------------------------------------
+CACHE_STORE=database
+QUEUE_CONNECTION=database
+BROADCAST_CONNECTION=log
+
+# --- Almacenamiento ---------------------------------------------------
+FILESYSTEM_DISK=local
+
+# --- Correo -----------------------------------------------------------
+# ATENCION: en este servidor la salida SMTP esta BLOQUEADA. Se probaron los
+# puertos 587, 465, 25 y 2525 hacia afuera, y 25/587/1025 en local: todos
+# cerrados. La configuracion "smtp" de mas abajo NO funciona tal cual esta;
+# queda documentada por si habilitan la salida o contratan CloudSMTP.
+#
+# "sendmail" TAMPOCO sirve: phpinfo muestra la ruta /usr/bin/sendmail, pero
+# es solo el valor por defecto de PHP; el binario no esta instalado.
+#
+# Hasta que haya una via de salida, dejar "log": los avisos quedan escritos
+# en storage/logs/ en vez de perderse en silencio.
+MAIL_MAILER=log
+
+# Los dos caminos posibles:
+#   a) contratar CloudSMTP y completar los datos de abajo con MAIL_MAILER=smtp
+#   b) usar un proveedor por API HTTPS (Resend, Postmark, Brevo), que no
+#      depende de puertos SMTP y por eso atraviesa este bloqueo. Requiere
+#      instalar el paquete en el servidor y agregar registros DNS al dominio.
+#
+# Puerto 587 con STARTTLS: el esquema va "smtp", no "smtps" (ese es para el
+# 465, cifrado desde el saludo). El remitente debe ser la MISMA casilla que
+# el usuario autenticado, o el relay rechaza con 535.
+MAIL_HOST=COMPLETAR_SERVIDOR_SALIENTE
+MAIL_PORT=587
+MAIL_SCHEME=smtp
+MAIL_USERNAME=noreply@odessaoil.com
+MAIL_PASSWORD=COMPLETAR_CLAVE_CORREO
+MAIL_FROM_ADDRESS="noreply@odessaoil.com"
+MAIL_FROM_NAME="${APP_NAME}"
+
+# --- Reglas de negocio ------------------------------------------------
+ODESSA_EXPIRY_WARNING_DAYS=60
+ODESSA_DEFAULT_VALIDITY_DAYS=365
+ODESSA_DOWNLOAD_TTL=5
+ODESSA_UPLOAD_MAX_KB=20480
+ODESSA_DOCUMENTS_DISK=documents
+
+# --- Ventana de recertificacion ---------------------------------------
+# fecha limite de envio = vencimiento - reparacion - margen
+ODESSA_TURNAROUND_DAYS=30
+ODESSA_SAFETY_MARGIN_DAYS=15
+ODESSA_RECERT_NOTICE_DAYS=30
+ODESSA_RECERT_DIGEST_DAY=1
+ODESSA_RECERT_COPY_TO=info@odessaoil.com
+
+# --- Herramientas de desarrollo ---------------------------------------
+INERTIA_DEVTOOLS_ENABLED=false
+DEMO_PASSWORD=

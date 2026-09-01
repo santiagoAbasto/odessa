@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="Odessa Oil">
+  <rect width="100" height="100" rx="22" fill="#1B2340"/>
+  <g transform="translate(50 50) scale(0.88) translate(-50 -50)">
+    <path fill="#FFFFFF" fill-rule="evenodd" d="M50 4a46 46 0 1 0 0 92 46 46 0 1 0 0-92ZM60 8a33 33 0 1 1 0 66 33 33 0 1 1 0-66Z"/>
+  </g>
+</svg>
