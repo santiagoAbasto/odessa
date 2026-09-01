@@ -42,7 +42,7 @@ Cada criterio indica la prueba que lo verifica. Estado a 3 de agosto de 2026: **
 | T6 | No se ven recepciones ajenas | `..._un_cliente_no_ve_recepciones_de_otra_organizacion` | ✅ |
 | T7 | El personal interno sí alcanza cualquier organización | `..._el_personal_interno_si_alcanza_datos_de_cualquier_organizacion` | ✅ |
 | T8 | Un cliente no gestiona usuarios ajenos | `..._un_cliente_no_puede_gestionar_usuarios_de_otra_organizacion` | ✅ |
-| T9 | El listado de usuarios de un cliente no incluye personal de KPK | `..._el_listado_de_usuarios_de_un_cliente_no_incluye_personal_de_kpk` | ✅ |
+| T9 | El listado de usuarios de un cliente no incluye personal de Odessa | `..._el_listado_de_usuarios_de_un_cliente_no_incluye_personal_de_kpk` | ✅ |
 
 ## Permisos
 
@@ -55,7 +55,7 @@ Cada criterio indica la prueba que lo verifica. Estado a 3 de agosto de 2026: **
 | P5 | El responsable de taller sí finaliza | `..._el_responsable_de_taller_si_puede_finalizar_un_informe` | ✅ |
 | P6 | Recepción despacha pero no libera | `..._recepcion_no_puede_liberar_pero_si_despachar` | ✅ |
 | P7 | El superadministrador supera toda comprobación | `..._el_superadministrador_supera_cualquier_comprobacion` | ✅ |
-| P8 | Un cliente no se otorga un rol interno | `..._un_cliente_no_puede_otorgarse_un_rol_interno_de_kpk` | ✅ |
+| P8 | Un cliente no se otorga un rol interno | `..._un_cliente_no_puede_otorgarse_un_rol_interno` | ✅ |
 | P9 | Un cliente no crea usuarios en otra organización | `..._un_cliente_no_puede_crear_usuarios_en_otra_organizacion` | ✅ |
 | P10 | Nadie se desactiva a sí mismo | `..._nadie_puede_desactivarse_a_si_mismo` | ✅ |
 

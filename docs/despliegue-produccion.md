@@ -18,7 +18,7 @@
 ## Variables de entorno
 
 ```dotenv
-APP_NAME="KPK Works"
+APP_NAME="Odessa Oil"
 APP_ENV=production
 APP_KEY=
 APP_DEBUG=false

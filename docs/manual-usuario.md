@@ -1,10 +1,10 @@
 # Manual de usuario
 
-Para clientes de KPK Works que consultan el estado de su equipamiento.
+Para clientes de Odessa Oil que consultan el estado de su equipamiento.
 
 ## Obtener acceso
 
-El acceso lo otorga un administrador de KPK. Desde la portada, **Solicitar acceso**: complete nombre, correo y empresa. Recibirá respuesta al correo indicado.
+El acceso lo otorga un administrador de Odessa. Desde la portada, **Solicitar acceso**: complete nombre, correo y empresa. Recibirá respuesta al correo indicado.
 
 **Nunca elegirá su contraseña en ese formulario.** Cuando su cuenta esté creada recibirá un enlace para definirla usted mismo.
 
@@ -37,7 +37,7 @@ El estado siempre aparece con texto además de color.
 
 *Activos* reúne todo su equipamiento. Arriba, un conmutador entre **Partes** (piezas con ficha técnica) y **Genéricos** (equipamiento con marca y modelo).
 
-**Buscar.** La caja de búsqueda recorre descripción, número de serie, código KPK y referencia. Desde cualquier pantalla, `⌘K` (o `Ctrl+K`) lleva el foco al buscador global.
+**Buscar.** La caja de búsqueda recorre descripción, número de serie, código y referencia. Desde cualquier pantalla, `⌘K` (o `Ctrl+K`) lleva el foco al buscador global.
 
 **Filtrar.** El botón *Filtros* abre estado, serie, código, referencia, número de FMR y rango de vencimiento. El contador indica cuántos hay activos.
 

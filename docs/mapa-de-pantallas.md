@@ -46,9 +46,9 @@
 ### Activos
 
 - **Conmutador:** Partes / Genéricos, en lugar de dos entradas de menú.
-- **Columnas (partes):** parte, número de serie, referencia del cliente, código KPK, FMR, vencimiento, estado.
+- **Columnas (partes):** parte, número de serie, referencia del cliente, código, FMR, vencimiento, estado.
 - **Columnas (genéricos):** genérico con marca y modelo, identificador, resto igual.
-- **Filtros:** búsqueda libre, estado, serie, código KPK, referencia, número de FMR, rango de vencimiento; marca y modelo en genéricos.
+- **Filtros:** búsqueda libre, estado, serie, código, referencia, número de FMR, rango de vencimiento; marca y modelo en genéricos.
 - **Orden:** por descripción, serie, código, referencia, vencimiento y estado.
 - **Vista:** densidad compacta / normal / cómoda y selector de columnas, recordados por navegador.
 - **Estados vacíos:** mensaje con acción para quitar filtros.
@@ -56,7 +56,7 @@
 ### Detalle de activo
 
 - **Cabecera:** estado de aptitud, vencimiento con días restantes en texto, y el FMR determinante enlazado.
-- **Identificación:** serie, código KPK, referencias, número de parte.
+- **Identificación:** serie, código, referencias, número de parte.
 - **Ficha técnica:** fabricante, presiones de test y trabajo, servicio y conexiones. Los campos sin valor se omiten.
 - **Bitácora:** cronológica, con dictamen, servicio, vigencia, precinto, hallazgos y documentos por entrada. Las entradas que fijan la aptitud llevan marca explícita.
 

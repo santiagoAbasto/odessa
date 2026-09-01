@@ -3,9 +3,13 @@
 namespace App\Actions;
 
 use App\Models\Reception;
+use App\Models\User;
+use App\Notifications\RepairAuthorizationRequested;
 use App\Support\ActivityLogger;
+use App\Support\Permissions;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -24,6 +28,8 @@ use Illuminate\Validation\ValidationException;
  */
 class ChangeReceptionStage
 {
+    public function __construct(private RecalculateAssetStatus $recalculate) {}
+
     /**
      * Marca que el taller empezó a trabajar el equipo.
      *
@@ -152,7 +158,36 @@ class ChangeReceptionStage
             new: ['notes' => $notes],
         );
 
+        $this->notifyClientOfRepairRequest($reception);
+
         return $reception;
+    }
+
+    /**
+     * Avisa a quien puede contestar.
+     *
+     * Sin esto la consulta se pierde: el equipo queda inmovilizado esperando
+     * una respuesta que nadie sabe que tiene que dar. Se avisa sólo a los
+     * usuarios que efectivamente pueden decidir —el rol de consulta no
+     * puede—, para que el aviso no llegue a quien no tiene el botón.
+     *
+     * Va fuera de la transacción a propósito: si el correo falla, la consulta
+     * igual quedó registrada. Perder el aviso es molesto; perder el hito
+     * sería peor.
+     */
+    private function notifyClientOfRepairRequest(Reception $reception): void
+    {
+        $recipients = User::withoutGlobalScope('organization')
+            ->where('organization_id', $reception->organization_id)
+            ->where('is_active', true)
+            ->get()
+            ->filter(fn (User $u) => $u->can(Permissions::RECEPTIONS_AUTHORIZE_REPAIR));
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        Notification::send($recipients, new RepairAuthorizationRequested($reception));
     }
 
     /**
@@ -213,6 +248,16 @@ class ChangeReceptionStage
                 'repair_decision_channel' => $channel,
                 'repair_decision_notes' => $notes,
             ])->save();
+
+            /*
+             * No autorizar cambia la aptitud del equipo: vuelve al cliente sin
+             * arreglar, así que no puede seguir figurando certificado. El
+             * estado no se escribe acá —se recalcula—, porque la aptitud
+             * siempre se deriva de los hechos y nunca se asigna a mano.
+             */
+            if ($decision === Reception::REPAIR_DECLINED && $reception->asset !== null) {
+                ($this->recalculate)($reception->asset);
+            }
         });
 
         $autoriza = $decision === Reception::REPAIR_APPROVED;

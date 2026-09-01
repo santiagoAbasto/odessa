@@ -6,6 +6,7 @@ use App\Enums\AssetStatus;
 use App\Enums\InspectionResult;
 use App\Enums\ReportStatus;
 use App\Models\Asset;
+use App\Models\Reception;
 use App\Support\RecertificationWindow;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,17 @@ use Illuminate\Support\Facades\DB;
  *  6. Con vencimiento, se deriva `send_by_at`: la última fecha en la que el
  *     cliente puede despachar el equipo sin que pierda la certificación
  *     mientras está en el taller. Ver RecertificationWindow.
+ *  7. Una pieza **rechazada que el cliente decidió no reparar** queda `unfit`
+ *     y sin vencimiento, aunque su último FMR dijera Apto. Es una segunda
+ *     fuente de aptitud, agregada cuando el negocio definió que ese equipo
+ *     «se devuelve sin reparar y marcado como No Apto».
+ *
+ *     Sin esto el equipo volvía al cliente figurando certificado, que es
+ *     justo lo contrario de lo que pasó. No se resolvió escribiéndole el
+ *     estado a mano desde la recepción: eso habría durado hasta el siguiente
+ *     recálculo, que sólo mira inspecciones. La regla de fondo se mantiene
+ *     —la aptitud se deriva de hechos registrados, nunca se asigna—, lo que
+ *     cambió es que ahora hay dos clases de hecho que la determinan.
  *
  * Es idempotente: se puede ejecutar cuantas veces haga falta.
  */
@@ -56,12 +68,16 @@ class RecalculateAssetStatus
             ->whereNull('r.deleted_at')
             ->orderByDesc('r.inspected_at')
             ->orderByDesc('l.id')
-            ->select('l.id', 'l.result', 'l.expires_at', 'l.inspection_report_id')
+            ->select('l.id', 'l.result', 'l.expires_at', 'l.inspection_report_id', 'r.inspected_at')
             ->first();
 
         if ($line === null) {
+            // Sin ningún FMR, un rechazo devuelto sin reparar sigue siendo un
+            // hecho: la pieza no está sin dictaminar, está no apta.
+            $sinReparar = $this->wasReturnedUnrepairedAfter($asset, null);
+
             $asset->forceFill([
-                'status' => AssetStatus::Unknown,
+                'status' => $sinReparar ? AssetStatus::Unfit : AssetStatus::Unknown,
                 'expires_at' => null,
                 'send_by_at' => null,
                 'current_inspection_report_id' => null,
@@ -74,6 +90,24 @@ class RecalculateAssetStatus
 
         $status = $this->resolveStatus(InspectionResult::from($line->result), $expiresAt);
 
+        /*
+         * Un rechazo que el cliente no quiso reparar pesa más que la
+         * inspección anterior, si es posterior a ella. El equipo volvió al
+         * cliente sin arreglar: no puede seguir figurando certificado.
+         */
+        if ($this->wasReturnedUnrepairedAfter($asset, $line->inspected_at)) {
+            $asset->forceFill([
+                'status' => AssetStatus::Unfit,
+                'expires_at' => null,
+                'send_by_at' => null,
+                // El FMR sigue siendo el último dictamen formal: se conserva
+                // para que la ficha no pierda el rastro de dónde viene.
+                'current_inspection_report_id' => $line->inspection_report_id,
+            ])->save();
+
+            return;
+        }
+
         $asset->forceFill([
             'status' => $status,
             'expires_at' => $expiresAt,
@@ -84,6 +118,27 @@ class RecalculateAssetStatus
             'send_by_at' => $this->sendBy($asset, $expiresAt),
             'current_inspection_report_id' => $line->inspection_report_id,
         ])->save();
+    }
+
+    /**
+     * ¿Se devolvió sin reparar después de la fecha dada?
+     *
+     * Se compara contra la inspección vigente porque el orden importa: si
+     * después de devolverla el cliente la volvió a mandar y esta vez aprobó,
+     * manda la inspección nueva y la pieza vuelve a estar apta. El rechazo no
+     * la condena para siempre, sólo hasta el próximo dictamen favorable.
+     *
+     * El momento decisivo es cuándo el cliente contestó que no, no cuándo se
+     * despachó: ahí quedó resuelto que el equipo no se iba a arreglar.
+     */
+    private function wasReturnedUnrepairedAfter(Asset $asset, ?string $since): bool
+    {
+        return DB::table('receptions')
+            ->where('asset_id', $asset->getKey())
+            ->whereNull('deleted_at')
+            ->where('repair_decision', Reception::REPAIR_DECLINED)
+            ->when($since !== null, fn ($q) => $q->where('repair_decided_at', '>=', $since))
+            ->exists();
     }
 
     /**

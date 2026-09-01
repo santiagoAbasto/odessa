@@ -1,4 +1,4 @@
-# Propuesta de rediseño — KPK Works
+# Propuesta de rediseño — Odessa Oil
 
 ## Resumen ejecutivo
 

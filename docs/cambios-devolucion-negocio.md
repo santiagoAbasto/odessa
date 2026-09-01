@@ -146,6 +146,42 @@ No se había detectado antes porque la prueba usaba un rol administrativo interm
 
 ---
 
+## Los estados del taller no son lineales
+
+El negocio corrigió el recorrido: *«tener en cuenta que los estados no son lineales»*. No se refería a ciclos ni a vueltas atrás, sino a que **el recorrido se bifurca dos veces**, y la segunda bifurcación no la decide el taller.
+
+```
+Pendiente → En proceso → Aprobada ──────────────────────────→ Despachada
+                       ↘ Rechazada → A reparar ─┬─ SÍ → Reparada ↗
+                                  (lo decide    │
+                                   el cliente)  └─ NO → Despachada sin reparar
+```
+
+### Por qué la decide el cliente
+
+Porque la reparación se le cobra. Hasta ahora el taller mandaba a reparar por su cuenta y esa decisión no quedaba registrada en ningún lado, con dos consecuencias:
+
+- **No había con qué respaldar el cobro.** Si el cliente después discutía el arreglo, no existía constancia de que lo hubiera autorizado.
+- **Una recepción rechazada podía quedar trabada para siempre.** Si el cliente no quería reparar, el equipo no tenía salida: despacharlo estaba bloqueado —correctamente— y no existía ninguna otra opción.
+
+### Qué pasa si el cliente no autoriza
+
+El negocio lo definió textual: *«en general el equipo se devuelve sin reparar; la opción válida sería Despachado y marcado como No Apto»*.
+
+Es decir, no se descarta: **vuelve al cliente tal como está, sin certificar**. La recepción termina en «Despachada sin reparar», que se distingue de un despacho normal para que nadie lea como cierre feliz lo que es un equipo que salió no apto.
+
+### La respuesta puede llegar por dos vías
+
+El cliente contesta desde su panel, o Odessa registra lo que recibió por teléfono o correo. Se guarda **por qué vía llegó**, y en el segundo caso **es obligatorio adjuntar el respaldo** —captura del correo o del mensaje—, porque es lo que justifica el cobro.
+
+El canal no se elige libremente: el sistema rechaza que Odessa declare «desde el panel del cliente». Si hubiera venido del panel, lo habría cargado el cliente. Sin esa restricción, marcar «panel» sería un atajo para saltearse la evidencia y el registro dejaría de valer.
+
+### Efecto secundario deseable
+
+Para poder contestar, el cliente necesita ver sus equipos en el taller. Eso responde de paso la pregunta que todo cliente hace igual por teléfono: **dónde está mi equipo**. Sigue sin poder operar ninguna etapa del taller.
+
+---
+
 ## Estado
 
 | Elemento | Estado |
@@ -155,12 +191,15 @@ No se había detectado antes porque la prueba usaba un rol administrativo interm
 | Adjuntos por FMR y por pieza | Implementado y probado |
 | Módulo de envíos con autorización | Implementado y probado |
 | Corrección de la auto-desactivación | Implementado y probado |
+| Bifurcación de la reparación con decisión del cliente | Implementado y probado |
+| Devolución sin reparar como salida válida | Implementado y probado |
+| Evidencia adjunta de la autorización | Implementado y probado |
 
 ---
 
 ## Pendiente de confirmar
 
 1. **¿El cliente debe poder gestionar sus propios usuarios?** Hoy no puede; la definición no lo menciona.
-2. **¿«Código KPK» debe renombrarse?** Es una etiqueta de datos, no de marca: los valores están grabados físicamente en las piezas. Renombrarla mal-etiquetaría el inventario existente.
+2. ~~**¿«Código KPK» debe renombrarse?**~~ **Resuelto.** El negocio pidió que no quede ningún rastro de la marca anterior. La columna pasó a llamarse `code` y la interfaz muestra sólo «Código». Los valores grabados en las piezas no se tocaron: cambió la etiqueta, no el dato.
 3. **¿Qué hace el taller con un envío parcialmente correcto?** Hoy es todo o nada: autoriza o rechaza el envío completo. Si hace falta aceptar unos equipos y rechazar otros, es un cambio acotado.
 4. **¿Debe avisarse al cliente cuando su envío se autoriza o rechaza?** Hoy lo ve al entrar. El mecanismo de notificación ya está montado y reutilizable.

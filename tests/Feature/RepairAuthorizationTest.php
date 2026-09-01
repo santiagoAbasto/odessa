@@ -2,13 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Actions\RecalculateAssetStatus;
+use App\Enums\AssetStatus;
+use App\Enums\InspectionResult;
 use App\Models\Document;
 use App\Models\Organization;
 use App\Models\Reception;
+use App\Notifications\RepairAuthorizationRequested;
 use App\Support\AssetTimeline;
 use App\Support\Permissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -79,6 +84,35 @@ class RepairAuthorizationTest extends TestCase
         $this->assertSame('awaiting_client', $fresca->stage());
         $this->assertSame('Cambio de sello: 4 horas de taller.', $fresca->repair_request_notes);
         $this->assertDatabaseHas('activity_logs', ['action' => 'reception.repair_requested']);
+    }
+
+    /**
+     * Sin aviso, la consulta se pierde: el equipo queda inmovilizado
+     * esperando una respuesta que nadie sabe que tiene que dar, y la demora
+     * se la come el cliente sin enterarse de que existe.
+     */
+    public function test_se_avisa_a_quien_puede_contestar(): void
+    {
+        Notification::fake();
+
+        $organizacion = $this->organization();
+        $recepcion = $this->rechazada($organizacion);
+
+        $operador = $this->clientUser($organizacion, Permissions::ROLE_CLIENT_OPERATOR);
+        $consulta = $this->clientUser($organizacion, Permissions::ROLE_CLIENT_VIEWER);
+        $ajeno = $this->clientUser($this->organization(), Permissions::ROLE_CLIENT_OPERATOR);
+
+        $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP))
+            ->post("/taller/recepciones/{$recepcion->public_id}/consultar-reparacion", [
+                'notes' => 'Cambio de sello.',
+            ])
+            ->assertRedirect();
+
+        Notification::assertSentTo($operador, RepairAuthorizationRequested::class);
+        // El rol de consulta no tiene el botón: avisarle sería mandarlo a una
+        // pantalla donde no puede hacer nada.
+        Notification::assertNotSentTo($consulta, RepairAuthorizationRequested::class);
+        Notification::assertNotSentTo($ajeno, RepairAuthorizationRequested::class);
     }
 
     public function test_no_se_consulta_dos_veces(): void
@@ -303,6 +337,86 @@ class RepairAuthorizationTest extends TestCase
             ->assertForbidden();
 
         $this->assertSame(Reception::REPAIR_APPROVED, $recepcion->fresh()->repair_decision);
+    }
+
+    /**
+     * Lo definió el negocio textual: el equipo se devuelve «marcado como No
+     * Apto». Si volviera figurando certificado, el sistema estaría diciendo
+     * exactamente lo contrario de lo que pasó, y el cliente podría mandarlo a
+     * un pozo confiando en una certificación que ya no corresponde.
+     */
+    public function test_el_equipo_devuelto_sin_reparar_queda_no_apto(): void
+    {
+        $organizacion = $this->organization();
+        $recepcion = $this->rechazada($organizacion);
+        $activo = $recepcion->asset;
+        $usuario = $this->staffUser(Permissions::ROLE_WORKSHOP);
+
+        // Parte de un equipo certificado y con vencimiento futuro: es el caso
+        // en el que el hueco se notaba.
+        $activo->forceFill([
+            'status' => AssetStatus::Fit,
+            'expires_at' => now()->addYear(),
+        ])->save();
+
+        $this->actingAs($usuario)
+            ->post("/taller/recepciones/{$recepcion->public_id}/consultar-reparacion")
+            ->assertRedirect();
+
+        $this->actingAs($usuario)
+            ->post("/taller/recepciones/{$recepcion->public_id}/autorizacion", [
+                'decision' => 'declined',
+                'channel' => 'phone',
+                'notes' => 'No justifica el arreglo.',
+                'evidence' => UploadedFile::fake()->image('acta.jpg'),
+            ])
+            ->assertRedirect();
+
+        $activo->refresh();
+
+        $this->assertSame(AssetStatus::Unfit, $activo->status);
+        // Y sin vencimiento: dejarlo sería seguir prometiendo una vigencia.
+        $this->assertNull($activo->expires_at);
+        $this->assertNull($activo->send_by_at);
+    }
+
+    /**
+     * El rechazo no condena la pieza para siempre: si el cliente la vuelve a
+     * mandar y esta vez aprueba, manda el dictamen nuevo.
+     */
+    public function test_una_inspeccion_posterior_favorable_devuelve_la_aptitud(): void
+    {
+        $organizacion = $this->organization();
+        $recepcion = $this->rechazada($organizacion);
+        $activo = $recepcion->asset;
+        $usuario = $this->staffUser(Permissions::ROLE_WORKSHOP);
+
+        $this->actingAs($usuario)
+            ->post("/taller/recepciones/{$recepcion->public_id}/consultar-reparacion")
+            ->assertRedirect();
+
+        $this->actingAs($usuario)
+            ->post("/taller/recepciones/{$recepcion->public_id}/autorizacion", [
+                'decision' => 'declined',
+                'channel' => 'phone',
+                'notes' => 'Por ahora no.',
+                'evidence' => UploadedFile::fake()->image('acta.jpg'),
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(AssetStatus::Unfit, $activo->fresh()->status);
+
+        // Vuelve más adelante y esta vez pasa.
+        $this->reportFor(
+            $activo,
+            InspectionResult::Apto,
+            now()->addDay()->toDateString(),
+            now()->addYear()->toDateString(),
+        );
+
+        app(RecalculateAssetStatus::class)($activo);
+
+        $this->assertSame(AssetStatus::Fit, $activo->fresh()->status);
     }
 
     /**

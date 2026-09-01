@@ -1,6 +1,6 @@
 # Manual del administrador
 
-Para personal de KPK Works con acceso al taller o a la administración.
+Para personal de Odessa Oil con acceso al taller o a la administración.
 
 ## Roles
 
