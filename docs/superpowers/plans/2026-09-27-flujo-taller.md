@@ -606,5 +606,5 @@ public function test_el_enlace_directo_muestra_solo_esa_recepcion_y_respeta_la_o
 ### Tarea 6: documentación y commit
 
 - [ ] Agregar el recorrido nuevo en `docs/flujos-de-negocio.md` y la entrada del bloque 2, subproyecto 1, en `docs/cambios-devolucion-negocio.md`.
-- [ ] Verificación final: `vendor/bin/phpunit`, `npm run types`, `npm run build` y `grep -rniI kpk --exclude-dir=node_modules --exclude-dir=vendor --exclude-dir=.git .` (sólo pueden aparecer las dos excepciones).
+- [ ] Verificación final: `vendor/bin/phpunit`, `npm run types`, `npm run build` y el grep de la marca anterior sobre todo el repositorio (sólo pueden aparecer las dos excepciones documentadas).
 - [ ] Commit: `feat: flujo del taller — reparación única, sin solución y consulta a toda la organización`.
