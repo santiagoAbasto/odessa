@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetSetController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
@@ -65,6 +66,12 @@ Route::middleware('guest')->group(function () {
 */
 Route::middleware(['auth'])->group(function () {
     Route::post('/salir', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+
+    // Primer ingreso con la contraseña temporal que dio un administrador.
+    Route::get('/cuenta/clave', [PasswordChangeController::class, 'edit'])->name('password.change');
+    Route::put('/cuenta/clave', [PasswordChangeController::class, 'update'])
+        ->middleware('throttle:10,10')
+        ->name('password.change.update');
 
     Route::get('/panel', DashboardController::class)->name('dashboard');
 
@@ -231,6 +238,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/usuarios', [UserController::class, 'store'])->name('users.store');
             Route::put('/usuarios/{user}', [UserController::class, 'update'])->name('users.update');
             Route::delete('/usuarios/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+            Route::post('/usuarios/{user}/restablecer-acceso', [UserController::class, 'resetAccess'])->name('users.reset_access');
         });
 
         Route::middleware('permission:'.Permissions::ACCOUNT_REQUESTS_MANAGE)->group(function () {

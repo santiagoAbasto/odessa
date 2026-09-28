@@ -65,6 +65,8 @@ class PasswordResetController extends Controller
             function ($user) use ($request) {
                 $user->forceFill([
                     'password' => Hash::make($request->string('password')->value()),
+                    // La eligió él: si tenía una temporal, ya no hace falta cambiarla.
+                    'must_change_password' => false,
                     'remember_token' => Str::random(60),
                 ])->save();
 

@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { CircleSlash, Pencil, Plus, ShieldCheck, UserCog, Users } from 'lucide-react';
+import { Check, CircleSlash, Copy, KeyRound, Pencil, Plus, ShieldCheck, UserCog, Users } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,15 @@ interface UserRow {
   lastLoginAt: string | null;
   canEdit: boolean;
   canDelete: boolean;
+  canResetAccess: boolean;
+}
+
+/** La contraseña temporal recién generada. Llega una sola vez. */
+interface TemporaryAccess {
+  name: string;
+  email: string;
+  password: string;
+  created: boolean;
 }
 
 interface UsersIndexProps {
@@ -41,6 +50,7 @@ interface UsersIndexProps {
   grantablePermissions: SelectOption[];
   /** Lo que cada rol de cliente ya incluye de esa lista. */
   roleGrants: Record<string, string[]>;
+  temporaryAccess: TemporaryAccess | null;
   can: { create: boolean; grantPermissions: boolean };
 }
 
@@ -58,6 +68,7 @@ export default function UsersIndex({
   organizations,
   grantablePermissions,
   roleGrants,
+  temporaryAccess,
   can,
 }: UsersIndexProps) {
   const [creating, setCreating] = useState(false);
@@ -66,7 +77,7 @@ export default function UsersIndex({
   return (
     <AppLayout
       title="Usuarios"
-      description="Altas, roles y estado de acceso. La contraseña la define cada usuario desde el enlace que recibe por correo."
+      description="Altas, roles y estado de acceso. Al crear un usuario o restablecer su acceso se genera una contraseña temporal, que el usuario cambia al entrar."
       breadcrumbs={[{ label: 'Administración' }, { label: 'Usuarios' }]}
       actions={
         can.create && (
@@ -88,6 +99,8 @@ export default function UsersIndex({
       }
     >
       <Head title="Usuarios" />
+
+      {temporaryAccess && <TemporaryAccessDialog key={temporaryAccess.password} access={temporaryAccess} />}
 
       <Panel>
         <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-2.5">
@@ -213,6 +226,21 @@ export default function UsersIndex({
                       {user.canEdit && (
                         <EditUserButton user={user} roleOptions={roleOptions} grants={grants} />
                       )}
+                      {user.canResetAccess && (
+                        <ConfirmButton
+                          variant="ghost"
+                          size="sm"
+                          title={`Restablecer el acceso de ${user.name}`}
+                          description="Se genera una contraseña temporal para pasarle. La actual deja de funcionar y se cierran sus sesiones abiertas."
+                          confirmLabel="Generar contraseña"
+                          onConfirm={() =>
+                            router.post(`/administracion/usuarios/${user.id}/restablecer-acceso`, {}, { preserveScroll: true })
+                          }
+                        >
+                          <KeyRound aria-hidden />
+                          Restablecer acceso
+                        </ConfirmButton>
+                      )}
                       {user.canDelete && (
                         <ConfirmButton
                           variant="ghost"
@@ -329,7 +357,7 @@ function UserDialog({
       description={
         editing
           ? 'Los cambios quedan registrados en la auditoría con el usuario que los hizo.'
-          : 'Se enviará un enlace al correo indicado para que defina su contraseña.'
+          : 'Al crearlo se genera una contraseña temporal para pasarle al usuario.'
       }
       footer={
         <>
@@ -499,5 +527,57 @@ function UserDialog({
         )}
       </form>
     </DialogContent>
+  );
+}
+
+/**
+ * La contraseña temporal, lista para pasársela al usuario.
+ *
+ * Se ve una sola vez: no se guarda en claro. Si se pierde, se vuelve a
+ * restablecer el acceso y sale otra.
+ */
+function TemporaryAccessDialog({ access }: { access: TemporaryAccess }) {
+  const [open, setOpen] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  const message = [
+    `Hola ${access.name}, ${access.created ? 'ya tiene usuario' : 'le restablecimos el acceso'} en el sistema de Odessa Oil.`,
+    `Ingrese en ${window.location.origin}/ingresar`,
+    `Usuario: ${access.email}`,
+    `Contraseña temporal: ${access.password}`,
+    'Al entrar, el sistema le pide que elija una contraseña propia.',
+  ].join('\n');
+
+  const copy = () => {
+    void navigator.clipboard.writeText(message).then(() => setCopied(true));
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent
+        title={access.created ? 'Usuario creado' : 'Acceso restablecido'}
+        description="Pásele estos datos al usuario. La contraseña se muestra sólo ahora; al entrar, el sistema le pide que elija una propia."
+        footer={
+          <>
+            <DialogClose asChild>
+              <Button variant="secondary" size="sm">
+                Cerrar
+              </Button>
+            </DialogClose>
+            <Button variant="primary" size="sm" onClick={copy}>
+              {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+              {copied ? 'Copiado' : 'Copiar mensaje'}
+            </Button>
+          </>
+        }
+      >
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[12.5px]">
+          <dt className="text-[var(--text-muted)]">Usuario</dt>
+          <dd className="font-medium">{access.email}</dd>
+          <dt className="text-[var(--text-muted)]">Contraseña temporal</dt>
+          <dd className="font-mono text-[14px] font-semibold select-all">{access.password}</dd>
+        </dl>
+      </DialogContent>
+    </Dialog>
   );
 }

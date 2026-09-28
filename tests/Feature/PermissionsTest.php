@@ -6,9 +6,7 @@ use App\Enums\ReportStatus;
 use App\Models\Reception;
 use App\Models\User;
 use App\Support\Permissions;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 /**
@@ -230,22 +228,6 @@ class PermissionsTest extends TestCase
         $creado = User::where('email', 'infiltrado@cliente.test')->first();
 
         $this->assertSame($propia->getKey(), $creado?->organization_id);
-    }
-
-    public function test_un_usuario_nuevo_recibe_el_enlace_para_definir_su_clave(): void
-    {
-        Notification::fake();
-
-        $admin = $this->staffUser(Permissions::ROLE_SUPER_ADMIN);
-
-        $this->actingAs($admin)->post('/administracion/usuarios', [
-            'name' => 'Usuario invitado',
-            'email' => 'invitado@cliente.test',
-            'roles' => [Permissions::ROLE_CLIENT_VIEWER],
-        ])->assertSessionHas('success');
-
-        $creado = User::where('email', 'invitado@cliente.test')->firstOrFail();
-        Notification::assertSentTo($creado, ResetPassword::class);
     }
 
     public function test_nadie_puede_desactivarse_a_si_mismo(): void

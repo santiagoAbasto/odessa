@@ -176,8 +176,11 @@ cd /www/odessaoil.com/sistema.odessaoil.com && php artisan schedule:run >> /dev/
 
 Lo que **no** depende de la tarea:
 - El aviso de la campana: se escribe en el momento, aunque la tarea falte.
-- El correo de «definí tu contraseña» y el de «olvidé mi contraseña»: salen
-  en el momento, si el correo está configurado.
+- El correo de «olvidé mi contraseña»: sale en el momento, si el correo está
+  configurado.
+- El alta de usuarios y el «Restablecer acceso» de la pantalla de Usuarios: no
+  mandan correo. Generan una contraseña temporal que el administrador le pasa
+  al usuario, y éste la cambia al entrar. Funcionan aunque no haya correo.
 
 Para ver si quedaron correos esperando en la cola (tiene que tender a 0 una
 vez que la tarea está cargada):

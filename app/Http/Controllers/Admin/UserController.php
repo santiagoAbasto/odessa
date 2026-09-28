@@ -13,8 +13,8 @@ use App\Support\TableQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,8 +24,9 @@ use Inertia\Response;
  *
  * Un administrador de cliente sólo ve y gestiona usuarios de su empresa: el
  * listado se acota por `organization_id` y cada acción vuelve a pasar por la
- * Policy. La contraseña inicial nunca se elige aquí: se envía un enlace de
- * establecimiento al correo del usuario.
+ * Policy. La contraseña inicial, y la de quien pierde el acceso, la genera el
+ * sistema: el administrador se la pasa al usuario y éste la reemplaza al
+ * entrar. No depende de que el servidor pueda mandar correos.
  */
 class UserController extends Controller
 {
@@ -70,6 +71,7 @@ class UserController extends Controller
                 'lastLoginAt' => $u->last_login_at?->toIso8601String(),
                 'canEdit' => $actor->can('update', $u),
                 'canDelete' => $actor->can('delete', $u),
+                'canResetAccess' => $actor->can('update', $u) && ! $u->is($actor),
             ]);
 
         return Inertia::render('admin/users/index', [
@@ -97,6 +99,8 @@ class UserController extends Controller
                     Permissions::roleMatrix()[$role],
                     array_keys(Permissions::clientGrantable()),
                 ))])->all(),
+            // Una sola vez, justo después de generarla: no se guarda en claro.
+            'temporaryAccess' => $request->session()->get('temporaryAccess'),
             'can' => [
                 'create' => $actor->can('create', User::class),
                 'grantPermissions' => $actor->can('manageRoles', User::class),
@@ -122,8 +126,8 @@ class UserController extends Controller
             'job_title' => $data['job_title'] ?? null,
             'organization_id' => $organizationId,
             'is_active' => true,
-            // Contraseña aleatoria descartable: el usuario la define por correo.
-            'password' => Hash::make(Str::random(48)),
+            'password' => Hash::make($temporal = $this->temporaryPassword()),
+            'must_change_password' => true,
         ]);
 
         $user->syncRoles($this->allowedRoles($actor, $data['roles']));
@@ -137,22 +141,51 @@ class UserController extends Controller
             organizationId: $organizationId,
         );
 
-        // La clave aleatoria nunca se entrega: el usuario establece la suya
-        // mediante el token de un solo uso, con expiración y throttle del broker.
-        try {
-            $resetStatus = Password::sendResetLink(['email' => $user->email]);
-        } catch (\Throwable $exception) {
-            report($exception);
-            $resetStatus = null;
-        }
+        return back()->with('temporaryAccess', $this->temporaryAccess($user, $temporal, created: true));
+    }
 
-        if ($resetStatus !== Password::ResetLinkSent) {
-            report(new \RuntimeException("No se pudo enviar el enlace inicial a {$user->email}: ".($resetStatus ?? 'error de transporte')));
+    /**
+     * Para quien perdió el acceso: una contraseña temporal nueva.
+     *
+     * La anterior deja de funcionar y se cierran las sesiones abiertas del
+     * usuario, por si el motivo es que alguien más la conocía.
+     */
+    public function resetAccess(Request $request, User $user): RedirectResponse
+    {
+        // Con la propia se cerraría la sesión antes de ver la clave nueva.
+        abort_if($request->user()->is($user), 403, 'No puede restablecer su propio acceso.');
 
-            return back()->with('warning', 'Usuario creado, pero no se pudo enviar el correo. Reintente desde recuperación de contraseña.');
-        }
+        $this->authorize('update', $user);
 
-        return back()->with('success', "Usuario creado. Se envió un enlace a {$user->email} para definir su contraseña.");
+        $user->forceFill([
+            'password' => Hash::make($temporal = $this->temporaryPassword()),
+            'must_change_password' => true,
+            'remember_token' => Str::random(60),
+        ])->save();
+
+        // ponytail: sólo corta sesiones con SESSION_DRIVER=database, el de producción.
+        DB::table('sessions')->where('user_id', $user->getKey())->delete();
+
+        ActivityLogger::log(
+            action: 'user.access_reset',
+            subject: $user,
+            description: "Acceso restablecido de {$user->email}",
+            organizationId: $user->organization_id,
+        );
+
+        return back()->with('temporaryAccess', $this->temporaryAccess($user, $temporal, created: false));
+    }
+
+    /** Sin símbolos: se dicta o se pega en un mensaje sin confundirse. */
+    private function temporaryPassword(): string
+    {
+        return Str::password(12, symbols: false);
+    }
+
+    /** @return array{name: string, email: string, password: string, created: bool} */
+    private function temporaryAccess(User $user, string $password, bool $created): array
+    {
+        return ['name' => $user->name, 'email' => $user->email, 'password' => $password, 'created' => $created];
     }
 
     public function update(UpdateUserRequest $request, User $user): RedirectResponse

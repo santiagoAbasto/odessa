@@ -333,4 +333,15 @@ Revisando el correo encontramos que en producción los avisos se encolaban y nad
 
 - **La campana ya no depende de la cola.** El aviso dentro del sistema se escribe en el momento.
 - **Los correos de aviso salen con la tarea programada**, que ahora también vacía la cola cada minuto. Hay que cargarla en el panel (ver `deploy/elserver/NOTAS-SERVIDOR.md`, punto 6).
-- El correo de «definí tu contraseña» no pasa por la cola: sale apenas el correo del servidor funcione.
+- El correo de «olvidé mi contraseña» no pasa por la cola: sale apenas el correo del servidor funcione.
+
+## 8. Contraseña temporal para altas y para quien pierde el acceso (28/09/2026)
+
+El cliente preguntó desde dónde se configura la contraseña de un usuario nuevo, y cómo se restablece si la pierde. Hasta ahora las dos cosas dependían de un correo, y el servidor todavía no manda correos.
+
+- **Al crear un usuario** el sistema genera una contraseña temporal y la muestra una sola vez, con un botón para copiar el mensaje listo para mandar por WhatsApp.
+- **«Restablecer acceso»** en cada fila de Usuarios hace lo mismo para quien la perdió. La anterior deja de funcionar y se cierran las sesiones que tuviera abiertas.
+- **Con la temporal no se puede usar el sistema.** Al entrar, el usuario tiene que elegir una propia, distinta de la temporal. Así la que conoce el administrador no sirve más.
+- No es una contraseña fija igual para todos: con una así, cualquiera que la conociera podría entrar a la cuenta de otro.
+- Nadie restablece su propio acceso desde esta pantalla: se le cerraría la sesión antes de ver la clave nueva.
+- «¿Olvidó su contraseña?» del login sigue igual. Va a servir cuando funcione el correo.
