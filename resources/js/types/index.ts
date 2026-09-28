@@ -18,10 +18,19 @@ export interface AuthUser {
   organization: Organization | null;
 }
 
+export interface NotificationItem {
+  id: string;
+  title: string;
+  body: string | null;
+  at: string | null;
+}
+
 export interface PageProps {
   auth: { user: AuthUser | null; permissions: string[] };
   flash: { success?: string; error?: string; warning?: string; info?: string };
   app: { name: string };
+  /** Avisos sin leer de la campana. Null sin sesión. */
+  notifications: { unread: number; items: NotificationItem[] } | null;
   errors: Record<string, string>;
   [key: string]: unknown;
 }

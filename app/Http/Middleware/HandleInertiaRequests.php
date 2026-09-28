@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\NotificationFeed;
 use App\Support\Permissions;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -58,6 +59,10 @@ class HandleInertiaRequests extends Middleware
             'app' => [
                 'name' => config('app.name'),
             ],
+
+            // Diferido en la práctica: es una closure, así que las recargas
+            // parciales que no la piden no consultan la base.
+            'notifications' => fn () => $user ? NotificationFeed::for($user) : null,
         ];
     }
 

@@ -29,6 +29,7 @@ import {
 import { Tooltip, TooltipProvider } from '@/components/ui/tooltip';
 import { usePermissions } from '@/hooks/use-permissions';
 import { cn } from '@/lib/cn';
+import { formatRelative } from '@/lib/format';
 import type { PageProps } from '@/types';
 
 export interface Breadcrumb {
@@ -283,9 +284,8 @@ export default function AppLayout({
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Button variant="ghost" size="icon" aria-label="Notificaciones">
-                <Bell aria-hidden />
-              </Button>
+              <NotificationsMenu />
+
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -411,6 +411,72 @@ function GlobalSearch() {
         ⌘K
       </kbd>
     </form>
+  );
+}
+
+/**
+ * Campana del encabezado: los avisos sin leer.
+ *
+ * Mientras la salida de correo del servidor siga bloqueada, es la única vía
+ * por la que un cliente se entera, por ejemplo, de que tiene una reparación
+ * para autorizar. Abrir un aviso lo marca leído y lleva a lo que avisa.
+ */
+function NotificationsMenu() {
+  const { notifications } = usePage<PageProps>().props;
+
+  if (!notifications) return null;
+
+  const { unread, items } = notifications;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={unread > 0 ? `Notificaciones: ${unread} sin leer` : 'Notificaciones'}
+          className="relative"
+        >
+          <Bell aria-hidden />
+          {unread > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-[var(--tone-danger-fg)] px-1 text-[9.5px] leading-none font-semibold text-[var(--text-inverse)] tabular">
+              {unread > 99 ? '99+' : unread}
+            </span>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-80">
+        <DropdownMenuLabel>Notificaciones</DropdownMenuLabel>
+        {items.length === 0 ? (
+          <p className="px-2 pt-1 pb-2.5 text-[12.5px] text-[var(--text-muted)]">No tiene avisos pendientes.</p>
+        ) : (
+          <>
+            {items.map((item) => (
+              <DropdownMenuItem
+                key={item.id}
+                onSelect={() => router.post(`/notificaciones/${item.id}/abrir`)}
+                className="flex-col items-start gap-0.5"
+              >
+                <span className="font-medium text-[var(--text-primary)]">{item.title}</span>
+                {item.body && (
+                  <span className="line-clamp-2 text-[11.5px] text-[var(--text-secondary)]">{item.body}</span>
+                )}
+                <span className="text-[10.5px] text-[var(--text-muted)]">{formatRelative(item.at)}</span>
+              </DropdownMenuItem>
+            ))}
+            {unread > items.length && (
+              <p className="px-2 py-1 text-[11px] text-[var(--text-muted)]">
+                Y {unread - items.length} más sin leer.
+              </p>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => router.post('/notificaciones/leidas', {}, { preserveScroll: true })}>
+              Marcar todas como leídas
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

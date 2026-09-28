@@ -304,3 +304,13 @@ La lista «Listas para despachar» dejaba afuera las recepciones liberadas sin d
 |---|---|
 | Reporte en pantalla (status, vencimientos, trabajos) | Implementado y probado |
 | Excel con cuatro hojas | Implementado y probado |
+
+## 5. Campana de notificaciones
+
+Los avisos que el sistema genera —consulta de reparación, equipo sin solución, equipos a recertificar, solicitudes de acceso— se guardaban en la aplicación, pero ninguna pantalla los mostraba: la campana del encabezado era decorativa. Con la salida de correo del servidor todavía bloqueada, el cliente no tenía forma de enterarse de que tenía una reparación para autorizar, salvo entrando por su cuenta a Recepción de equipos.
+
+Ahora la campana muestra cuántos avisos hay sin leer y los últimos ocho. Al abrir uno se marca como leído y lleva a lo que avisa: la consulta de reparación, por ejemplo, abre directamente esa recepción. También se pueden marcar todos como leídos. Cada usuario ve sólo los suyos, y los enlaces sólo pueden llevar a pantallas del propio sistema.
+
+| Elemento | Estado |
+|---|---|
+| Campana con avisos sin leer | Implementado y probado |

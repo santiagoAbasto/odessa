@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\InspectionReportController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrganizationReportController;
 use App\Http\Controllers\PublicSiteController;
 use App\Http\Controllers\ShipmentController;
@@ -66,6 +67,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/salir', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
     Route::get('/panel', DashboardController::class)->name('dashboard');
+
+    // Campana del encabezado. Cada usuario sólo alcanza sus propios avisos.
+    Route::post('/notificaciones/leidas', [NotificationController::class, 'markAllRead'])->name('notifications.read_all');
+    Route::post('/notificaciones/{notification}/abrir', [NotificationController::class, 'open'])
+        ->whereUuid('notification')
+        ->name('notifications.open');
 
     // --- Activos ---------------------------------------------------------
     Route::middleware('permission:'.Permissions::ASSETS_VIEW)->group(function () {
