@@ -58,8 +58,8 @@ export default function ShipmentsIndex({
       title="Envíos al taller"
       description={
         can.authorize
-          ? 'Equipos que los clientes declaran antes de mandarlos. Hasta que se autorizan, nada entra al taller.'
-          : 'Declare aquí los equipos que envía. El taller los autoriza al recibirlos.'
+          ? 'Equipos que los clientes declaran antes de mandarlos. Hasta que el taller les da recepción, nada entra al taller.'
+          : 'Declare aquí los equipos que envía. El taller les da recepción cuando llegan.'
       }
       breadcrumbs={[{ label: 'Envíos al taller' }]}
       actions={
@@ -211,7 +211,7 @@ function PendingBanner({ count }: { count: number }) {
     >
       <Truck className="size-4 shrink-0 text-[var(--tone-info-fg)]" aria-hidden />
       <p className="text-[13px] text-[var(--tone-info-fg)]">
-        <strong>{count}</strong> {count === 1 ? 'envío espera' : 'envíos esperan'} su autorización.
+        <strong>{count}</strong> {count === 1 ? 'envío espera' : 'envíos esperan'} recepción en el taller.
       </p>
     </Link>
   );

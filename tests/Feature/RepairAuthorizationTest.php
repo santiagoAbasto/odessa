@@ -90,8 +90,11 @@ class RepairAuthorizationTest extends TestCase
      * Sin aviso, la consulta se pierde: el equipo queda inmovilizado
      * esperando una respuesta que nadie sabe que tiene que dar, y la demora
      * se la come el cliente sin enterarse de que existe.
+     *
+     * Llega a toda la organización, no sólo a quien puede contestar: lo
+     * pidió el negocio, y el de consulta es justamente quien audita.
      */
-    public function test_se_avisa_a_quien_puede_contestar(): void
+    public function test_se_avisa_a_toda_la_organizacion(): void
     {
         Notification::fake();
 
@@ -109,9 +112,7 @@ class RepairAuthorizationTest extends TestCase
             ->assertRedirect();
 
         Notification::assertSentTo($operador, RepairAuthorizationRequested::class);
-        // El rol de consulta no tiene el botón: avisarle sería mandarlo a una
-        // pantalla donde no puede hacer nada.
-        Notification::assertNotSentTo($consulta, RepairAuthorizationRequested::class);
+        Notification::assertSentTo($consulta, RepairAuthorizationRequested::class);
         Notification::assertNotSentTo($ajeno, RepairAuthorizationRequested::class);
     }
 

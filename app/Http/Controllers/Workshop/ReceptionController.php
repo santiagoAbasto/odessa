@@ -40,7 +40,7 @@ class ReceptionController extends Controller
     {
         $this->authorize('viewAny', Reception::class);
 
-        $filters = TableQuery::filters($request, ['search', 'stage', 'urgent', 'overdue', 'report_number']);
+        $filters = TableQuery::filters($request, ['search', 'stage', 'urgent', 'overdue', 'report_number', 'reception']);
 
         $query = Reception::query()
             ->with([
@@ -56,7 +56,7 @@ class ReceptionController extends Controller
             'ready' => $query->readyToDispatch(),
             'rejected' => $query->rejected(),
             'awaiting_client' => $query->awaitingClient(),
-            'in_repair' => $query->inRepair(),
+            'repair' => $query->repairQueue(),
             'pending' => $query->pending(),
             'in_progress' => $query->inProgress(),
             'all' => $query,
@@ -64,6 +64,9 @@ class ReceptionController extends Controller
         };
 
         $query
+            // Enlace directo de los avisos por correo. El scope de organización
+            // ya hace que una recepción ajena simplemente no aparezca.
+            ->when($filters['reception'] ?? null, fn (Builder $q, string $v) => $q->where('receptions.public_id', $v))
             ->when(($filters['urgent'] ?? null) === '1', fn (Builder $q) => $q->where('is_urgent', true))
             ->when(($filters['overdue'] ?? null) === '1', fn (Builder $q) => $q->overdue())
             ->when($filters['report_number'] ?? null, fn (Builder $q, string $v) => $q
@@ -101,6 +104,10 @@ class ReceptionController extends Controller
                 'repairDecisionNotes' => $r->repair_decision_notes,
                 'repairStartedAt' => $r->repair_started_at?->toIso8601String(),
                 'repairedAt' => $r->repaired_at?->toIso8601String(),
+                'repairFailedAt' => $r->repair_failed_at?->toIso8601String(),
+                'repairFailureNotes' => $r->repair_failure_notes,
+                'unrepairableAt' => $r->unrepairable_at?->toIso8601String(),
+                'unrepairableNotes' => $r->unrepairable_notes,
                 'dispatchedAt' => $r->dispatched_at?->toIso8601String(),
                 'reportNumber' => $r->inspectionReport?->number,
                 'reportId' => $r->inspectionReport?->public_id,
@@ -121,21 +128,27 @@ class ReceptionController extends Controller
                  * Cada acción se ofrece sólo en la etapa donde tiene sentido.
                  * Así el taller no elige entre botones que van a fallar.
                  */
-                'can' => [
-                    'start' => ! $r->hasStarted() && ! $r->isResolved() && $user->can('release', $r),
-                    'resolve' => $r->hasStarted() && ! $r->isResolved() && $user->can('release', $r),
-                    // Consultar al cliente: sólo una vez, y sólo si fue rechazada.
-                    'requestRepair' => $r->wasRejected() && ! $r->repairWasRequested()
-                        && $user->can('release', $r),
-                    // Contestar la consulta. Es lo único que un usuario cliente
-                    // puede hacer sobre una recepción.
-                    'decideRepair' => $user->can('authorizeRepair', $r),
-                    'sendToRepair' => $r->repairWasApproved() && $r->repair_started_at === null
-                        && $user->can('release', $r),
-                    'markRepaired' => $r->repair_started_at !== null && $r->repaired_at === null
-                        && $user->can('release', $r),
-                    'dispatch' => $r->isDispatchable() && $user->can('dispatchReception', $r),
-                ],
+                'can' => (function () use ($r, $user) {
+                    $stage = $r->stage();
+                    $release = $user->can('release', $r);
+
+                    return [
+                        'start' => ! $r->hasStarted() && ! $r->isResolved() && $release,
+                        'resolve' => $r->hasStarted() && ! $r->isResolved() && $release,
+                        // Desde Rechazadas, dos salidas: consultar al cliente
+                        // (una sola vez) o marcarla sin solución.
+                        'requestRepair' => $stage === 'rejected' && $release,
+                        'markUnrepairable' => in_array($stage, ['rejected', 'repair_failed'], true) && $release,
+                        // Contestar la consulta. Es lo único que un usuario
+                        // cliente puede hacer sobre una recepción.
+                        'decideRepair' => $user->can('authorizeRepair', $r),
+                        'sendToRepair' => $stage === 'repair_authorized' && $release,
+                        // La reparación en curso se dictamina como cualquier trabajo.
+                        'markRepaired' => $stage === 'in_repair' && $release,
+                        'failRepair' => $stage === 'in_repair' && $release,
+                        'dispatch' => $r->isDispatchable() && $user->can('dispatchReception', $r),
+                    ];
+                })(),
             ]);
 
         return Inertia::render('workshop/receptions', [
@@ -316,7 +329,7 @@ class ReceptionController extends Controller
 
         $stages->sendToRepair($reception);
 
-        return back()->with('success', 'La pieza pasó a reparación.');
+        return back()->with('success', 'Reparación iniciada. La pieza pasa a En proceso.');
     }
 
     public function markRepaired(Reception $reception, ChangeReceptionStage $stages): RedirectResponse
@@ -325,7 +338,29 @@ class ReceptionController extends Controller
 
         $stages->markRepaired($reception);
 
-        return back()->with('success', 'Reparación terminada. La pieza queda lista para despachar.');
+        return back()->with('success', 'Reparación aprobada. La pieza queda lista para despachar.');
+    }
+
+    public function failRepair(Request $request, Reception $reception, ChangeReceptionStage $stages): RedirectResponse
+    {
+        $this->authorize('release', $reception);
+
+        $data = $request->validate(['repair_failure_notes' => ['nullable', 'string', 'max:2000']]);
+
+        $stages->failRepair($reception, $data['repair_failure_notes'] ?? null);
+
+        return back()->with('success', 'Reparación rechazada. La pieza vuelve a Rechazadas.');
+    }
+
+    public function markUnrepairable(Request $request, Reception $reception, ChangeReceptionStage $stages): RedirectResponse
+    {
+        $this->authorize('release', $reception);
+
+        $data = $request->validate(['unrepairable_notes' => ['nullable', 'string', 'max:2000']]);
+
+        $stages->markUnrepairable($reception, $data['unrepairable_notes'] ?? null);
+
+        return back()->with('success', 'Pieza marcada sin solución. Queda lista para devolver, no apta.');
     }
 
     public function dispatchReception(Request $request, Reception $reception, ChangeReceptionStage $stages): RedirectResponse
@@ -348,7 +383,7 @@ class ReceptionController extends Controller
             'in_progress' => Reception::query()->inProgress()->count(),
             'rejected' => Reception::query()->rejected()->count(),
             'awaiting_client' => Reception::query()->awaitingClient()->count(),
-            'in_repair' => Reception::query()->inRepair()->count(),
+            'repair' => Reception::query()->repairQueue()->count(),
             'ready' => Reception::query()->readyToDispatch()->count(),
             'in_workshop' => Reception::query()->inWorkshop()->count(),
             'dispatched' => Reception::query()->dispatched()->count(),

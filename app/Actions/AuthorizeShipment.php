@@ -30,7 +30,7 @@ class AuthorizeShipment
     {
         if (! $shipment->isPending()) {
             throw ValidationException::withMessages([
-                'status' => 'Sólo se pueden autorizar los envíos que están esperando autorización.',
+                'status' => 'Sólo se puede dar recepción a los envíos pendientes de recepción.',
             ]);
         }
 
@@ -86,7 +86,7 @@ class AuthorizeShipment
         ActivityLogger::log(
             action: 'shipment.authorized',
             subject: $shipment,
-            description: "Envío {$shipment->reference} autorizado; se crearon {$shipment->items()->count()} recepciones",
+            description: "Envío {$shipment->reference} recibido; se crearon {$shipment->items()->count()} recepciones",
             organizationId: $shipment->organization_id,
         );
 
@@ -97,7 +97,7 @@ class AuthorizeShipment
     {
         if (! $shipment->isPending()) {
             throw ValidationException::withMessages([
-                'status' => 'Sólo se pueden rechazar los envíos que están esperando autorización.',
+                'status' => 'Sólo se pueden rechazar los envíos pendientes de recepción.',
             ]);
         }
 

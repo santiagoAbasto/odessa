@@ -29,10 +29,11 @@ use Illuminate\Support\Facades\DB;
  *  6. Con vencimiento, se deriva `send_by_at`: la última fecha en la que el
  *     cliente puede despachar el equipo sin que pierda la certificación
  *     mientras está en el taller. Ver RecertificationWindow.
- *  7. Una pieza **rechazada que el cliente decidió no reparar** queda `unfit`
- *     y sin vencimiento, aunque su último FMR dijera Apto. Es una segunda
- *     fuente de aptitud, agregada cuando el negocio definió que ese equipo
- *     «se devuelve sin reparar y marcado como No Apto».
+ *  7. Una pieza **rechazada que el cliente decidió no reparar, o que el taller
+ *     marcó sin solución**, queda `unfit` y sin vencimiento, aunque su último
+ *     FMR dijera Apto. Es una segunda fuente de aptitud, agregada cuando el
+ *     negocio definió que ese equipo «se devuelve sin reparar y marcado como
+ *     No Apto».
  *
  *     Sin esto el equipo volvía al cliente figurando certificado, que es
  *     justo lo contrario de lo que pasó. No se resolvió escribiéndole el
@@ -128,16 +129,22 @@ class RecalculateAssetStatus
      * manda la inspección nueva y la pieza vuelve a estar apta. El rechazo no
      * la condena para siempre, sólo hasta el próximo dictamen favorable.
      *
-     * El momento decisivo es cuándo el cliente contestó que no, no cuándo se
-     * despachó: ahí quedó resuelto que el equipo no se iba a arreglar.
+     * El momento decisivo es cuándo quedó resuelto que el equipo no se iba a
+     * arreglar —el cliente contestó que no, o el taller lo marcó sin
+     * solución—, no cuándo se despachó.
      */
     private function wasReturnedUnrepairedAfter(Asset $asset, ?string $since): bool
     {
         return DB::table('receptions')
             ->where('asset_id', $asset->getKey())
             ->whereNull('deleted_at')
-            ->where('repair_decision', Reception::REPAIR_DECLINED)
-            ->when($since !== null, fn ($q) => $q->where('repair_decided_at', '>=', $since))
+            ->where(fn ($q) => $q
+                ->where(fn ($d) => $d
+                    ->where('repair_decision', Reception::REPAIR_DECLINED)
+                    ->when($since !== null, fn ($w) => $w->where('repair_decided_at', '>=', $since)))
+                ->orWhere(fn ($u) => $u
+                    ->whereNotNull('unrepairable_at')
+                    ->when($since !== null, fn ($w) => $w->where('unrepairable_at', '>=', $since))))
             ->exists();
     }
 

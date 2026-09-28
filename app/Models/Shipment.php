@@ -29,10 +29,16 @@ class Shipment extends Model
 
     public const STATUS_REJECTED = 'rejected';
 
+    /**
+     * El negocio lo nombra por lo que pasa físicamente: el cliente lo manda,
+     * queda pendiente de recepción, y cuando llega el taller le da recepción
+     * confirmando lo declarado. Las claves internas conservan el nombre
+     * original para no migrar datos.
+     */
     public const STATUS_LABELS = [
         self::STATUS_DRAFT => 'Borrador',
-        self::STATUS_SUBMITTED => 'Esperando autorización',
-        self::STATUS_AUTHORIZED => 'Autorizado',
+        self::STATUS_SUBMITTED => 'Pendiente de recepción',
+        self::STATUS_AUTHORIZED => 'Recibido',
         self::STATUS_REJECTED => 'Rechazado',
     ];
 

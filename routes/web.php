@@ -184,6 +184,10 @@ Route::middleware(['auth'])->group(function () {
                 ->name('receptions.repair');
             Route::post('/recepciones/{reception}/reparada', [ReceptionController::class, 'markRepaired'])
                 ->name('receptions.repaired');
+            Route::post('/recepciones/{reception}/reparacion-fallida', [ReceptionController::class, 'failRepair'])
+                ->name('receptions.repair_failed');
+            Route::post('/recepciones/{reception}/sin-solucion', [ReceptionController::class, 'markUnrepairable'])
+                ->name('receptions.unrepairable');
         });
 
         /*

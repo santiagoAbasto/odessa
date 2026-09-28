@@ -203,3 +203,31 @@ Para poder contestar, el cliente necesita ver sus equipos en el taller. Eso resp
 2. ~~**¿El código heredado del sistema anterior debe renombrarse?**~~ **Resuelto.** El negocio pidió que no quede ningún rastro de la marca anterior. La columna pasó a llamarse `code` y la interfaz muestra sólo «Código». Los valores grabados en las piezas no se tocaron: cambió la etiqueta, no el dato.
 3. **¿Qué hace el taller con un envío parcialmente correcto?** Hoy es todo o nada: autoriza o rechaza el envío completo. Si hace falta aceptar unos equipos y rechazar otros, es un cambio acotado.
 4. **¿Debe avisarse al cliente cuando su envío se autoriza o rechaza?** Hoy lo ve al entrar. El mecanismo de notificación ya está montado y reutilizable.
+
+---
+
+# Bloque 2 — devolución del 27/09/2026
+
+El negocio contestó las cuatro definiciones pendientes y sumó cambios al flujo del taller. Se dividió en cuatro partes, cada una con su diseño en `docs/superpowers/specs/`. El cambio de nombre de «FMR» quedó pendiente del negocio y no se tocó.
+
+## 1. Flujo del taller
+
+Lo pedido: «pendiente de recepción» como estado propio, «en taller» como paraguas de todo lo que no salió, que lo consultado salga de Rechazadas, la consulta a todos los correos de la organización con un enlace, una salida «sin solución» y que la reparación autorizada se inicie como un trabajo más.
+
+### Decisiones
+
+- **Una sola reparación.** Si se rechaza, vuelve a Rechazadas como «reparación fallida» y la única salida es «sin solución». No hay segunda consulta ni segundo cobro.
+- **Sin solución la decide el taller**, sin consultar al cliente, con motivo obligatorio. Se le avisa a la organización por correo, porque pierde el equipo sin haberlo decidido. El equipo queda **no apto y sin vencimiento**, igual que cuando el cliente no autoriza.
+- **La consulta llega a todos:** usuarios activos de la organización (incluido Consulta, que audita) y el correo de contacto de su ficha, sin duplicados.
+- **El enlace del correo abre el sistema con sesión.** Va directo a esa recepción. No se aceptan enlaces que autoricen sin iniciar sesión: la autorización justifica un cobro y tiene que quedar registrado quién la dio.
+- **«Dar recepción»** reemplaza a «autorizar envío». Es el mismo paso con el nombre que usa el taller: confirma lo declarado y los equipos entran a Pendientes.
+
+### Estado
+
+| Elemento | Estado |
+|---|---|
+| Colas nuevas: Reparación, Rechazadas sin lo consultado | Implementado y probado |
+| Reparación iniciada vuelve a En proceso | Implementado y probado |
+| Reparación fallida y sin solución | Implementado y probado |
+| Aviso a toda la organización con enlace directo | Implementado y probado |
+| «Pendiente de recepción» / «Dar recepción» / «Recibido» | Implementado y probado |

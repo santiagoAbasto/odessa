@@ -72,7 +72,7 @@ export default function ShipmentShow({
               variant="primary"
               size="sm"
               title="Remitir el envío al taller"
-              description="El taller recibirá el listado para autorizarlo. Después de remitirlo ya no podrá modificar los equipos."
+              description="El taller le dará recepción cuando los equipos lleguen, confirmando lo declarado. Después de remitirlo ya no podrá modificar los equipos."
               confirmLabel="Remitir al taller"
               onConfirm={() => router.post(`/envios/${shipment.id}/enviar`, {}, { preserveScroll: true })}
             >
@@ -134,7 +134,7 @@ export default function ShipmentShow({
                   : 'text-[var(--tone-danger-fg)]',
               )}
             >
-              {shipment.status === 'authorized' ? 'Autorizado' : 'Rechazado'} por{' '}
+              {shipment.status === 'authorized' ? 'Recibido' : 'Rechazado'} por{' '}
               {shipment.reviewedBy} · {formatDateTime(shipment.reviewedAt)}
             </p>
             {shipment.reviewNotes && (
@@ -150,7 +150,7 @@ export default function ShipmentShow({
           title="Equipos declarados"
           description={
             can.review
-              ? 'Al autorizar se creará una recepción por cada equipo. Los no registrados se darán de alta.'
+              ? 'Al dar recepción se creará una recepción por cada equipo. Los no registrados se darán de alta.'
               : 'Los equipos que se enviarán al taller.'
           }
           actions={
@@ -343,7 +343,7 @@ function AddItemDialog({ shipmentId, assets }: { shipmentId: string; assets: Ava
             <>
               <Field
                 label="Descripción del equipo"
-                hint="El taller lo dará de alta al autorizar el envío."
+                hint="El taller lo dará de alta al dar recepción al envío."
                 error={errors.declared_description}
                 required
               >
@@ -428,12 +428,12 @@ function ReviewDialog({ shipmentId, itemsCount }: { shipmentId: string; itemsCou
       <DialogTrigger asChild>
         <Button variant="primary" size="sm">
           <Truck aria-hidden />
-          Revisar envío
+          Dar recepción
         </Button>
       </DialogTrigger>
 
       <DialogContent
-        title="Revisar el envío"
+        title="Dar recepción al envío"
         description={`${itemsCount} ${itemsCount === 1 ? 'equipo declarado' : 'equipos declarados'}.`}
         footer={
           <>
@@ -449,7 +449,7 @@ function ReviewDialog({ shipmentId, itemsCount }: { shipmentId: string; itemsCou
               size="sm"
               loading={processing}
             >
-              {decision === 'authorize' ? 'Autorizar' : 'Rechazar'}
+              {decision === 'authorize' ? 'Dar recepción' : 'Rechazar'}
             </Button>
           </>
         }
@@ -468,7 +468,7 @@ function ReviewDialog({ shipmentId, itemsCount }: { shipmentId: string; itemsCou
               aria-pressed={decision === 'authorize'}
             >
               <Check className="size-4 shrink-0" aria-hidden />
-              Autorizar
+              Recibido: confirmar lo declarado
             </button>
 
             <button
@@ -490,8 +490,8 @@ function ReviewDialog({ shipmentId, itemsCount }: { shipmentId: string; itemsCou
           {decision === 'authorize' ? (
             <>
               <p className="rounded-xs bg-[var(--surface-sunken)] px-3 py-2 text-[12px] text-[var(--text-secondary)]">
-                Al autorizar se creará una recepción por cada equipo y entrarán al pipeline del
-                taller. Los equipos declarados sin registrar se darán de alta en el inventario.
+                Al dar recepción se creará una recepción por cada equipo, que queda en la cola
+                de Pendientes del taller. Los equipos declarados sin registrar se darán de alta en el inventario.
               </p>
 
               <Field

@@ -206,7 +206,7 @@ class ShipmentController extends Controller
 
         return redirect()
             ->route('shipments.show', $shipment)
-            ->with('success', "Envío {$shipment->reference} creado. Agregue los equipos y envíelo a autorizar.");
+            ->with('success', "Envío {$shipment->reference} creado. Agregue los equipos y remítalo al taller.");
     }
 
     public function addItem(Request $request, Shipment $shipment): RedirectResponse
@@ -276,10 +276,10 @@ class ShipmentController extends Controller
         ActivityLogger::log(
             'shipment.submitted',
             $shipment,
-            "Envío {$shipment->reference} enviado a autorización"
+            "Envío {$shipment->reference} remitido al taller"
         );
 
-        return back()->with('success', 'Envío remitido al taller. Le avisaremos cuando lo autoricen.');
+        return back()->with('success', 'Envío remitido al taller. Queda pendiente de recepción hasta que llegue al taller.');
     }
 
     public function review(Request $request, Shipment $shipment, AuthorizeShipment $action): RedirectResponse
@@ -291,7 +291,7 @@ class ShipmentController extends Controller
             'review_notes' => ['nullable', 'string', 'max:500'],
             'promised_at' => ['nullable', 'date', 'after_or_equal:today'],
         ], [
-            'decision.required' => 'Indique si autoriza o rechaza el envío.',
+            'decision.required' => 'Indique si le da recepción o lo rechaza.',
         ]);
 
         if ($data['decision'] === 'reject') {
@@ -306,7 +306,7 @@ class ShipmentController extends Controller
 
         $action->authorize($shipment, $data['review_notes'] ?? null, $data['promised_at'] ?? null);
 
-        return back()->with('success', 'Envío autorizado. Las piezas ya están en el pipeline del taller.');
+        return back()->with('success', 'Envío recibido. Los equipos quedan en Pendientes del taller.');
     }
 
     /** Sólo para mostrar en el formulario; no reserva el número. */

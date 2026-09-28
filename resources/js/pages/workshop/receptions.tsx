@@ -2,15 +2,16 @@ import { Deferred, Head, Link, router, useForm } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import {
   AlertTriangle,
+  Ban,
   MessageSquareQuote,
   PackageCheck,
   PackagePlus,
   Play,
   Truck,
   Warehouse,
-  Wrench,
   X,
   Zap,
+  type LucideIcon,
 } from 'lucide-react';
 import { useState, useMemo, type FormEvent } from 'react';
 import { DataTable, type ColumnMeta } from '@/components/tables/data-table';
@@ -35,7 +36,7 @@ interface StageCounts {
   in_progress: number;
   rejected: number;
   awaiting_client: number;
-  in_repair: number;
+  repair: number;
   ready: number;
   in_workshop: number;
   dispatched: number;
@@ -46,15 +47,17 @@ interface StageCounts {
 /*
   Las pestañas siguen el recorrido real del equipo:
 
-    Pendiente → En proceso → Aprobada ──────────────────────────→ Despachada
-                           ↘ Rechazada → A reparar ─┬─ SÍ → Reparada ↗
-                                      (lo decide    │
-                                       el cliente)  └─ NO → Despachada sin reparar
+    Pendientes → En proceso → Aprobar ─────────────────────────→ Listas para despachar
+                     ↑          ↘ Rechazar
+                     │        Rechazadas ─ Consultar → Esperando al cliente ─ NO → Listas (no apto)
+                     │            │                        └ SÍ → Reparación ─ Iniciar ┐
+                     └────────────┼────────────────────────────────────────────────────┘
+                                  └ Sin solución → Listas (no apto)
 
   "En taller" agrupa todo lo que no salió todavía, y es la vista con la que
-  el taller arranca el día. "Listas" junta todo lo que puede despacharse
-  —aprobadas, reparadas, y las que el cliente decidió no reparar—, que es lo
-  único que importa a la hora de cargar el camión.
+  el taller arranca el día. La reparación en curso aparece en "En proceso":
+  se aprueba o se rechaza como cualquier trabajo. "Listas" junta todo lo que
+  puede despacharse, que es lo único que importa a la hora de cargar el camión.
 */
 const stageTabs = [
   { value: 'in_workshop', label: 'En taller' },
@@ -64,7 +67,7 @@ const stageTabs = [
   // La cola que traba el taller sin que sea culpa del taller: conviene poder
   // verla de un vistazo para reclamarle al cliente.
   { value: 'awaiting_client', label: 'Esperando al cliente' },
-  { value: 'in_repair', label: 'En reparación' },
+  { value: 'repair', label: 'Reparación' },
   { value: 'ready', label: 'Listas para despachar' },
   { value: 'dispatched', label: 'Despachadas' },
   { value: 'all', label: 'Todas' },
@@ -215,18 +218,24 @@ export default function Receptions({
       {
         id: 'stage',
         header: 'Etapa',
-        cell: ({ row }) => (
-          <div className="min-w-0">
-            <Badge tone={row.original.stageTone}>{row.original.stageLabel}</Badge>
-            {/* El motivo del rechazo es lo que explica todo lo que sigue. */}
-            {row.original.outcomeNotes && row.original.outcome === 'rejected' && (
-              <p className="mt-1 max-w-[200px] truncate text-[10.5px] text-[var(--tone-danger-fg)]"
-                 title={row.original.outcomeNotes}>
-                {row.original.outcomeNotes}
-              </p>
-            )}
-          </div>
-        ),
+        cell: ({ row }) => {
+          // El motivo más reciente es lo que explica todo lo que sigue.
+          const note =
+            row.original.unrepairableNotes ??
+            row.original.repairFailureNotes ??
+            (row.original.outcome === 'rejected' ? row.original.outcomeNotes : null);
+
+          return (
+            <div className="min-w-0">
+              <Badge tone={row.original.stageTone}>{row.original.stageLabel}</Badge>
+              {note && (
+                <p className="mt-1 max-w-[200px] truncate text-[10.5px] text-[var(--tone-danger-fg)]" title={note}>
+                  {note}
+                </p>
+              )}
+            </div>
+          );
+        },
       },
       {
         id: 'actions',
@@ -243,15 +252,15 @@ export default function Receptions({
               <ConfirmButton
                 variant="secondary"
                 size="sm"
-                title="Empezar el trabajo"
+                title="Iniciar el trabajo"
                 description="Marca que el taller tomó el equipo. Sale de la cola de pendientes y pasa a En proceso."
-                confirmLabel="Empezar"
+                confirmLabel="Iniciar"
                 onConfirm={() =>
                   router.post(`/taller/recepciones/${row.original.id}/empezar`, {}, { preserveScroll: true })
                 }
               >
                 <Play aria-hidden />
-                Empezar
+                Iniciar
               </ConfirmButton>
             )}
 
@@ -280,16 +289,40 @@ export default function Receptions({
                   Aprobar
                 </ConfirmButton>
 
-                <RejectButton receptionId={row.original.id} />
+                <NotesActionButton
+                  url={`/taller/recepciones/${row.original.id}/dictamen`}
+                  field="outcome_notes"
+                  extra={{ outcome: 'rejected' }}
+                  icon={X}
+                  label="Rechazar"
+                  title="Rechazar el trabajo"
+                  description="Indique por qué no se aprueba. Después podrá consultarle al cliente la reparación o marcarla sin solución."
+                  notesLabel="Motivo del rechazo"
+                  maxLength={500}
+                />
               </>
             )}
 
             {/*
               La reparación se le cobra al cliente, así que la decide el
               cliente. El taller propone; recién con la respuesta registrada
-              puede empezar a reparar —o devolver el equipo como está.
+              puede empezar a reparar —o devolver el equipo como está—. Si no
+              hay nada que ofrecerle, el taller la marca sin solución.
             */}
             {row.original.can.requestRepair && <RequestRepairButton receptionId={row.original.id} />}
+
+            {row.original.can.markUnrepairable && (
+              <NotesActionButton
+                url={`/taller/recepciones/${row.original.id}/sin-solucion`}
+                field="unrepairable_notes"
+                icon={Ban}
+                label="Sin solución"
+                title="Marcar sin solución"
+                description="El equipo se le devuelve al cliente sin reparar y queda no apto. Se le avisa a la organización por correo."
+                notesLabel="Por qué no tiene solución"
+                confirmLabel="Marcar sin solución"
+              />
+            )}
 
             {row.original.can.decideRepair && (
               <RepairDecisionDialog
@@ -303,32 +336,45 @@ export default function Receptions({
               <ConfirmButton
                 variant="secondary"
                 size="sm"
-                title="Empezar la reparación"
-                description="El cliente ya autorizó. La pieza pasa a repararse y hasta que la reparación termine no puede despacharse."
-                confirmLabel="Empezar reparación"
+                title="Iniciar la reparación"
+                description="El cliente autorizó. La pieza pasa a En proceso para repararla; al terminar se aprueba o se rechaza."
+                confirmLabel="Iniciar"
                 onConfirm={() =>
                   router.post(`/taller/recepciones/${row.original.id}/reparar`, {}, { preserveScroll: true })
                 }
               >
-                <Wrench aria-hidden />
-                A reparar
+                <Play aria-hidden />
+                Iniciar
               </ConfirmButton>
             )}
 
+            {/* La reparación se dictamina como cualquier trabajo. */}
             {row.original.can.markRepaired && (
               <ConfirmButton
                 variant="secondary"
                 size="sm"
-                title="Terminar la reparación"
-                description="La reparación se dio por terminada y la pieza queda lista para despachar."
-                confirmLabel="Marcar reparada"
+                title="Aprobar la reparación"
+                description="La reparación dio resultado y la pieza queda lista para despachar."
+                confirmLabel="Aprobar"
                 onConfirm={() =>
                   router.post(`/taller/recepciones/${row.original.id}/reparada`, {}, { preserveScroll: true })
                 }
               >
                 <PackageCheck aria-hidden />
-                Reparada
+                Aprobar
               </ConfirmButton>
+            )}
+
+            {row.original.can.failRepair && (
+              <NotesActionButton
+                url={`/taller/recepciones/${row.original.id}/reparacion-fallida`}
+                field="repair_failure_notes"
+                icon={X}
+                label="Rechazar"
+                title="Rechazar la reparación"
+                description="La reparación no dio resultado. La pieza vuelve a Rechazadas y sólo queda marcarla sin solución: no se repara dos veces."
+                notesLabel="Por qué se rechaza la reparación"
+              />
             )}
 
             {row.original.can.dispatch && (
@@ -415,6 +461,16 @@ export default function Receptions({
         ))}
       </div>
 
+      {/* Se llega así desde el enlace de un aviso por correo. */}
+      {filters.reception && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-sm border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3.5 py-2.5 text-[12.5px] text-[var(--text-secondary)]">
+          <span>Mostrando una sola recepción, la del aviso que recibió.</span>
+          <Button asChild variant="secondary" size="sm">
+            <Link href="/taller/recepciones">Ver todas</Link>
+          </Button>
+        </div>
+      )}
+
       <Panel>
         <DataTable
           columns={columns}
@@ -464,7 +520,7 @@ function StageSummary({ counts }: { counts?: StageCounts }) {
       href: '?stage=awaiting_client',
       tone: 'warning' as Tone,
     },
-    { label: 'En reparación', value: counts.in_repair, href: '?stage=in_repair', tone: 'warning' as Tone },
+    { label: 'Reparación', value: counts.repair, href: '?stage=repair', tone: 'warning' as Tone },
     { label: 'Listas para despachar', value: counts.ready, href: '?stage=ready' },
     { label: 'Despachadas', value: counts.dispatched, href: '?stage=dispatched' },
   ];
@@ -494,20 +550,45 @@ function StageSummary({ counts }: { counts?: StageCounts }) {
 }
 
 /**
- * Rechazar exige motivo, así que no puede ser un botón de confirmación
- * simple: lo que se escriba acá es lo que después justifica la reparación
- * y lo que ve el cliente en la trazabilidad.
+ * Acción que exige motivo: rechazar el trabajo, rechazar la reparación o
+ * marcarla sin solución. No puede ser un botón de confirmación simple: lo que
+ * se escriba acá es lo que después justifica lo que pasó con el equipo y lo
+ * que ve el cliente en la trazabilidad.
  */
-function RejectButton({ receptionId }: { receptionId: string }) {
+function NotesActionButton({
+  url,
+  field,
+  extra = {},
+  icon: Icon,
+  label,
+  title,
+  description,
+  notesLabel,
+  confirmLabel = label,
+  maxLength = 2000,
+}: {
+  url: string;
+  field: string;
+  extra?: Record<string, string>;
+  icon: LucideIcon;
+  label: string;
+  title: string;
+  description: string;
+  notesLabel: string;
+  confirmLabel?: string;
+  maxLength?: number;
+}) {
   const [open, setOpen] = useState(false);
-  const { data, setData, post, processing, errors, reset } = useForm({
-    outcome: 'rejected',
-    outcome_notes: '',
+  const { data, setData, post, processing, errors, reset } = useForm<Record<string, string>>({
+    ...extra,
+    [field]: '',
   });
+  const formId = `form-${field}-${url}`;
+  const error = (errors as Record<string, string | undefined>)[field];
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    post(`/taller/recepciones/${receptionId}/dictamen`, {
+    post(url, {
       preserveScroll: true,
       onSuccess: () => {
         reset();
@@ -520,14 +601,14 @@ function RejectButton({ receptionId }: { receptionId: string }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="secondary" size="sm">
-          <X aria-hidden />
-          Rechazar
+          <Icon aria-hidden />
+          {label}
         </Button>
       </DialogTrigger>
 
       <DialogContent
-        title="Rechazar el trabajo"
-        description="Indique por qué no se aprueba. Después podrá mandarla a reparación."
+        title={title}
+        description={description}
         footer={
           <>
             <DialogClose asChild>
@@ -535,21 +616,21 @@ function RejectButton({ receptionId }: { receptionId: string }) {
                 Cancelar
               </Button>
             </DialogClose>
-            <Button type="submit" form="form-rechazo" variant="danger" size="sm" loading={processing}>
-              Rechazar
+            <Button type="submit" form={formId} variant="danger" size="sm" loading={processing}>
+              {confirmLabel}
             </Button>
           </>
         }
       >
-        <form id="form-rechazo" onSubmit={submit} noValidate>
-          <Field label="Motivo del rechazo" error={errors.outcome_notes} required>
+        <form id={formId} onSubmit={submit} noValidate>
+          <Field label={notesLabel} error={error} required>
             {(props) => (
               <Textarea
                 {...props}
-                value={data.outcome_notes}
-                maxLength={500}
-                onChange={(event) => setData('outcome_notes', event.target.value)}
-                invalid={Boolean(errors.outcome_notes)}
+                value={data[field]}
+                maxLength={maxLength}
+                onChange={(event) => setData(field, event.target.value)}
+                invalid={Boolean(error)}
               />
             )}
           </Field>

@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\Reception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -29,8 +30,10 @@ class RepairAuthorizationRequested extends Notification implements ShouldQueue
     public function via(object $notifiable): array
     {
         // También en la aplicación: hoy la salida de correo del servidor está
-        // bloqueada, y este aviso no puede depender de que se resuelva.
-        return ['mail', 'database'];
+        // bloqueada, y este aviso no puede depender de que se resuelva. El
+        // correo de contacto de la organización no es un usuario y no tiene
+        // bandeja en la aplicación: a ese sólo le llega el mail.
+        return $notifiable instanceof AnonymousNotifiable ? ['mail'] : ['mail', 'database'];
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -57,7 +60,9 @@ class RepairAuthorizationRequested extends Notification implements ShouldQueue
 
         return $mail
             ->line('Hasta que nos indique cómo seguir, el equipo permanece en el taller sin avanzar.')
-            ->action('Responder en el sistema', url('/taller/recepciones?stage=awaiting_client'))
+            // Directo a esta recepción. Si no hay sesión, el login devuelve
+            // acá: la respuesta queda cargada por el propio cliente.
+            ->action('Responder en el sistema', url($this->reception->url()))
             ->line('Si no autoriza la reparación, le devolvemos el equipo tal como está. '.
                 'En ese caso queda **no apto** y no puede volver a servicio hasta recertificarlo.');
     }
@@ -72,7 +77,7 @@ class RepairAuthorizationRequested extends Notification implements ShouldQueue
             'asset_name' => $this->reception->asset?->displayName(),
             'serial_number' => $this->reception->asset?->serial_number,
             'proposal' => $this->reception->repair_request_notes,
-            'url' => '/taller/recepciones?stage=awaiting_client',
+            'url' => $this->reception->url(),
         ];
     }
 }

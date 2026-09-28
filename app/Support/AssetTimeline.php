@@ -101,6 +101,7 @@ class AssetTimeline
                 'receiver:id,name', 'releaser:id,name', 'dispatcher:id,name',
                 'startedBy:id,name', 'repairStartedBy:id,name', 'repairedBy:id,name',
                 'repairRequestedBy:id,name', 'repairDecidedBy:id,name',
+                'repairFailedBy:id,name', 'unrepairableBy:id,name',
             ])
             ->get()
             ->flatMap(function ($reception) {
@@ -113,7 +114,7 @@ class AssetTimeline
                     'by' => $reception->receiver?->name,
                     'at' => $reception->received_at?->toIso8601String(),
                     'recordedAt' => $reception->created_at?->toIso8601String(),
-                    'href' => '/taller/recepciones',
+                    'href' => $reception->url(),
                 ]];
 
                 /*
@@ -157,14 +158,16 @@ class AssetTimeline
                             (string) $reception->repair_decision_notes,
                         )) ?: null,
                     ],
-                    ['repair_started_at', 'repairStartedBy', 'wrench', 'warning', 'Enviado a reparación', null],
-                    ['repaired_at', 'repairedBy', 'package-check', 'success', 'Reparación terminada', null],
+                    ['repair_started_at', 'repairStartedBy', 'wrench', 'warning', 'Se inició la reparación', null],
+                    ['repaired_at', 'repairedBy', 'package-check', 'success', 'Reparación aprobada', null],
+                    ['repair_failed_at', 'repairFailedBy', 'x', 'danger', 'Reparación rechazada', $reception->repair_failure_notes],
+                    ['unrepairable_at', 'unrepairableBy', 'x', 'danger', 'Marcado sin solución', $reception->unrepairable_notes],
                     [
                         'dispatched_at', 'dispatcher', 'truck',
                         // Devuelto sin reparar no es un cierre feliz: el equipo
                         // se fue no apto y el hilo tiene que decirlo.
-                        $reception->repairWasDeclined() ? 'danger' : 'success',
-                        $reception->repairWasDeclined()
+                        $reception->leavesUnrepaired() ? 'danger' : 'success',
+                        $reception->leavesUnrepaired()
                             ? 'Devuelto al cliente sin reparar'
                             : 'Despachado al cliente',
                         $reception->dispatch_note ? "Remito {$reception->dispatch_note}" : null,
@@ -185,7 +188,7 @@ class AssetTimeline
                         'by' => $reception->{$relation}?->name,
                         'at' => $reception->{$column}->toIso8601String(),
                         'recordedAt' => $reception->{$column}->toIso8601String(),
-                        'href' => '/taller/recepciones',
+                        'href' => $reception->url(),
                     ];
                 }
 

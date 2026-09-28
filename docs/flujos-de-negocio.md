@@ -71,21 +71,35 @@ Implementado en `App\Actions\RecalculateAssetStatus`, con diez pruebas que cubre
 
 ## 4. Pipeline de taller
 
-```mermaid
-stateDiagram-v2
-    [*] --> EnTaller: ingreso registrado
-    EnTaller --> Liberada: el responsable valida la inspección
-    Liberada --> Despachada: recepción entrega la pieza
-    Despachada --> [*]
+Recorrido definido por el negocio (revisado el 27/09/2026):
+
+```
+ENVÍO   Borrador → Pendiente de recepción ─[Dar recepción]→ Recibido   (o Rechazado)
+
+EN TALLER  (todo lo que no se despachó)
+ Pendientes ─[Iniciar]→ En proceso ─[Aprobar]→ Listas para despachar ─[Despachar]→ Despachada
+                            │
+                        [Rechazar]
+                            ↓
+                       Rechazadas ─[Consultar]→ Esperando cliente ─ NO ─→ Listas para despachar (no apto)
+                            │                          │
+                     [Sin solución]                    SÍ
+                            ↓                          ↓
+         Listas para despachar (no apto)          Reparación ─[Iniciar]→ En proceso (reparación)
+                                                                           ├─[Aprobar]→ Listas para despachar
+                                                                           └─[Rechazar]→ Rechazadas (reparación fallida;
+                                                                                          sólo "Sin solución")
 ```
 
-- **En taller:** ingresada, sin liberar.
-- **Liberada:** inspección validada, aún en planta.
-- **Despachada:** entregada al cliente.
+- **Dar recepción:** el taller confirma lo que el cliente declaró en el envío. En ese momento se crea una recepción por equipo, en Pendientes.
+- **Rechazadas:** dos salidas. Consultarle al cliente si autoriza la reparación (se le cobra, así que la decide él) o marcarla **sin solución** (lo decide el taller, con motivo obligatorio).
+- **Consulta:** llega por correo a todos los usuarios de la organización y a su correo de contacto, con un enlace directo a la recepción. La respuesta se carga con sesión iniciada.
+- **Reparación:** se intenta una sola vez. Iniciada, vuelve a En proceso y se aprueba o se rechaza como cualquier trabajo.
+- **Sin reparar:** si el cliente no autoriza o no hay solución, el equipo vuelve como está y queda **no apto y sin vencimiento**.
 
-«Pendiente» y «Fuera de plazo» **no son etapas**: se calculan comparando los hitos contra la fecha comprometida.
+«Pendiente» y «Fuera de plazo» se calculan comparando los hitos contra la fecha comprometida. Ninguna etapa es una columna: todas se derivan de los hitos registrados (`Reception::stage()`).
 
-**Reglas aplicadas:** no se puede despachar sin liberar, ni repetir un hito ya cumplido. Cada hito guarda quién y cuándo.
+**Reglas aplicadas:** no se puede despachar algo rechazado sobre lo que nadie decidió nada, ni repetir un hito ya cumplido. Cada hito guarda quién y cuándo.
 
 ## 5. Alta de una cuenta
 

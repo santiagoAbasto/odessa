@@ -2,14 +2,16 @@
 
 namespace App\Actions;
 
+use App\Models\Organization;
 use App\Models\Reception;
 use App\Models\User;
+use App\Notifications\ReceptionDeclaredUnrepairable;
 use App\Notifications\RepairAuthorizationRequested;
 use App\Support\ActivityLogger;
-use App\Support\Permissions;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Notification as Notifier;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -17,14 +19,16 @@ use Illuminate\Validation\ValidationException;
  *
  * Los hitos están ordenados, pero el recorrido no es una sola línea:
  *
- *   empezar → dictaminar ─┬─ aprobado ────────────────────────→ despachar
+ *   empezar → dictaminar ─┬─ aprobado ──────────────────────────────────────→ despachar
  *                         │
- *                         └─ rechazado → consultar al cliente ─┬─ SÍ → reparar → despachar
- *                                                              └─ NO → despachar sin reparar
+ *                         └─ rechazado ─┬─ consultar al cliente ─┬─ SÍ → iniciar reparación → dictaminar ─┬─ aprobada → despachar
+ *                                       │                        │                                        └─ rechazada ─┐
+ *                                       │                        └─ NO → despachar sin reparar                          │
+ *                                       └─ sin solución → despachar sin reparar  ←──────────────────────────────────────┘
  *
- * No se puede saltar un hito hacia atrás ni repetir uno ya cumplido. Y no se
- * puede despachar un equipo rechazado sobre el que nadie decidió nada: tiene
- * que estar reparado, o tener registrado que el cliente no quiso repararlo.
+ * No se puede saltar un hito hacia atrás ni repetir uno ya cumplido. La
+ * reparación se intenta una sola vez. Y no se puede despachar un equipo
+ * rechazado sobre el que nadie decidió nada.
  */
 class ChangeReceptionStage
 {
@@ -137,6 +141,18 @@ class ChangeReceptionStage
             ]);
         }
 
+        if ($reception->isUnrepairable()) {
+            throw ValidationException::withMessages([
+                'repair_requested_at' => 'Esta pieza ya se marcó sin solución.',
+            ]);
+        }
+
+        if ($reception->repairFailed()) {
+            throw ValidationException::withMessages([
+                'repair_requested_at' => 'La reparación ya se intentó y no dio resultado: sólo queda marcarla sin solución.',
+            ]);
+        }
+
         if ($reception->repairWasRequested()) {
             throw ValidationException::withMessages([
                 'repair_requested_at' => 'Ya se le pidió al cliente que autorice esta reparación.',
@@ -158,36 +174,40 @@ class ChangeReceptionStage
             new: ['notes' => $notes],
         );
 
-        $this->notifyClientOfRepairRequest($reception);
+        $this->notifyOrganization($reception, new RepairAuthorizationRequested($reception));
 
         return $reception;
     }
 
     /**
-     * Avisa a quien puede contestar.
+     * Avisa a toda la organización dueña del equipo.
      *
-     * Sin esto la consulta se pierde: el equipo queda inmovilizado esperando
-     * una respuesta que nadie sabe que tiene que dar. Se avisa sólo a los
-     * usuarios que efectivamente pueden decidir —el rol de consulta no
-     * puede—, para que el aviso no llegue a quien no tiene el botón.
+     * El negocio pidió que llegue a todos sus correos, no sólo a quien puede
+     * contestar: el de consulta audita el avance, y el correo de contacto de
+     * la ficha suele ser el de compras, que es quien aprueba el gasto. Ese
+     * correo no es un usuario, así que va por ruta aparte y sólo si no
+     * coincide con uno que ya lo recibe.
      *
-     * Va fuera de la transacción a propósito: si el correo falla, la consulta
-     * igual quedó registrada. Perder el aviso es molesto; perder el hito
+     * Va fuera de la transacción a propósito: si el correo falla, el hito
+     * igual quedó registrado. Perder el aviso es molesto; perder el hito
      * sería peor.
      */
-    private function notifyClientOfRepairRequest(Reception $reception): void
+    private function notifyOrganization(Reception $reception, Notification $notification): void
     {
-        $recipients = User::withoutGlobalScope('organization')
+        $users = User::withoutGlobalScope('organization')
             ->where('organization_id', $reception->organization_id)
             ->where('is_active', true)
-            ->get()
-            ->filter(fn (User $u) => $u->can(Permissions::RECEPTIONS_AUTHORIZE_REPAIR));
+            ->get();
 
-        if ($recipients->isEmpty()) {
-            return;
+        if ($users->isNotEmpty()) {
+            Notifier::send($users, $notification);
         }
 
-        Notification::send($recipients, new RepairAuthorizationRequested($reception));
+        $contact = Organization::query()->whereKey($reception->organization_id)->value('contact_email');
+
+        if (filled($contact) && ! $users->contains(fn (User $u) => strcasecmp($u->email, $contact) === 0)) {
+            Notifier::route('mail', $contact)->notify($notification);
+        }
     }
 
     /**
@@ -275,11 +295,14 @@ class ChangeReceptionStage
     }
 
     /**
-     * El taller empieza la reparación que el cliente autorizó.
+     * El taller inicia la reparación que el cliente autorizó.
      *
      * Se mantiene como paso propio y no se dispara solo al autorizar, porque
      * entre una cosa y la otra suele pasar tiempo: saber cuánto es justamente
      * lo que permite medir la demora del taller aparte de la del cliente.
+     * Una vez iniciada, la reparación vuelve a En proceso y se dictamina
+     * como cualquier trabajo: aprobada (`markRepaired`) o rechazada
+     * (`failRepair`).
      */
     public function sendToRepair(Reception $reception): Reception
     {
@@ -319,12 +342,18 @@ class ChangeReceptionStage
         return $reception;
     }
 
-    /** Reparación terminada: el equipo vuelve a poder despacharse. */
+    /** Reparación aprobada: el equipo vuelve a poder despacharse. */
     public function markRepaired(Reception $reception): Reception
     {
         if ($reception->repair_started_at === null) {
             throw ValidationException::withMessages([
                 'repaired_at' => 'Esta recepción no está en reparación.',
+            ]);
+        }
+
+        if ($reception->repairFailed()) {
+            throw ValidationException::withMessages([
+                'repaired_at' => 'La reparación se rechazó: ya no puede darse por terminada.',
             ]);
         }
 
@@ -350,6 +379,96 @@ class ChangeReceptionStage
         return $reception;
     }
 
+    /**
+     * La reparación no dio resultado.
+     *
+     * Vuelve a Rechazadas, pero no a empezar de nuevo: el negocio definió que
+     * se repara una sola vez, así que la única salida que le queda es "sin
+     * solución". El motivo es obligatorio por lo mismo que en el primer
+     * rechazo: es lo que después explica por qué el equipo volvió así.
+     */
+    public function failRepair(Reception $reception, ?string $notes): Reception
+    {
+        if ($reception->stage() !== 'in_repair') {
+            throw ValidationException::withMessages([
+                'repair_failed_at' => 'Sólo se rechaza una reparación en curso.',
+            ]);
+        }
+
+        if (blank($notes)) {
+            throw ValidationException::withMessages([
+                'repair_failure_notes' => 'Indique por qué se rechaza la reparación.',
+            ]);
+        }
+
+        DB::transaction(function () use ($reception, $notes) {
+            $reception->forceFill([
+                'repair_failed_at' => now(),
+                'repair_failed_by' => Auth::id(),
+                'repair_failure_notes' => $notes,
+            ])->save();
+        });
+
+        ActivityLogger::log(
+            action: 'reception.repair_failed',
+            subject: $reception,
+            description: 'Se rechazó la reparación',
+            new: ['notes' => $notes],
+        );
+
+        return $reception;
+    }
+
+    /**
+     * El taller determina que la pieza no tiene solución.
+     *
+     * Es la salida que el negocio pidió para Rechazadas: no hace falta
+     * consultarle al cliente si no hay nada que ofrecerle. Sólo vale desde
+     * ahí —el rechazo original o una reparación fallida—; lo que está
+     * esperando al cliente o ya autorizado sigue su propio curso.
+     *
+     * Cambia la aptitud igual que cuando el cliente no autoriza: el equipo
+     * vuelve sin arreglar, así que no puede seguir figurando certificado. Se
+     * le avisa a la organización porque lo pierde sin haberlo decidido.
+     */
+    public function markUnrepairable(Reception $reception, ?string $notes): Reception
+    {
+        if (! in_array($reception->stage(), ['rejected', 'repair_failed'], true)) {
+            throw ValidationException::withMessages([
+                'unrepairable_at' => 'Sólo se marca sin solución una pieza rechazada que no esté esperando al cliente.',
+            ]);
+        }
+
+        if (blank($notes)) {
+            throw ValidationException::withMessages([
+                'unrepairable_notes' => 'Indique por qué no tiene solución.',
+            ]);
+        }
+
+        DB::transaction(function () use ($reception, $notes) {
+            $reception->forceFill([
+                'unrepairable_at' => now(),
+                'unrepairable_by' => Auth::id(),
+                'unrepairable_notes' => $notes,
+            ])->save();
+
+            if ($reception->asset !== null) {
+                ($this->recalculate)($reception->asset);
+            }
+        });
+
+        ActivityLogger::log(
+            action: 'reception.unrepairable',
+            subject: $reception,
+            description: 'Se marcó sin solución',
+            new: ['notes' => $notes],
+        );
+
+        $this->notifyOrganization($reception, new ReceptionDeclaredUnrepairable($reception));
+
+        return $reception;
+    }
+
     public function dispatch(Reception $reception, ?string $note = null): Reception
     {
         if ($reception->isDispatched()) {
@@ -367,7 +486,8 @@ class ChangeReceptionStage
             throw ValidationException::withMessages([
                 'dispatched_at' => match (true) {
                     ! $reception->wasRejected() => 'La pieza debe tener dictamen antes de despacharse.',
-                    ! $reception->repairWasRequested() => 'La pieza fue rechazada: consulte al cliente si autoriza la reparación.',
+                    $reception->repairFailed() => 'La reparación no dio resultado: márquela sin solución para devolverla.',
+                    ! $reception->repairWasRequested() => 'La pieza fue rechazada: consulte al cliente o márquela sin solución.',
                     $reception->repairWasApproved() => 'El cliente autorizó la reparación: debe completarse antes de despachar.',
                     default => 'Falta que el cliente conteste si autoriza la reparación.',
                 },
