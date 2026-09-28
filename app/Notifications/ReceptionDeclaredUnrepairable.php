@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Reception;
+use App\Notifications\Concerns\WritesDatabaseImmediately;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\AnonymousNotifiable;
@@ -18,7 +19,7 @@ use Illuminate\Notifications\Notification;
  */
 class ReceptionDeclaredUnrepairable extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, WritesDatabaseImmediately;
 
     public function __construct(private Reception $reception) {}
 

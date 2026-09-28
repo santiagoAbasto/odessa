@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\AccountRequest;
+use App\Notifications\Concerns\WritesDatabaseImmediately;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -19,7 +20,7 @@ use Illuminate\Notifications\Notification;
  */
 class AccountRequestReceived extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, WritesDatabaseImmediately;
 
     public function __construct(private AccountRequest $accountRequest) {}
 

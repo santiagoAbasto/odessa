@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\WritesDatabaseImmediately;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -20,7 +21,7 @@ use Illuminate\Support\Collection;
  */
 class RecertificationDigest extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, WritesDatabaseImmediately;
 
     /**
      * @param  Collection<string, array{due: int, missed: int, assets: Collection}>  $byOrganization

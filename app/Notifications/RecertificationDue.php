@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Asset;
 use App\Support\RecertificationWindow;
+use App\Notifications\Concerns\WritesDatabaseImmediately;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -26,7 +27,7 @@ use Illuminate\Support\Collection;
  */
 class RecertificationDue extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, WritesDatabaseImmediately;
 
     /**
      * @param  Collection<int, Asset>  $dueSoon   Todavía a tiempo de despachar.

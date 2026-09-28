@@ -142,15 +142,12 @@ en `storage/logs/` en lugar de perderse en silencio.
 
 ---
 
-## 5. Certificado SSL — PENDIENTE
+## 5. Certificado SSL — RESUELTO
 
-`sistema.odessaoil.com` presenta el certificado por defecto del servidor:
-autofirmado, emitido para `default`, vencido el 15/09/2018. El panel figura
-con "SSL Activado" pero la emisión de Let's Encrypt nunca se ejecutó.
+Verificado el 28/09/2026: certificado de Let's Encrypt para
+`sistema.odessaoil.com`, válido del 01/09/2026 al 30/11/2026. Se renueva solo.
 
-El navegador marca el sitio como **No seguro**. Reclamado a Soporte.
-
-Verificar cuando digan que está resuelto:
+Para volver a verificarlo:
 
 ```bash
 echo | openssl s_client -connect sistema.odessaoil.com:443 \
@@ -167,12 +164,63 @@ Tiene que decir `CN=sistema.odessaoil.com`, emitido por Let's Encrypt.
 
 ## 6. Tarea programada — PENDIENTE
 
-Los avisos de recertificación dependen del planificador. Sin esto, **no se
-envía ningún aviso**. Configurar en el panel, cada minuto:
+Sin esta tarea **no sale ningún correo de aviso**. No hay un proceso
+escuchando la cola: cada minuto la tarea corre el planificador y éste vacía la
+cola de correos (`queue:work --stop-when-empty`). También genera los avisos de
+recertificación. Se carga en el panel, en Cloud Hosting → Tareas programadas,
+para que corra cada minuto:
 
 ```
 cd /www/odessaoil.com/sistema.odessaoil.com && php artisan schedule:run >> /dev/null 2>&1
 ```
+
+Lo que **no** depende de la tarea:
+- El aviso de la campana: se escribe en el momento, aunque la tarea falte.
+- El correo de «definí tu contraseña» y el de «olvidé mi contraseña»: salen
+  en el momento, si el correo está configurado.
+
+Para ver si quedaron correos esperando en la cola (tiene que tender a 0 una
+vez que la tarea está cargada):
+
+```bash
+php artisan tinker --execute='echo DB::table("jobs")->count().PHP_EOL;'
+```
+
+Ojo: la primera vez que corra, manda de una vez todo lo que se haya acumulado.
+
+---
+
+## 7. Configurar el correo, paso a paso
+
+1. **Salida SMTP.** Ver el punto 4: con los puertos cerrados, crear una casilla
+   no alcanza. Hace falta **CloudSMTP** (en Correo Electrónico, la tarjeta
+   «Tipo de servidor» → «Activa ahora tu CloudSMTP») o un proveedor por API.
+   Pedirle a LatinCloud el servidor saliente y el puerto.
+2. **Casilla remitente**, por ejemplo `noreply@odessaoil.com`, en Correo
+   Electrónico → Usuarios de correo → Agregar.
+3. **Probar la conexión desde el servidor** antes de tocar el `.env`
+   (reemplazar el servidor y el puerto):
+
+   ```bash
+   php -r '$s=@fsockopen("SERVIDOR_SALIENTE",587,$e,$m,10); echo $s ? "ABIERTO\n" : "CERRADO: $m\n";'
+   ```
+
+   Si dice CERRADO, el problema sigue siendo de red y no tiene sentido
+   configurar nada todavía.
+4. **Completar el `.env`** con `nano .env`. La clave se escribe ahí, nunca por
+   el chat:
+   `MAIL_MAILER=smtp`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`,
+   `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`. Para el puerto 587 va
+   `MAIL_SCHEME=smtp`; para el 465, `MAIL_SCHEME=smtps`.
+5. `php artisan config:cache` y **reiniciar PHP-FPM** (punto 2).
+6. **Prueba de envío** (reemplazar el correo):
+
+   ```bash
+   php artisan tinker --execute='Illuminate\Support\Facades\Mail::raw("Prueba de envío del sistema", fn ($m) => $m->to("TU@CORREO")->subject("Prueba Odessa"));'
+   ```
+
+   Revisar también la carpeta de spam. Si llega, los usuarios ya creados
+   pueden pedir su enlace desde «¿Olvidó su contraseña?».
 
 ---
 

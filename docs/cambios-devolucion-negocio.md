@@ -326,3 +326,11 @@ Al probar en producción, el negocio marcó que faltaba el paso anterior a En ta
 ### De paso
 
 El botón «Registrar respuesta» aparecía en todas las filas cuando entraba el superadministrador, porque atraviesa las verificaciones de permisos. Ahora sólo aparece en las recepciones que esperan la respuesta del cliente.
+
+## 7. Avisos que quedaban trabados en la cola (28/09/2026)
+
+Revisando el correo encontramos que en producción los avisos se encolaban y nada procesaba la cola: el hosting no tiene un proceso escuchándola y la tarea programada todavía no está cargada. Consecuencias: la campana quedaba vacía y, aunque se arreglara el correo, los mails de aviso no iban a salir.
+
+- **La campana ya no depende de la cola.** El aviso dentro del sistema se escribe en el momento.
+- **Los correos de aviso salen con la tarea programada**, que ahora también vacía la cola cada minuto. Hay que cargarla en el panel (ver `deploy/elserver/NOTAS-SERVIDOR.md`, punto 6).
+- El correo de «definí tu contraseña» no pasa por la cola: sale apenas el correo del servidor funcione.

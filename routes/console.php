@@ -14,6 +14,18 @@ Schedule::command('auth:clear-resets')->dailyAt('02:10');
 Schedule::command('queue:prune-failed --hours=168')->dailyAt('02:20');
 
 /*
+ * Correos encolados (avisos de reparación, recertificación, solicitudes).
+ *
+ * En el hosting no hay un proceso escuchando la cola: la vacía la tarea
+ * programada, cada minuto, y termina cuando no queda nada. Sin la tarea
+ * cargada en el panel, los correos se acumulan en la tabla `jobs`. El aviso
+ * de la campana no depende de esto: se escribe en el momento.
+ */
+Schedule::command('queue:work --stop-when-empty --tries=3 --max-time=50')
+    ->everyMinute()
+    ->withoutOverlapping();
+
+/*
  * Avisos de recertificación.
  *
  * A diario y temprano, para que el aviso esté en la bandeja del cliente al
