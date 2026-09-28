@@ -329,7 +329,11 @@ class DemoDataSeeder extends Seeder
             $stage = fake()->randomElement(['pending', 'pending', 'released', 'dispatched', 'dispatched']);
 
             if ($stage !== 'pending') {
-                $reception->forceFill(['released_at' => $receivedAt->copy()->addDays(4)])->save();
+                $reception->forceFill([
+                    'started_at' => $receivedAt->copy()->addDays(2),
+                    'released_at' => $receivedAt->copy()->addDays(4),
+                    'outcome' => Reception::OUTCOME_APPROVED,
+                ])->save();
             }
 
             if ($stage === 'dispatched') {

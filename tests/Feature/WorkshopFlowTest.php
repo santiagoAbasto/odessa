@@ -143,6 +143,12 @@ class WorkshopFlowTest extends TestCase
                 $etapa,
             );
         }
+
+        // Liberada sin dictamen registrado: en SQL, NULL != 'rejected' no es
+        // verdadero, y la lista la dejaba afuera aunque se pudiera despachar.
+        $sinDictamen = $this->recepcion(['started_at' => now()->subDay(), 'released_at' => now(), 'outcome' => null]);
+        $this->assertTrue($sinDictamen->isDispatchable());
+        $this->assertTrue(Reception::query()->readyToDispatch()->whereKey($sinDictamen->getKey())->exists());
     }
 
     // --- Acciones ------------------------------------------------------------

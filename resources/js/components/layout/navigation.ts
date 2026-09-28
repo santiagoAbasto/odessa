@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   Building2,
   ClipboardList,
   FileSearch,
@@ -75,6 +76,13 @@ export const navigation: NavGroup[] = [
         icon: Truck,
         permission: 'shipments.view',
         match: ['/envios'],
+      },
+      {
+        label: 'Reportes',
+        href: '/reportes',
+        icon: BarChart3,
+        permission: 'reports.view',
+        match: ['/reportes'],
       },
     ],
   },

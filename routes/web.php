@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\InspectionReportController;
+use App\Http\Controllers\OrganizationReportController;
 use App\Http\Controllers\PublicSiteController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\Workshop\ReceptionController;
@@ -89,6 +90,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/sets', [AssetSetController::class, 'index'])->name('sets.index');
         Route::get('/sets/{set}', [AssetSetController::class, 'show'])->name('sets.show');
     });
+
+    // --- Reporte por organización: status, vencimientos y trabajos --------
+    Route::get('/reportes', [OrganizationReportController::class, 'index'])
+        ->middleware('permission:'.Permissions::REPORTS_VIEW)
+        ->name('org_reports.index');
+    Route::get('/reportes/exportar', [OrganizationReportController::class, 'export'])
+        ->middleware('permission:'.Permissions::REPORTS_EXPORT)
+        ->name('org_reports.export');
 
     // --- FMR -------------------------------------------------------------
     Route::middleware('permission:'.Permissions::REPORTS_VIEW)->group(function () {

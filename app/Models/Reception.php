@@ -492,7 +492,11 @@ class Reception extends Model
                 ->orWhereNotNull('unrepairable_at')
                 ->orWhere(fn (Builder $i) => $i
                     ->whereNotNull('released_at')
-                    ->where('outcome', '!=', self::OUTCOME_REJECTED)));
+                    // En SQL, NULL != 'rejected' no es verdadero: sin esto una
+                    // liberada sin dictamen quedaría fuera, y en PHP no.
+                    ->where(fn (Builder $o) => $o
+                        ->whereNull('outcome')
+                        ->orWhere('outcome', '!=', self::OUTCOME_REJECTED))));
     }
 
     public function scopeOverdue(Builder $query): Builder

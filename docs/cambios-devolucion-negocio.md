@@ -281,3 +281,26 @@ Corregido y cubierto por prueba. **En producción hay que revisar** los usuarios
 | Permisos adicionales por usuario cliente | Implementado y probado |
 | Alta de usuario cliente en la organización correcta | Corregido y probado |
 | Qué distingue al jefe del operador | Pendiente del negocio |
+
+## 4. Reportes por organización
+
+Lo pedido: «informes status, vencimiento y trabajos por organización». El negocio respondió «las dos cosas» a las dos preguntas: en pantalla **y** en Excel, y los trabajos incluyen recepciones **e** informes FMR emitidos.
+
+### Decisiones
+
+- **Pantalla nueva «Reportes»** en el menú Operación. Se llama así y no «Informes» para no confundirla con los FMR. La ven los cuatro roles: un cliente ve lo suyo, el personal de Odessa elige la organización o ve todas.
+- **Status:** equipos por estado de aptitud.
+- **Vencimientos:** cuántos vencen en 30, 60 y 90 días, cuántos ya están **fuera de tiempo para mandarlos** (todavía certificados, pero sin margen para recertificarse), y el listado ordenado por la fecha límite de envío.
+- **Trabajos:** lo que hay ahora en el taller por etapa, y en el período elegido: recibidos, despachados, devueltos sin reparar y FMR emitidos, con su detalle. *Supuesto*: el período por defecto son los últimos 90 días.
+- **Excel:** un solo archivo con cuatro hojas: Resumen, Vencimientos, Trabajos y FMR emitidos. Sale de las mismas consultas que la pantalla, así que nunca dicen cosas distintas.
+
+### De paso
+
+La lista «Listas para despachar» dejaba afuera las recepciones liberadas sin dictamen registrado, porque en SQL comparar un vacío con `!=` no da verdadero. En producción no había casos, porque la migración de agosto completó el histórico, pero sí en los datos de demostración, y la lista y el botón de despachar podían contradecirse. Corregido, junto con el sembrado de demostración.
+
+### Estado
+
+| Elemento | Estado |
+|---|---|
+| Reporte en pantalla (status, vencimientos, trabajos) | Implementado y probado |
+| Excel con cuatro hojas | Implementado y probado |

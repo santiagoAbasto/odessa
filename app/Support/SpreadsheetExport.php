@@ -69,6 +69,73 @@ class SpreadsheetExport
     }
 
     /**
+     * Varias hojas en un mismo archivo: un reporte con secciones.
+     *
+     * Sin la extensión `zip` no hay hojas posibles, así que el CSV lleva las
+     * secciones una tras otra, cada una con su título, separadas por una
+     * fila en blanco.
+     *
+     * @param  list<array{name: string, headings: array<int, string>, rows: Closure(): iterable<array<int, mixed>>}>  $sheets
+     */
+    public static function downloadSheets(string $filename, array $sheets, ?bool $asXlsx = null): StreamedResponse
+    {
+        $xlsx = $asXlsx ?? self::supportsXlsx();
+        $filename = self::withExtension($filename, $xlsx ? 'xlsx' : 'csv');
+
+        $callback = function () use ($xlsx, $sheets) {
+            if ($xlsx) {
+                $writer = new XlsxWriter(tap(new XlsxOptions, fn ($o) => $o->DEFAULT_COLUMN_WIDTH = 20));
+                $writer->openToFile('php://output');
+
+                foreach ($sheets as $i => $sheet) {
+                    if ($i > 0) {
+                        $writer->addNewSheetAndMakeItCurrent();
+                    }
+
+                    // Excel limita el nombre de la hoja a 31 caracteres.
+                    $writer->getCurrentSheet()->setName(mb_substr($sheet['name'], 0, 31));
+                    $writer->getCurrentSheet()->setSheetView((new SheetView)->setFreezeRow(2));
+                    $writer->addRow(Row::fromValues($sheet['headings'], self::headingStyle()));
+
+                    foreach ($sheet['rows']() as $row) {
+                        $writer->addRow(Row::fromValues($row));
+                    }
+                }
+
+                $writer->close();
+
+                return;
+            }
+
+            $writer = new CsvWriter(tap(new CsvOptions, fn ($o) => $o->SHOULD_ADD_BOM = true));
+            $writer->openToFile('php://output');
+
+            foreach ($sheets as $i => $sheet) {
+                if ($i > 0) {
+                    $writer->addRow(Row::fromValues([]));
+                }
+
+                $writer->addRow(Row::fromValues([$sheet['name']]));
+                $writer->addRow(Row::fromValues($sheet['headings']));
+
+                foreach ($sheet['rows']() as $row) {
+                    $writer->addRow(Row::fromValues($row));
+                }
+            }
+
+            $writer->close();
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => $xlsx
+                ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                : 'text/csv; charset=UTF-8',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            'Pragma' => 'no-cache',
+        ]);
+    }
+
+    /**
      * @param  array<int, string>  $headings
      * @param  Closure(): iterable<array<int, mixed>>  $rows
      */
