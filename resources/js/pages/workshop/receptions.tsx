@@ -26,12 +26,14 @@ import { Input, Select, Textarea } from '@/components/ui/input';
 import { Panel } from '@/components/ui/panel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DirectReceptionDialog } from '@/components/workshop/direct-reception-dialog';
+import { ReceiveShipmentDialog, type ArrivingItem } from '@/components/workshop/receive-shipment-dialog';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/cn';
 import { formatDate, formatNumber } from '@/lib/format';
 import type { Paginated, ReceptionRow, SelectOption, SortState, Tone } from '@/types';
 
 interface StageCounts {
+  incoming: number;
   pending: number;
   in_progress: number;
   rejected: number;
@@ -60,6 +62,9 @@ interface StageCounts {
   puede despacharse, que es lo único que importa a la hora de cargar el camión.
 */
 const stageTabs = [
+  // El paso anterior a En taller: lo que los clientes remitieron y falta
+  // controlar al llegar.
+  { value: 'incoming', label: 'Pendiente de recepción' },
   { value: 'in_workshop', label: 'En taller' },
   { value: 'pending', label: 'Pendientes' },
   { value: 'in_progress', label: 'En proceso' },
@@ -82,6 +87,7 @@ export default function Receptions({
   isClient,
   can,
   organizationOptions,
+  incoming,
 }: {
   receptions: Paginated<ReceptionRow>;
   filters: Record<string, string | undefined>;
@@ -96,6 +102,8 @@ export default function Receptions({
   isClient: boolean;
   can: { create: boolean };
   organizationOptions: SelectOption[];
+  /** Envíos remitidos que esperan recepción. Sólo viene en esa pestaña. */
+  incoming: IncomingShipment[];
 }) {
   const [ingresando, setIngresando] = useState(false);
   const filterDefinitions = useMemo<FilterDefinition[]>(
@@ -473,37 +481,127 @@ export default function Receptions({
         </div>
       )}
 
+      {activeStage === 'incoming' ? (
+        <IncomingShipments shipments={incoming} />
+      ) : (
+        <Panel>
+          <DataTable
+            columns={columns}
+            page={receptions}
+            sort={sort}
+            baseUrl="/taller/recepciones"
+            query={filters}
+            storageKey="receptions"
+            toolbar={
+              <FilterBar
+                baseUrl="/taller/recepciones"
+                filters={filters}
+                definitions={filterDefinitions}
+                searchPlaceholder="Pieza, serie o código…"
+              />
+            }
+            emptyState={
+              <EmptyState
+                icon={Warehouse}
+                title="Sin recepciones"
+                description="No hay piezas en esta etapa con los filtros aplicados."
+                action={
+                  <Button asChild variant="secondary" size="sm">
+                    <Link href="/taller/recepciones">Ver todas</Link>
+                  </Button>
+                }
+              />
+            }
+          />
+        </Panel>
+      )}
+    </AppLayout>
+  );
+}
+
+interface IncomingShipment {
+  id: string;
+  reference: string;
+  clientReference: string | null;
+  organization: string | null;
+  expectedAt: string | null;
+  submittedAt: string | null;
+  carrier: string | null;
+  /** Qué pide el cliente, en su propia descripción del envío. */
+  notes: string | null;
+  canReceive: boolean;
+  items: ArrivingItem[];
+}
+
+/**
+ * "Pendiente de recepción": los envíos que los clientes remitieron y todavía
+ * no llegaron —o llegaron y falta controlarlos—. Es el paso anterior a En
+ * taller: cada uno se abre, se controla pieza por pieza contra lo que pide
+ * el cliente, y recién ahí sus equipos entran a Pendientes.
+ */
+function IncomingShipments({ shipments }: { shipments: IncomingShipment[] }) {
+  if (shipments.length === 0) {
+    return (
       <Panel>
-        <DataTable
-          columns={columns}
-          page={receptions}
-          sort={sort}
-          baseUrl="/taller/recepciones"
-          query={filters}
-          storageKey="receptions"
-          toolbar={
-            <FilterBar
-              baseUrl="/taller/recepciones"
-              filters={filters}
-              definitions={filterDefinitions}
-              searchPlaceholder="Pieza, serie o código…"
-            />
-          }
-          emptyState={
-            <EmptyState
-              icon={Warehouse}
-              title="Sin recepciones"
-              description="No hay piezas en esta etapa con los filtros aplicados."
-              action={
-                <Button asChild variant="secondary" size="sm">
-                  <Link href="/taller/recepciones">Ver todas</Link>
-                </Button>
-              }
-            />
-          }
+        <EmptyState
+          icon={Truck}
+          title="Sin envíos pendientes de recepción"
+          description="Cuando un cliente remita un envío, aparece acá para controlarlo al llegar."
         />
       </Panel>
-    </AppLayout>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {shipments.map((shipment) => (
+        <Panel key={shipment.id}>
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border-subtle)] px-4 py-3">
+            <div className="min-w-0">
+              <p className="flex flex-wrap items-center gap-2">
+                <Link
+                  href={`/envios/${shipment.id}`}
+                  className="font-mono text-[13px] font-semibold text-[var(--text-accent)] hover:underline"
+                >
+                  {shipment.reference}
+                </Link>
+                {shipment.organization && (
+                  <span className="text-[13px] font-medium">{shipment.organization}</span>
+                )}
+                <Badge tone="info">Pendiente de recepción</Badge>
+              </p>
+              <p className="mt-1 text-[11.5px] text-[var(--text-muted)]">
+                {shipment.items.length} {shipment.items.length === 1 ? 'equipo' : 'equipos'} · llegada estimada{' '}
+                {formatDate(shipment.expectedAt)}
+                {shipment.clientReference ? ` · remito ${shipment.clientReference}` : ''}
+                {shipment.carrier ? ` · ${shipment.carrier}` : ''}
+              </p>
+              {shipment.notes && (
+                <p className="mt-1.5 text-[12.5px] text-[var(--text-secondary)]">
+                  <span className="font-medium text-[var(--text-primary)]">Qué pide:</span> {shipment.notes}
+                </p>
+              )}
+            </div>
+            {shipment.canReceive && (
+              <ReceiveShipmentDialog shipmentId={shipment.id} reference={shipment.reference} items={shipment.items} />
+            )}
+          </div>
+
+          <ul className="divide-y divide-[var(--border-subtle)]">
+            {shipment.items.map((item) => (
+              <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-[12.5px]">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  {item.isUrgent && <Zap className="size-3.5 text-[var(--tone-danger-fg)]" aria-label="Urgente" />}
+                  <span className="font-medium">{item.name}</span>
+                  <span className="font-mono text-[11px] text-[var(--text-muted)]">{item.serial ?? 'sin serie'}</span>
+                </span>
+                <RequestedLine requested={item.operations} special={item.specialOperation} />
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      ))}
+    </div>
   );
 }
 
@@ -523,6 +621,7 @@ function StageSummary({ counts }: { counts?: StageCounts }) {
   if (!counts) return null;
 
   const items = [
+    { label: 'Pendiente de recepción', value: counts.incoming, href: '?stage=incoming', tone: 'warning' as Tone },
     { label: 'Pendientes', value: counts.pending, href: '?stage=pending' },
     { label: 'En proceso', value: counts.in_progress, href: '?stage=in_progress' },
     { label: 'Fuera de plazo', value: counts.overdue, href: '?stage=pending&overdue=1', tone: 'danger' as Tone },

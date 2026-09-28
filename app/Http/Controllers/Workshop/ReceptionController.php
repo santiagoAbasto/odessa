@@ -10,12 +10,14 @@ use App\Http\Requests\RecordRepairDecisionRequest;
 use App\Models\Asset;
 use App\Models\Organization;
 use App\Models\Reception;
+use App\Models\Shipment;
 use App\Support\TableQuery;
 use Illuminate\Validation\Rule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -56,6 +58,9 @@ class ReceptionController extends Controller
             ->select('receptions.*');
 
         match ($filters['stage'] ?? 'in_workshop') {
+            // Todavía no hay recepciones: lo que se lista son los envíos
+            // remitidos que esperan que el taller les dé recepción.
+            'incoming' => $query->whereRaw('1 = 0'),
             'dispatched' => $query->dispatched(),
             'ready' => $query->readyToDispatch(),
             'rejected' => $query->rejected(),
@@ -88,14 +93,7 @@ class ReceptionController extends Controller
             ->paginate(TableQuery::perPage($request))
             ->withQueryString();
 
-        // Nombre de cada operación para cada empresa de la página, en una sola
-        // consulta: la misma operación puede llamarse distinto en cada cliente.
-        $nombres = DB::table('organization_service')
-            ->whereIn('organization_id', $page->getCollection()->pluck('organization_id')->unique())
-            ->whereNotNull('name')
-            ->get(['organization_id', 'service_id', 'name'])
-            ->groupBy('organization_id')
-            ->map(fn ($filas) => $filas->pluck('name', 'service_id')->all());
+        $nombres = $this->clientNames($page->getCollection()->pluck('organization_id'));
 
         $receptions = $page->through(fn (Reception $r) => [
                 'id' => $r->public_id,
@@ -159,8 +157,10 @@ class ReceptionController extends Controller
                         'requestRepair' => $stage === 'rejected' && $release,
                         'markUnrepairable' => in_array($stage, ['rejected', 'repair_failed'], true) && $release,
                         // Contestar la consulta. Es lo único que un usuario
-                        // cliente puede hacer sobre una recepción.
-                        'decideRepair' => $user->can('authorizeRepair', $r),
+                        // cliente puede hacer sobre una recepción. La etapa se
+                        // comprueba acá además de en la Policy: el superadmin
+                        // la atraviesa y veía el botón en todas las filas.
+                        'decideRepair' => $stage === 'awaiting_client' && $user->can('authorizeRepair', $r),
                         'sendToRepair' => $stage === 'repair_authorized' && $release,
                         // La reparación en curso se dictamina como cualquier trabajo.
                         'markRepaired' => $stage === 'in_repair' && $release,
@@ -191,7 +191,73 @@ class ReceptionController extends Controller
                 ->map(fn (Organization $o) => ['value' => $o->public_id, 'label' => $o->name])
                 ->all(),
             'counts' => Inertia::defer(fn () => $this->stageCounts()),
+            'incoming' => ($filters['stage'] ?? null) === 'incoming' ? $this->incoming($user) : [],
         ]);
+    }
+
+    /**
+     * Envíos remitidos por los clientes que esperan que el taller les dé
+     * recepción. Cada uno trae sus equipos con lo que pide el cliente, que es
+     * contra lo que el taller controla lo que llegó.
+     *
+     * Van todos, sin paginar: son los que están en camino, no un histórico.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function incoming($user): array
+    {
+        $envios = Shipment::query()
+            ->where('status', Shipment::STATUS_SUBMITTED)
+            ->with([
+                'organization:id,name',
+                'items.asset:id,public_id,description,workshop_description,serial_number,code,catalog_item_id',
+                'items.asset.catalogItem:id,description',
+                'items.operations:id,code,name',
+            ])
+            ->orderBy('expected_at')
+            ->orderBy('submitted_at')
+            ->get();
+
+        $nombres = $this->clientNames($envios->pluck('organization_id'));
+        $conCodigo = ! $user->isClientUser();
+
+        return $envios->map(fn (Shipment $s) => [
+            'id' => $s->public_id,
+            'reference' => $s->reference,
+            'clientReference' => $s->client_reference,
+            'organization' => $s->organization?->name,
+            'expectedAt' => $s->expected_at?->toDateString(),
+            'submittedAt' => $s->submitted_at?->toIso8601String(),
+            'carrier' => $s->carrier,
+            'notes' => $s->notes,
+            'canReceive' => $user->can('review', $s),
+            'items' => $s->items->map(fn ($item) => [
+                'id' => $item->id,
+                'name' => $item->displayName(),
+                'serial' => $item->displaySerial(),
+                'isRegistered' => $item->isRegistered(),
+                'isUrgent' => $item->is_urgent,
+                'notes' => $item->notes,
+                'operations' => $item->requestedNames($nombres->get($s->organization_id, []), $conCodigo),
+                'specialOperation' => $item->special_operation,
+            ])->all(),
+        ])->all();
+    }
+
+    /**
+     * Nombre de cada operación para cada empresa, en una sola consulta: la
+     * misma operación puede llamarse distinto en cada cliente.
+     *
+     * @return Collection<int, array<int, string>>
+     */
+    private function clientNames(Collection $organizationIds): Collection
+    {
+        return DB::table('organization_service')
+            ->whereIn('organization_id', $organizationIds->unique())
+            ->whereNotNull('name')
+            ->get(['organization_id', 'service_id', 'name'])
+            ->groupBy('organization_id')
+            ->map(fn ($filas) => $filas->pluck('name', 'service_id')->all());
     }
 
     /**
@@ -398,6 +464,7 @@ class ReceptionController extends Controller
     private function stageCounts(): array
     {
         return [
+            'incoming' => Shipment::query()->where('status', Shipment::STATUS_SUBMITTED)->count(),
             'pending' => Reception::query()->pending()->count(),
             'in_progress' => Reception::query()->inProgress()->count(),
             'rejected' => Reception::query()->rejected()->count(),

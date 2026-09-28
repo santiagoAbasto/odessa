@@ -345,9 +345,27 @@ class ShipmentController extends Controller
             'decision' => ['required', Rule::in(['authorize', 'reject'])],
             'review_notes' => ['nullable', 'string', 'max:500'],
             'promised_at' => ['nullable', 'date', 'after_or_equal:today'],
+            'arrived' => ['array'],
+            'arrived.*' => ['integer'],
         ], [
             'decision.required' => 'Indique si le da recepción o lo rechaza.',
         ]);
+
+        /*
+         * Dar recepción es certificar que llegó lo que el cliente declaró:
+         * el taller confirma equipo por equipo. Si falta alguno o llegó mal,
+         * el camino es rechazar el envío con el motivo, no recibirlo igual.
+         */
+        if ($data['decision'] === 'authorize') {
+            $declarados = $shipment->items()->pluck('id')->sort()->values()->all();
+            $confirmados = collect($data['arrived'] ?? [])->map(fn ($id) => (int) $id)->unique()->sort()->values()->all();
+
+            if ($declarados !== $confirmados) {
+                return back()->withErrors([
+                    'arrived' => 'Confirme que llegó cada equipo declarado. Si falta alguno o llegó mal, rechace el envío indicando el motivo.',
+                ]);
+            }
+        }
 
         if ($data['decision'] === 'reject') {
             if (blank($data['review_notes'] ?? null)) {

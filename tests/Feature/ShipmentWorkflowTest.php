@@ -40,6 +40,12 @@ class ShipmentWorkflowTest extends TestCase
         return $shipment;
     }
 
+    /** Dar recepción confirmando que llegó cada equipo declarado. */
+    private function recibirTodo(Shipment $shipment, array $extra = []): array
+    {
+        return ['decision' => 'authorize', 'arrived' => $shipment->items()->pluck('id')->all(), ...$extra];
+    }
+
     // --- Creación por el cliente -----------------------------------------
 
     /** Datos mínimos que el operador debe declarar al crear un envío. */
@@ -190,7 +196,7 @@ class ShipmentWorkflowTest extends TestCase
         $shipment->items()->create(['asset_id' => $this->asset($organizacion)->getKey()]);
 
         $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP))
-            ->post("/envios/{$shipment->public_id}/revisar", ['decision' => 'authorize'])
+            ->post("/envios/{$shipment->public_id}/revisar", $this->recibirTodo($shipment))
             ->assertRedirect();
 
         $this->assertSame(Shipment::STATUS_AUTHORIZED, $shipment->fresh()->status);
@@ -209,7 +215,7 @@ class ShipmentWorkflowTest extends TestCase
         ]);
 
         $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP))
-            ->post("/envios/{$shipment->public_id}/revisar", ['decision' => 'authorize']);
+            ->post("/envios/{$shipment->public_id}/revisar", $this->recibirTodo($shipment));
 
         $pieza = Asset::withoutGlobalScope('organization')
             ->where('serial_number', 'BR-999')->first();
@@ -279,7 +285,7 @@ class ShipmentWorkflowTest extends TestCase
         $shipment->items()->create(['asset_id' => $this->asset($organizacion)->getKey()]);
 
         $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP))
-            ->post("/envios/{$shipment->public_id}/revisar", ['decision' => 'authorize']);
+            ->post("/envios/{$shipment->public_id}/revisar", $this->recibirTodo($shipment));
 
         $this->assertDatabaseHas('activity_logs', [
             'action' => 'shipment.authorized',

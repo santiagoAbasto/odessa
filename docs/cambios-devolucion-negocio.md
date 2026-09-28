@@ -314,3 +314,15 @@ Ahora la campana muestra cuántos avisos hay sin leer y los últimos ocho. Al ab
 | Elemento | Estado |
 |---|---|
 | Campana con avisos sin leer | Implementado y probado |
+
+## 6. «Pendiente de recepción» dentro de Recepción de equipos (28/09/2026)
+
+Al probar en producción, el negocio marcó que faltaba el paso anterior a En taller: validar cómo llegó el envío y certificar que esté bien. «Dar recepción» existía, pero sólo desde Envíos al taller.
+
+- **Pestaña nueva «Pendiente de recepción»**, la primera de Recepción de equipos, con su contador. Muestra los envíos que los clientes remitieron, con qué pide cada uno y qué operaciones pide para cada equipo.
+- **Control pieza por pieza.** «Dar recepción» lista cada equipo declarado y el taller tilda que llegó bien. Se puede anotar cómo llegó (embalaje, golpes, documentación). Sólo se confirma con todos tildados, y el servidor también lo exige. Si falta algo o llegó mal, se rechaza el envío con el motivo, que ve el cliente.
+- El mismo diálogo se usa desde el detalle del envío: hay una sola forma de dar recepción.
+
+### De paso
+
+El botón «Registrar respuesta» aparecía en todas las filas cuando entraba el superadministrador, porque atraviesa las verificaciones de permisos. Ahora sólo aparece en las recepciones que esperan la respuesta del cliente.
