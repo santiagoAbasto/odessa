@@ -235,6 +235,11 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/organizaciones', [OrganizationController::class, 'store'])->name('organizations.store');
             Route::put('/organizaciones/{organization}', [OrganizationController::class, 'update'])
                 ->name('organizations.update');
+            // Qué operaciones tiene cada cliente y cómo se llaman para él.
+            Route::get('/organizaciones/{organization}/operaciones', [OrganizationController::class, 'operations'])
+                ->name('organizations.operations');
+            Route::put('/organizaciones/{organization}/operaciones', [OrganizationController::class, 'updateOperations'])
+                ->name('organizations.operations.update');
         });
 
         // Tabla de operaciones: sus tiempos gobiernan vigencias y avisos.

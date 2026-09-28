@@ -361,7 +361,11 @@ function CreateShipmentDialog({ prefill, onDone }: { prefill: Prefill; onDone: (
           </Field>
         </div>
 
-        <Field label="Observaciones" hint="Opcional." error={errors.notes}>
+        <Field
+          label="Qué pide (descripción breve)"
+          hint="Opcional. Es lo primero que lee el taller. Lo que pide para cada equipo se indica al agregarlo."
+          error={errors.notes}
+        >
           {(props) => (
             <Textarea
               {...props}

@@ -1,6 +1,6 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { Building2, Pencil, Plus } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { Building2, ListChecks, Pencil, Plus } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/components/ui/dialog';
@@ -137,7 +137,8 @@ export default function Organizations({
                         {organization.isActive ? 'Activa' : 'Inactiva'}
                       </Badge>
                     </td>
-                    <td className="px-3 py-2.5 text-right">
+                    <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                      <OperationsButton organization={organization} />
                       <EditOrganizationButton organization={organization} />
                     </td>
                   </tr>
@@ -148,6 +149,195 @@ export default function Organizations({
         )}
       </Panel>
     </AppLayout>
+  );
+}
+
+interface OrganizationOperation {
+  serviceId: number;
+  code: string;
+  catalogName: string;
+  catalogDescription: string | null;
+  catalogValidityDays: number | null;
+  determinesFitness: boolean;
+  enabled: boolean;
+  name: string | null;
+  description: string | null;
+  validityDays: number | null;
+}
+
+function OperationsButton({ organization }: { organization: OrganizationRow }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <ListChecks aria-hidden />
+          Operaciones
+        </Button>
+      </DialogTrigger>
+      {open && <OperationsDialog organization={organization} onDone={() => setOpen(false)} />}
+    </Dialog>
+  );
+}
+
+/**
+ * Qué operaciones tiene habilitadas esta empresa y cómo se llaman para ella.
+ *
+ * Odessa lo define por cliente: la misma operación puede tener otro nombre,
+ * otra descripción u otra vigencia según la empresa. Un campo vacío deja
+ * valer lo del catálogo, que se muestra como sugerencia.
+ */
+function OperationsDialog({ organization, onDone }: { organization: OrganizationRow; onDone: () => void }) {
+  const [rows, setRows] = useState<OrganizationOperation[] | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch(`/administracion/organizaciones/${organization.id}/operaciones`, {
+      headers: { Accept: 'application/json' },
+    })
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then((data: OrganizationOperation[]) => {
+        if (!cancelled) setRows(data);
+      })
+      .catch(() => {
+        if (!cancelled) setError('No se pudieron cargar las operaciones.');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [organization.id]);
+
+  const update = (serviceId: number, patch: Partial<OrganizationOperation>) =>
+    setRows((current) => current?.map((row) => (row.serviceId === serviceId ? { ...row, ...patch } : row)) ?? null);
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!rows) return;
+
+    router.put(
+      `/administracion/organizaciones/${organization.id}/operaciones`,
+      {
+        operations: rows.map((row) => ({
+          service_id: row.serviceId,
+          enabled: row.enabled,
+          name: row.name ?? '',
+          description: row.description ?? '',
+          validity_days: row.validityDays ?? '',
+        })),
+      },
+      {
+        preserveScroll: true,
+        onStart: () => setProcessing(true),
+        onFinish: () => setProcessing(false),
+        onSuccess: onDone,
+        onError: (errors) => setError(Object.values(errors)[0] ?? 'Revise los datos cargados.'),
+      },
+    );
+  };
+
+  return (
+    <DialogContent
+      title={`Operaciones de ${organization.name}`}
+      description="Las que marque son las que esta empresa puede pedir al armar un envío. El resto lo pide como operación especial."
+      className="max-w-3xl"
+      footer={
+        <>
+          <DialogClose asChild>
+            <Button variant="secondary" size="sm">
+              Cancelar
+            </Button>
+          </DialogClose>
+          <Button type="submit" form="form-operaciones-org" variant="primary" size="sm" loading={processing} disabled={!rows}>
+            Guardar
+          </Button>
+        </>
+      }
+    >
+      <form id="form-operaciones-org" onSubmit={submit} noValidate className="flex flex-col gap-3">
+        {error && (
+          <p role="alert" className="text-[12px] text-[var(--tone-danger-fg)]">
+            {error}
+          </p>
+        )}
+
+        {rows === null && !error && <p className="text-[12.5px] text-[var(--text-muted)]">Cargando…</p>}
+
+        {rows?.length === 0 && (
+          <p className="text-[12.5px] text-[var(--text-muted)]">No hay operaciones activas en el catálogo.</p>
+        )}
+
+        {rows?.map((row) => (
+          <div
+            key={row.serviceId}
+            className="rounded-sm border border-[var(--border-default)] p-3"
+          >
+            <label className="flex items-center gap-2 text-[13px] font-medium">
+              <input
+                type="checkbox"
+                checked={row.enabled}
+                onChange={(event) => update(row.serviceId, { enabled: event.target.checked })}
+                className="size-3.5 rounded-xs accent-[var(--accent)]"
+              />
+              {row.catalogName}
+              <span className="font-mono text-[10.5px] font-normal text-[var(--text-muted)]">{row.code}</span>
+            </label>
+
+            {row.enabled && (
+              <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_120px]">
+                <Field label="Nombre para esta empresa">
+                  {(props) => (
+                    <Input
+                      {...props}
+                      value={row.name ?? ''}
+                      placeholder={row.catalogName}
+                      maxLength={120}
+                      onChange={(event) => update(row.serviceId, { name: event.target.value })}
+                    />
+                  )}
+                </Field>
+                <Field label="En qué consiste">
+                  {(props) => (
+                    <Input
+                      {...props}
+                      value={row.description ?? ''}
+                      placeholder={row.catalogDescription ?? 'Descripción breve del trabajo'}
+                      maxLength={1000}
+                      onChange={(event) => update(row.serviceId, { description: event.target.value })}
+                    />
+                  )}
+                </Field>
+                {row.determinesFitness ? (
+                  <Field label="Vigencia (días)">
+                    {(props) => (
+                      <Input
+                        {...props}
+                        type="number"
+                        min={1}
+                        max={3650}
+                        value={row.validityDays ?? ''}
+                        placeholder={row.catalogValidityDays?.toString() ?? 'Por defecto'}
+                        onChange={(event) =>
+                          update(row.serviceId, {
+                            validityDays: event.target.value === '' ? null : Number(event.target.value),
+                          })
+                        }
+                      />
+                    )}
+                  </Field>
+                ) : (
+                  <div />
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </form>
+    </DialogContent>
   );
 }
 

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * Línea de un envío: una pieza declarada por el cliente.
@@ -19,7 +20,7 @@ class ShipmentItem extends Model
 
     protected $fillable = [
         'shipment_id', 'asset_id', 'declared_description', 'declared_serial',
-        'is_urgent', 'notes',
+        'is_urgent', 'notes', 'special_operation',
     ];
 
     protected function casts(): array
@@ -40,6 +41,26 @@ class ShipmentItem extends Model
     public function reception(): BelongsTo
     {
         return $this->belongsTo(Reception::class);
+    }
+
+    /** Lo que el cliente pide para este equipo, de sus operaciones habilitadas. */
+    public function operations(): BelongsToMany
+    {
+        return $this->belongsToMany(Service::class, 'shipment_item_operations');
+    }
+
+    /**
+     * Nombres de lo pedido tal como los conoce esta empresa.
+     *
+     * @param  array<int, string>  $clientNames  nombre por id de operación, de la empresa del envío
+     * @return list<string>
+     */
+    public function requestedNames(array $clientNames, bool $withCode = false): array
+    {
+        return $this->operations
+            ->map(fn (Service $s) => ($clientNames[$s->getKey()] ?? $s->name).($withCode ? " ({$s->code})" : ''))
+            ->values()
+            ->all();
     }
 
     /** Qué se muestra al taller: la pieza registrada o lo declarado. */

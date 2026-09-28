@@ -4,6 +4,8 @@ namespace App\Actions;
 
 use App\Enums\ReportStatus;
 use App\Models\InspectionReport;
+use App\Models\Organization;
+use App\Models\Service;
 use App\Support\ActivityLogger;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +17,8 @@ use Illuminate\Validation\ValidationException;
  *
  * Al finalizar:
  *  - se calcula el vencimiento de cada línea con dictamen (fecha FMR + vigencia
- *    del servicio, o la vigencia por defecto) si no se fijó a mano;
+ *    de la operación para ese cliente, o la del catálogo, o la vigencia por
+ *    defecto) si no se fijó a mano;
  *  - se recalcula el estado de cada pieza afectada;
  *  - queda registrado en auditoría.
  *
@@ -44,7 +47,14 @@ class FinalizeInspectionReport
         DB::transaction(function () use ($report) {
             $defaultValidity = (int) config('odessa.default_validity_days');
 
-            $report->loadMissing('lines.service');
+            // La misma operación puede tener otra vigencia para este cliente:
+            // la define Odessa por empresa, y pesa más que la del catálogo.
+            $overrides = Organization::query()->find($report->organization_id)?->validityOverrides() ?? [];
+            $validity = fn (?Service $service) => $service === null
+                ? null
+                : ($overrides[$service->getKey()] ?? $service->validity_days);
+
+            $report->loadMissing('lines.service', 'service');
 
             foreach ($report->lines as $line) {
                 if (! $line->result->determinesFitness()) {
@@ -52,8 +62,8 @@ class FinalizeInspectionReport
                 }
 
                 if ($line->expires_at === null) {
-                    $days = $line->service?->validity_days
-                        ?? $report->service?->validity_days
+                    $days = $validity($line->service)
+                        ?? $validity($report->service)
                         ?? $defaultValidity;
 
                     $line->expires_at = Carbon::parse($report->inspected_at)->addDays($days);

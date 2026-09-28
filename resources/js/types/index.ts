@@ -130,6 +130,9 @@ export interface ReceptionRow {
   dispatchedAt: string | null;
   reportNumber: string | null;
   reportId: string | null;
+  /** Operaciones que pidió el cliente para este equipo al mandarlo. */
+  requested: string[];
+  specialOperation: string | null;
   asset: {
     id: string;
     name: string;

@@ -231,3 +231,29 @@ Lo pedido: «pendiente de recepción» como estado propio, «en taller» como pa
 | Reparación fallida y sin solución | Implementado y probado |
 | Aviso a toda la organización con enlace directo | Implementado y probado |
 | «Pendiente de recepción» / «Dar recepción» / «Recibido» | Implementado y probado |
+
+## 2. Operaciones por empresa y operación especial
+
+Lo pedido: que Odessa defina qué operaciones tiene cada cliente, con título, descripción y días de vigencia propios —«quizás para un cliente tenga un nombre y para otro sea otro»—, y que al armar un envío el cliente indique **por cada equipo** qué operaciones aplican, o una operación especial descripta.
+
+### Decisiones
+
+- **El catálogo sigue siendo uno solo.** Las reglas de cada operación (si certifica, cuánto tarda el taller) son de la operación. Se le sumó «En qué consiste».
+- **Por empresa se habilita y se ajusta.** Desde Organizaciones → Operaciones se marca cuáles tiene cada cliente y, si hace falta, su nombre, descripción y vigencia. Un campo vacío deja valer el del catálogo. *Supuesto*: lo define el superadministrador, porque es configuración comercial.
+- **La vigencia del cliente manda.** Al finalizar un FMR, el vencimiento usa primero los días que la empresa tiene para esa operación.
+- **Cada equipo lleva su solicitud.** Al agregarlo al envío, el cliente marca operaciones habilitadas y/o una operación especial, que exige descripción. El servidor rechaza operaciones que no estén habilitadas para esa empresa.
+- **El taller ve lo pedido** en el detalle del envío (columna «Solicitud») y en la fila de cada recepción («Pide: …»). El personal de Odessa ve además el código interno de la operación.
+- **Envíos ya cargados**: los equipos anteriores quedan como «Sin operaciones indicadas». La exigencia vale de acá en adelante.
+
+### De paso
+
+Al agregar un equipo con un error de validación, el diálogo se cerraba y el mensaje se perdía: vivía dentro de una carga diferida que se reiniciaba al volver. Ya pasaba antes, pero con el campo obligatorio nuevo el cliente lo habría encontrado seguido. Corregido.
+
+### Estado
+
+| Elemento | Estado |
+|---|---|
+| Operaciones habilitadas y ajustadas por empresa | Implementado y probado |
+| Pedido por equipo con operación especial | Implementado y probado |
+| Vigencia por empresa en el FMR | Implementado y probado |
+| Lo pedido visible en envíos y en el taller | Implementado y probado |

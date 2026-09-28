@@ -15,7 +15,7 @@ class Service extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['code', 'name', 'determines_fitness', 'validity_days', 'turnaround_days', 'is_active'];
+    protected $fillable = ['code', 'name', 'description', 'determines_fitness', 'validity_days', 'turnaround_days', 'is_active'];
 
     protected function casts(): array
     {
@@ -39,5 +39,19 @@ class Service extends Model
     public function label(): string
     {
         return "{$this->name} ({$this->code})";
+    }
+
+    /**
+     * Nombre con el que la conoce el cliente. Sólo lo resuelve si la
+     * operación se cargó a través de una organización (con su pivot).
+     */
+    public function clientName(): string
+    {
+        return $this->pivot?->name ?: $this->name;
+    }
+
+    public function clientDescription(): ?string
+    {
+        return $this->pivot?->description ?: $this->description;
     }
 }

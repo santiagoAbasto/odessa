@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -48,6 +49,9 @@ class ReceptionController extends Controller
                 'asset.organization:id,name',
                 'asset.catalogItem:id,description',
                 'inspectionReport:id,public_id,number',
+                // Lo que pidió el cliente para este equipo al mandarlo.
+                'shipmentItem:id,reception_id,special_operation',
+                'shipmentItem.operations:id,code,name',
             ])
             ->select('receptions.*');
 
@@ -80,10 +84,20 @@ class ReceptionController extends Controller
 
         $user = $request->user();
 
-        $receptions = TableQuery::sort($query, $request, self::SORTABLE, 'received_at')
+        $page = TableQuery::sort($query, $request, self::SORTABLE, 'received_at')
             ->paginate(TableQuery::perPage($request))
-            ->withQueryString()
-            ->through(fn (Reception $r) => [
+            ->withQueryString();
+
+        // Nombre de cada operación para cada empresa de la página, en una sola
+        // consulta: la misma operación puede llamarse distinto en cada cliente.
+        $nombres = DB::table('organization_service')
+            ->whereIn('organization_id', $page->getCollection()->pluck('organization_id')->unique())
+            ->whereNotNull('name')
+            ->get(['organization_id', 'service_id', 'name'])
+            ->groupBy('organization_id')
+            ->map(fn ($filas) => $filas->pluck('name', 'service_id')->all());
+
+        $receptions = $page->through(fn (Reception $r) => [
                 'id' => $r->public_id,
                 'isUrgent' => $r->is_urgent,
                 'receivedAt' => $r->received_at?->toDateString(),
@@ -111,6 +125,11 @@ class ReceptionController extends Controller
                 'dispatchedAt' => $r->dispatched_at?->toIso8601String(),
                 'reportNumber' => $r->inspectionReport?->number,
                 'reportId' => $r->inspectionReport?->public_id,
+                'requested' => $r->shipmentItem?->requestedNames(
+                    $nombres->get($r->organization_id, []),
+                    withCode: ! $user->isClientUser(),
+                ) ?? [],
+                'specialOperation' => $r->shipmentItem?->special_operation,
                 'asset' => [
                     'id' => $r->asset->public_id,
                     'name' => $r->asset->workshop_description ?: $r->asset->displayName(),

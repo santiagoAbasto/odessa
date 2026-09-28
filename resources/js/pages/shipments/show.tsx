@@ -1,4 +1,4 @@
-import { Deferred, Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Check, Package, PackagePlus, Send, Trash2, Truck, X, Zap } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
 import { Input, Select, Textarea } from '@/components/ui/input';
 import { Panel, PanelHeader } from '@/components/ui/panel';
-import { Skeleton } from '@/components/ui/skeleton';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/cn';
 import { formatDate, formatDateTime } from '@/lib/format';
@@ -41,7 +40,17 @@ interface ShipmentItem {
   code: string | null;
   isUrgent: boolean;
   notes: string | null;
+  /** Lo que se pide para este equipo, con el nombre que tiene para la empresa. */
+  operations: string[];
+  specialOperation: string | null;
   receptionId: string | null;
+  receptionUrl: string | null;
+}
+
+interface OperationOption {
+  id: number;
+  name: string;
+  description: string | null;
 }
 
 interface AvailableAsset {
@@ -54,9 +63,11 @@ export default function ShipmentShow({
   items,
   can,
   availableAssets,
+  operationOptions,
 }: {
   shipment: ShipmentDetail;
   items: ShipmentItem[];
+  operationOptions: OperationOption[];
   can: { update: boolean; submit: boolean; review: boolean; delete: boolean };
   availableAssets?: AvailableAsset[];
 }) {
@@ -111,10 +122,12 @@ export default function ShipmentShow({
           </Metric>
         </div>
 
+        {/* Lo primero que tiene que leer el taller: qué pide el cliente. */}
         {shipment.notes && (
-          <p className="border-t border-[var(--border-subtle)] px-4 py-3 text-[12.5px] text-[var(--text-secondary)]">
-            {shipment.notes}
-          </p>
+          <div className="border-t border-[var(--border-subtle)] px-4 py-3">
+            <p className="text-[11px] font-medium text-[var(--text-secondary)]">Qué pide</p>
+            <p className="mt-1 text-[13px] whitespace-pre-line text-[var(--text-primary)]">{shipment.notes}</p>
+          </div>
         )}
 
         {shipment.reviewedAt && (
@@ -154,10 +167,13 @@ export default function ShipmentShow({
               : 'Los equipos que se enviarán al taller.'
           }
           actions={
+            /*
+              Fuera de <Deferred> a propósito: al volver con un error de
+              validación Inertia recarga las piezas diferidas, y si el diálogo
+              viviera adentro se desmontaría perdiendo lo cargado y el mensaje.
+            */
             can.update ? (
-              <Deferred data="availableAssets" fallback={<Skeleton className="h-8 w-28" />}>
-                <AddItemDialog shipmentId={shipment.id} assets={availableAssets ?? []} />
-              </Deferred>
+              <AddItemDialog shipmentId={shipment.id} assets={availableAssets} operations={operationOptions} />
             ) : undefined
           }
         />
@@ -174,10 +190,10 @@ export default function ShipmentShow({
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-[12.5px]">
+            <table className="w-full min-w-[760px] text-[12.5px]">
               <thead>
                 <tr>
-                  {['Equipo', 'Serie', 'Estado', 'Nota', ''].map((header) => (
+                  {['Equipo', 'Serie', 'Solicitud', 'Estado', 'Nota', ''].map((header) => (
                     <th
                       key={header}
                       scope="col"
@@ -215,6 +231,9 @@ export default function ShipmentShow({
                       </div>
                     </td>
                     <td className="px-3 py-2.5 font-mono text-[11.5px]">{item.serial ?? '—'}</td>
+                    <td className="max-w-[260px] px-3 py-2.5">
+                      <RequestedWork operations={item.operations} special={item.specialOperation} />
+                    </td>
                     <td className="px-3 py-2.5">
                       {item.isRegistered ? (
                         <Badge tone="success">Registrado</Badge>
@@ -226,9 +245,9 @@ export default function ShipmentShow({
                       {item.notes ?? '—'}
                     </td>
                     <td className="px-3 py-2.5 text-right">
-                      {item.receptionId ? (
+                      {item.receptionUrl ? (
                         <Link
-                          href="/taller/recepciones"
+                          href={item.receptionUrl}
                           className="text-[11.5px] text-[var(--text-accent)] hover:underline"
                         >
                           Ver en taller
@@ -261,6 +280,32 @@ export default function ShipmentShow({
   );
 }
 
+/** Lo que el cliente pide para un equipo: sus operaciones y, si hay, la especial. */
+function RequestedWork({ operations, special }: { operations: string[]; special: string | null }) {
+  if (operations.length === 0 && !special) {
+    return <span className="text-[11.5px] text-[var(--text-muted)]">Sin operaciones indicadas</span>;
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {operations.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {operations.map((name) => (
+            <Badge key={name} tone="info">
+              {name}
+            </Badge>
+          ))}
+        </div>
+      )}
+      {special && (
+        <p className="text-[11.5px] text-[var(--text-secondary)]">
+          <span className="font-medium text-[var(--tone-warning-fg)]">Especial:</span> {special}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function Metric({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="bg-[var(--surface-raised)] p-4">
@@ -270,16 +315,34 @@ function Metric({ label, children }: { label: string; children: React.ReactNode 
   );
 }
 
-function AddItemDialog({ shipmentId, assets }: { shipmentId: string; assets: AvailableAsset[] }) {
+function AddItemDialog({
+  shipmentId,
+  assets,
+  operations,
+}: {
+  shipmentId: string;
+  /** Llega diferida: mientras tanto el desplegable avisa que está cargando. */
+  assets: AvailableAsset[] | undefined;
+  operations: OperationOption[];
+}) {
   const [open, setOpen] = useState(false);
+  const [especial, setEspecial] = useState(operations.length === 0);
 
-  const { data, setData, post, processing, errors, reset } = useForm({
+  const { data, setData, post, processing, errors, reset, transform } = useForm({
     asset_public_id: '',
     declared_description: '',
     declared_serial: '',
     is_urgent: false as boolean,
     notes: '',
+    operations: [] as number[],
+    special_operation: '',
   });
+
+  // Si se destilda la especial, su texto no viaja: no es parte del pedido.
+  transform((values) => ({ ...values, special_operation: especial ? values.special_operation : '' }));
+
+  const toggleOperation = (id: number, checked: boolean) =>
+    setData('operations', checked ? [...data.operations, id] : data.operations.filter((op) => op !== id));
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -287,10 +350,15 @@ function AddItemDialog({ shipmentId, assets }: { shipmentId: string; assets: Ava
       preserveScroll: true,
       onSuccess: () => {
         reset();
+        setEspecial(operations.length === 0);
         setOpen(false);
       },
     });
   };
+
+  const operationsError =
+    errors.operations ??
+    Object.entries(errors).find(([key]) => key.startsWith('operations.'))?.[1];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -329,8 +397,8 @@ function AddItemDialog({ shipmentId, assets }: { shipmentId: string; assets: Ava
                 value={data.asset_public_id}
                 onChange={(event) => setData('asset_public_id', event.target.value)}
               >
-                <option value="">— No está registrado —</option>
-                {assets.map((asset) => (
+                <option value="">{assets ? '— No está registrado —' : 'Cargando piezas…'}</option>
+                {(assets ?? []).map((asset) => (
                   <option key={asset.id} value={asset.id}>
                     {asset.label}
                   </option>
@@ -370,6 +438,76 @@ function AddItemDialog({ shipmentId, assets }: { shipmentId: string; assets: Ava
               </Field>
             </>
           )}
+
+          {/*
+            Cada equipo lleva su solicitud: las operaciones que Odessa le
+            habilitó a la empresa, o una operación especial descripta para lo
+            que no está en la lista.
+          */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1.5 text-[12px] font-medium text-[var(--text-primary)]">
+              Qué pide para este equipo <span className="text-[var(--tone-danger-fg)]">*</span>
+            </legend>
+
+            {operations.length === 0 && (
+              <p className="text-[11.5px] text-[var(--text-muted)]">
+                Su empresa todavía no tiene operaciones habilitadas. Describa lo que necesita como operación especial.
+              </p>
+            )}
+
+            {operations.map((operation) => (
+              <label key={operation.id} className="flex items-start gap-2 text-[12.5px]">
+                <input
+                  type="checkbox"
+                  checked={data.operations.includes(operation.id)}
+                  onChange={(event) => toggleOperation(operation.id, event.target.checked)}
+                  className="mt-0.5 size-3.5 rounded-xs accent-[var(--accent)]"
+                />
+                <span>
+                  {operation.name}
+                  {operation.description && (
+                    <span className="block text-[11px] text-[var(--text-muted)]">{operation.description}</span>
+                  )}
+                </span>
+              </label>
+            ))}
+
+            <label className="flex items-start gap-2 text-[12.5px]">
+              <input
+                type="checkbox"
+                checked={especial}
+                onChange={(event) => setEspecial(event.target.checked)}
+                className="mt-0.5 size-3.5 rounded-xs accent-[var(--accent)]"
+              />
+              <span>
+                Operación especial
+                <span className="block text-[11px] text-[var(--text-muted)]">
+                  Algo que no está en su lista. Describa el trabajo que necesita.
+                </span>
+              </span>
+            </label>
+
+            {especial && (
+              <Field label="Descripción de la operación especial" error={errors.special_operation} required>
+                {(props) => (
+                  <Textarea
+                    {...props}
+                    value={data.special_operation}
+                    maxLength={1000}
+                    rows={3}
+                    onChange={(event) => setData('special_operation', event.target.value)}
+                    invalid={Boolean(errors.special_operation)}
+                  />
+                )}
+              </Field>
+            )}
+
+            {operationsError && (
+              <p role="alert" className="text-[11.5px] text-[var(--tone-danger-fg)]">
+                {operationsError}
+              </p>
+            )}
+          </fieldset>
 
           <label className="flex items-center gap-2 text-[12.5px]">
             <input

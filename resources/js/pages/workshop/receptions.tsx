@@ -148,6 +148,8 @@ export default function Receptions({
             <p className="mt-0.5 truncate font-mono text-[11px] text-[var(--text-muted)]">
               {row.original.asset.serialNumber ?? row.original.asset.code ?? '—'}
             </p>
+            {/* Lo que pidió el cliente: es lo que el taller tiene que hacer. */}
+            <RequestedLine requested={row.original.requested} special={row.original.specialOperation} />
           </div>
         ),
       },
@@ -502,6 +504,18 @@ export default function Receptions({
         />
       </Panel>
     </AppLayout>
+  );
+}
+
+function RequestedLine({ requested, special }: { requested: string[]; special: string | null }) {
+  const pedido = [...requested, special && `Especial: ${special}`].filter(Boolean).join(' · ');
+
+  if (!pedido) return null;
+
+  return (
+    <p className="mt-1 max-w-[260px] truncate text-[11px] text-[var(--text-secondary)]" title={pedido}>
+      <span className="font-medium">Pide:</span> {pedido}
+    </p>
   );
 }
 

@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
+use App\Models\Service;
 use App\Support\ActivityLogger;
 use App\Support\TableQuery;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -97,6 +99,81 @@ class OrganizationController extends Controller
         );
 
         return back()->with('success', 'Organización actualizada.');
+    }
+
+    /**
+     * Catálogo activo con lo que esta empresa tiene habilitado y ajustado.
+     *
+     * Se trae aparte, al abrir el diálogo, porque es el catálogo completo por
+     * empresa y no hace falta en el listado.
+     */
+    public function operations(Organization $organization): JsonResponse
+    {
+        $ajustes = $organization->operations()->get()->keyBy('id');
+
+        return response()->json(
+            Service::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get()
+                ->map(fn (Service $s) => [
+                    'serviceId' => $s->getKey(),
+                    'code' => $s->code,
+                    'catalogName' => $s->name,
+                    'catalogDescription' => $s->description,
+                    'catalogValidityDays' => $s->validity_days,
+                    'determinesFitness' => $s->determines_fitness,
+                    'enabled' => $ajustes->has($s->getKey()),
+                    'name' => $ajustes->get($s->getKey())?->pivot->name,
+                    'description' => $ajustes->get($s->getKey())?->pivot->description,
+                    'validityDays' => $ajustes->get($s->getKey())?->pivot->validity_days,
+                ])
+                ->values()
+        );
+    }
+
+    /**
+     * Qué operaciones tiene esta empresa y cómo se llaman para ella.
+     *
+     * Se reemplaza el conjunto entero: la pantalla manda todas las filas, así
+     * que lo que no viene habilitado deja de estarlo. Lo ya pedido en envíos
+     * anteriores no se toca —vive en su propia tabla—.
+     */
+    public function updateOperations(Request $request, Organization $organization): RedirectResponse
+    {
+        $data = $request->validate([
+            'operations' => ['present', 'array'],
+            'operations.*.service_id' => ['required', 'integer', 'exists:services,id'],
+            'operations.*.enabled' => ['required', 'boolean'],
+            'operations.*.name' => ['nullable', 'string', 'max:120'],
+            'operations.*.description' => ['nullable', 'string', 'max:1000'],
+            // Mismo rango que el catálogo: cero rompe el cálculo del
+            // vencimiento y diez años es siempre un error de tipeo.
+            'operations.*.validity_days' => ['nullable', 'integer', 'min:1', 'max:3650'],
+        ]);
+
+        $habilitadas = collect($data['operations'])
+            ->filter(fn (array $op) => $op['enabled'])
+            ->mapWithKeys(fn (array $op) => [$op['service_id'] => [
+                'name' => filled($op['name'] ?? null) ? trim($op['name']) : null,
+                'description' => filled($op['description'] ?? null) ? trim($op['description']) : null,
+                'validity_days' => $op['validity_days'] ?? null,
+            ]]);
+
+        $antes = $organization->operations()->pluck('services.id')->all();
+
+        $organization->operations()->sync($habilitadas->all());
+
+        ActivityLogger::log(
+            action: 'organization.operations_updated',
+            subject: $organization,
+            description: "Operaciones habilitadas de {$organization->name}",
+            old: ['operations' => $antes],
+            new: ['operations' => $habilitadas->keys()->all()],
+            organizationId: $organization->getKey(),
+        );
+
+        return back()->with('success', "Operaciones de {$organization->name} actualizadas.");
     }
 
     /** @return array<string, mixed> */

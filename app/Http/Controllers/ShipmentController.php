@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\AuthorizeShipment;
 use App\Models\Asset;
+use App\Models\Service;
 use App\Models\Shipment;
 use App\Support\ActivityLogger;
 use App\Support\Permissions;
@@ -105,12 +106,25 @@ class ShipmentController extends Controller
         $shipment->load([
             'items.asset:id,public_id,description,serial_number,code',
             'items.reception:id,public_id',
+            'items.operations:id,code,name',
             'creator:id,name',
             'reviewer:id,name',
             'organization:id,name',
         ]);
 
         $user = $request->user();
+
+        /*
+         * Las operaciones con el nombre que tienen para esta empresa. El
+         * personal de Odessa ve además el código interno: la misma operación
+         * puede llamarse distinto en cada cliente.
+         */
+        $habilitadas = $shipment->organization?->operations()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get() ?? collect();
+        $nombres = $habilitadas->mapWithKeys(fn (Service $s) => [$s->getKey() => $s->clientName()])->all();
+        $conCodigo = ! $user->isClientUser();
 
         return Inertia::render('shipments/show', [
             'shipment' => [
@@ -143,8 +157,17 @@ class ShipmentController extends Controller
                 'code' => $item->asset?->code,
                 'isUrgent' => $item->is_urgent,
                 'notes' => $item->notes,
+                'operations' => $item->requestedNames($nombres, $conCodigo),
+                'specialOperation' => $item->special_operation,
                 'receptionId' => $item->reception?->public_id,
+                'receptionUrl' => $item->reception?->url(),
             ])->all(),
+            // Lo que el cliente puede pedir para cada equipo que agrega.
+            'operationOptions' => $habilitadas->map(fn (Service $s) => [
+                'id' => $s->getKey(),
+                'name' => $s->clientName(),
+                'description' => $s->clientDescription(),
+            ])->values()->all(),
             'can' => [
                 'update' => $user->can('update', $shipment),
                 'submit' => $user->can('submit', $shipment),
@@ -219,6 +242,17 @@ class ShipmentController extends Controller
             'declared_serial' => ['nullable', 'string', 'max:120'],
             'is_urgent' => ['boolean'],
             'notes' => ['nullable', 'string', 'max:200'],
+            /*
+             * Sólo las operaciones que Odessa le habilitó a esta empresa y
+             * que siguen activas en el catálogo. Lo demás va como operación
+             * especial, que es justamente para eso.
+             */
+            'operations' => ['nullable', 'array'],
+            'operations.*' => ['integer', 'distinct', Rule::exists('organization_service', 'service_id')
+                ->where('organization_id', $shipment->organization_id)],
+            'special_operation' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'operations.*.exists' => 'Esa operación no está habilitada para su empresa.',
         ]);
 
         // O se elige una pieza registrada, o se declara una nueva.
@@ -244,13 +278,34 @@ class ShipmentController extends Controller
             $assetId = $asset->getKey();
         }
 
-        $shipment->items()->create([
-            'asset_id' => $assetId,
-            'declared_description' => $data['declared_description'] ?? null,
-            'declared_serial' => $data['declared_serial'] ?? null,
-            'is_urgent' => $data['is_urgent'] ?? false,
-            'notes' => $data['notes'] ?? null,
-        ]);
+        // Cada equipo lleva su solicitud: qué se le pide al taller.
+        if (empty($data['operations']) && blank($data['special_operation'] ?? null)) {
+            return back()->withErrors([
+                'operations' => 'Indique qué operaciones pide para este equipo, o describa una operación especial.',
+            ]);
+        }
+
+        $operations = Service::query()
+            ->whereKey($data['operations'] ?? [])
+            ->where('is_active', true)
+            ->pluck('id');
+
+        if ($operations->count() !== count($data['operations'] ?? [])) {
+            return back()->withErrors(['operations' => 'Una de las operaciones elegidas ya no está activa.']);
+        }
+
+        DB::transaction(function () use ($shipment, $assetId, $data, $operations) {
+            $item = $shipment->items()->create([
+                'asset_id' => $assetId,
+                'declared_description' => $data['declared_description'] ?? null,
+                'declared_serial' => $data['declared_serial'] ?? null,
+                'is_urgent' => $data['is_urgent'] ?? false,
+                'notes' => $data['notes'] ?? null,
+                'special_operation' => filled($data['special_operation'] ?? null) ? trim($data['special_operation']) : null,
+            ]);
+
+            $item->operations()->attach($operations->all());
+        });
 
         return back()->with('success', 'Equipo agregado al envío.');
     }

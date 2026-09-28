@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -76,6 +77,12 @@ class Reception extends Model
     public function shipment(): BelongsTo
     {
         return $this->belongsTo(Shipment::class);
+    }
+
+    /** Línea del envío que la originó: dice qué pidió el cliente para este equipo. */
+    public function shipmentItem(): HasOne
+    {
+        return $this->hasOne(ShipmentItem::class);
     }
 
     public function releaser(): BelongsTo

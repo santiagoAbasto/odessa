@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
-import { Input, Select } from '@/components/ui/input';
+import { Input, Select, Textarea } from '@/components/ui/input';
 import { Panel, PanelHeader } from '@/components/ui/panel';
 import AppLayout from '@/layouts/app-layout';
 
@@ -13,6 +13,8 @@ interface Operation {
   id: number;
   code: string;
   name: string;
+  /** En qué consiste el trabajo. Cada empresa puede tener la suya. */
+  description: string | null;
   determinesFitness: boolean;
   validityDays: number | null;
   turnaroundDays: number | null;
@@ -104,6 +106,9 @@ export default function Operations({
                     <p className="mt-0.5 font-mono text-[10.5px] text-[var(--text-muted)]">
                       {operation.code}
                     </p>
+                    {operation.description && (
+                      <p className="mt-1 max-w-[320px] text-[11.5px] text-[var(--text-secondary)]">{operation.description}</p>
+                    )}
                   </td>
                   <td className="px-3 py-2.5">
                     {operation.determinesFitness ? (
@@ -187,6 +192,7 @@ function OperationDialog({
   const { data, setData, post, put, processing, errors } = useForm({
     name: operation?.name ?? '',
     code: operation?.code ?? '',
+    description: operation?.description ?? '',
     determines_fitness: operation?.determinesFitness ?? true,
     validity_days: operation?.validityDays?.toString() ?? '',
     turnaround_days: operation?.turnaroundDays?.toString() ?? '',
@@ -249,6 +255,23 @@ function OperationDialog({
             )}
           </Field>
         </div>
+
+        <Field
+          label="En qué consiste"
+          hint="Descripción breve del trabajo. Cada empresa puede tener la suya desde Organizaciones."
+          error={errors.description}
+        >
+          {(props) => (
+            <Textarea
+              {...props}
+              value={data.description}
+              maxLength={1000}
+              rows={2}
+              onChange={(event) => setData('description', event.target.value)}
+              invalid={Boolean(errors.description)}
+            />
+          )}
+        </Field>
 
         <Field
           label="Tipo de operación"

@@ -87,6 +87,7 @@ class ShipmentWorkflowTest extends TestCase
         $this->actingAs($this->clientUser($organizacion, Permissions::ROLE_CLIENT_OPERATOR))
             ->post("/envios/{$shipment->public_id}/equipos", [
                 'asset_public_id' => $pieza->public_id,
+                'special_operation' => 'Inspección general.',
             ])
             ->assertRedirect();
 
@@ -103,6 +104,7 @@ class ShipmentWorkflowTest extends TestCase
             ->post("/envios/{$shipment->public_id}/equipos", [
                 'declared_description' => 'Válvula nueva sin registrar',
                 'declared_serial' => 'NUEVA-001',
+                'special_operation' => 'Inspección general.',
             ])
             ->assertRedirect();
 

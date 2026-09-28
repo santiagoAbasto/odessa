@@ -40,6 +40,7 @@ class OperationController extends Controller
                     'id' => $service->getKey(),
                     'code' => $service->code,
                     'name' => $service->name,
+                    'description' => $service->description,
                     'determinesFitness' => $service->determines_fitness,
                     'validityDays' => $service->validity_days,
                     'turnaroundDays' => $service->turnaround_days,
@@ -62,6 +63,7 @@ class OperationController extends Controller
 
         $data = $request->validate([
             'name' => ['required', 'string', 'min:3', 'max:120'],
+            'description' => ['nullable', 'string', 'max:1000'],
             'code' => ['required', 'string', 'max:20', Rule::unique('services', 'code')->ignore($service)],
             'determines_fitness' => ['required', 'boolean'],
             // 1..3650: un plazo de cero rompería el cálculo de la fecha límite
@@ -96,6 +98,7 @@ class OperationController extends Controller
 
         $data = $request->validate([
             'name' => ['required', 'string', 'min:3', 'max:120'],
+            'description' => ['nullable', 'string', 'max:1000'],
             'code' => ['required', 'string', 'max:20', 'unique:services,code'],
             'determines_fitness' => ['required', 'boolean'],
             'validity_days' => ['nullable', 'integer', 'min:1', 'max:3650'],
