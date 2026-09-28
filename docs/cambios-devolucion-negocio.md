@@ -200,6 +200,6 @@ Para poder contestar, el cliente necesita ver sus equipos en el taller. Eso resp
 ## Pendiente de confirmar
 
 1. **¿El cliente debe poder gestionar sus propios usuarios?** Hoy no puede; la definición no lo menciona.
-2. ~~**¿«Código KPK» debe renombrarse?**~~ **Resuelto.** El negocio pidió que no quede ningún rastro de la marca anterior. La columna pasó a llamarse `code` y la interfaz muestra sólo «Código». Los valores grabados en las piezas no se tocaron: cambió la etiqueta, no el dato.
+2. ~~**¿El código heredado del sistema anterior debe renombrarse?**~~ **Resuelto.** El negocio pidió que no quede ningún rastro de la marca anterior. La columna pasó a llamarse `code` y la interfaz muestra sólo «Código». Los valores grabados en las piezas no se tocaron: cambió la etiqueta, no el dato.
 3. **¿Qué hace el taller con un envío parcialmente correcto?** Hoy es todo o nada: autoriza o rechaza el envío completo. Si hace falta aceptar unos equipos y rechazar otros, es un cambio acotado.
 4. **¿Debe avisarse al cliente cuando su envío se autoriza o rechaza?** Hoy lo ve al entrar. El mecanismo de notificación ya está montado y reutilizable.

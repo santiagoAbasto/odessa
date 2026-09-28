@@ -39,10 +39,10 @@ Cada criterio indica la prueba que lo verifica. Estado a 3 de agosto de 2026: **
 | T3 | Un informe ajeno devuelve 404 | `..._acceder_a_un_informe_de_otra_organizacion_devuelve_404` | ✅ |
 | T4 | Un set ajeno devuelve 404 | `..._acceder_a_un_set_de_otra_organizacion_devuelve_404` | ✅ |
 | T5 | No se descarga un documento ajeno | `..._no_se_puede_descargar_un_documento_de_otra_organizacion` | ✅ |
-| T6 | No se ven recepciones ajenas | `..._un_cliente_no_ve_recepciones_de_otra_organizacion` | ✅ |
+| T6 | No se ven recepciones ajenas | `..._un_cliente_ve_sus_recepciones_y_ninguna_ajena` | ✅ |
 | T7 | El personal interno sí alcanza cualquier organización | `..._el_personal_interno_si_alcanza_datos_de_cualquier_organizacion` | ✅ |
 | T8 | Un cliente no gestiona usuarios ajenos | `..._un_cliente_no_puede_gestionar_usuarios_de_otra_organizacion` | ✅ |
-| T9 | El listado de usuarios de un cliente no incluye personal de Odessa | `..._el_listado_de_usuarios_de_un_cliente_no_incluye_personal_de_kpk` | ✅ |
+| T9 | Un cliente no ve personal de Odessa: no alcanza la administración de usuarios | `..._un_cliente_no_alcanza_la_administracion_de_usuarios` | ✅ |
 
 ## Permisos
 
