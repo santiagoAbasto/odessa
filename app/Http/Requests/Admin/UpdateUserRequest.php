@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Support\Permissions;
 use Illuminate\Validation\Rule;
 
 class UpdateUserRequest extends FormRequest
@@ -24,6 +25,10 @@ class UpdateUserRequest extends FormRequest
             'is_active' => ['boolean'],
             'roles' => ['sometimes', 'array', 'min:1'],
             'roles.*' => ['string', Rule::exists('roles', 'name')],
+            // Sólo de la lista pensada para clientes: dar un permiso no puede ser una
+            // vía para escalar a funciones del taller o de administración.
+            'extra_permissions' => ['sometimes', 'array'],
+            'extra_permissions.*' => ['string', Rule::in(array_keys(Permissions::clientGrantable()))],
         ];
     }
 

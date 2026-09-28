@@ -37,7 +37,7 @@ class UserController extends Controller
         $filters = TableQuery::filters($request, ['search', 'role', 'status', 'organization']);
 
         $users = User::query()
-            ->with('organization:id,public_id,name')
+            ->with(['organization:id,public_id,name', 'permissions:id,name'])
             ->when($actor->isClientUser(), fn (Builder $q) => $q->where('organization_id', $actor->organization_id))
             ->when($filters['search'] ?? null, fn (Builder $q, string $v) => $q
                 ->where(fn (Builder $i) => $i
@@ -64,6 +64,9 @@ class UserController extends Controller
                 // Los nombres crudos, para preseleccionar al editar. Las
                 // etiquetas de arriba son para mostrar y no sirven de valor.
                 'roleNames' => $u->getRoleNames()->all(),
+                // Sólo los de la lista para clientes: son los que se editan acá.
+                'extraPermissions' => $u->permissions->pluck('name')
+                    ->intersect(array_keys(Permissions::clientGrantable()))->values()->all(),
                 'lastLoginAt' => $u->last_login_at?->toIso8601String(),
                 'canEdit' => $actor->can('update', $u),
                 'canDelete' => $actor->can('delete', $u),
@@ -73,10 +76,31 @@ class UserController extends Controller
             'users' => $users,
             'filters' => $filters,
             'roleOptions' => $this->roleOptions($actor),
+            /*
+             * Se arma a mano y no con `public_id as id`: Eloquent castea `id`
+             * a entero, y un UUIDv7 que empieza con «01a0…» quedaba en 1 para
+             * todas las organizaciones. El alta asignaba así cualquier usuario
+             * cliente a la organización 1.
+             */
             'organizations' => $actor->isStaff()
-                ? Organization::query()->orderBy('name')->get(['public_id as id', 'name'])
+                ? Organization::query()->orderBy('name')->get(['public_id', 'name'])
+                    ->map(fn (Organization $o) => ['id' => $o->public_id, 'name' => $o->name])
+                    ->all()
                 : [],
-            'can' => ['create' => $actor->can('create', User::class)],
+            'grantablePermissions' => collect(Permissions::clientGrantable())
+                ->map(fn (string $label, string $value) => ['value' => $value, 'label' => $label])
+                ->values()->all(),
+            // Lo que cada rol de cliente ya incluye de esa lista: se muestra
+            // tildado y bloqueado, porque sumarlo no cambiaría nada.
+            'roleGrants' => collect(Permissions::clientRoles())
+                ->mapWithKeys(fn (string $role) => [$role => array_values(array_intersect(
+                    Permissions::roleMatrix()[$role],
+                    array_keys(Permissions::clientGrantable()),
+                ))])->all(),
+            'can' => [
+                'create' => $actor->can('create', User::class),
+                'grantPermissions' => $actor->can('manageRoles', User::class),
+            ],
         ]);
     }
 
@@ -88,7 +112,7 @@ class UserController extends Controller
         $data = $request->validated();
 
         $organizationId = $actor->isStaff()
-            ? ($data['organization_id'] ?? null)
+            ? Organization::query()->where('public_id', $data['organization_id'] ?? null)->value('id')
             : $actor->organization_id; // un cliente nunca elige otra organización
 
         $user = User::create([
@@ -103,6 +127,7 @@ class UserController extends Controller
         ]);
 
         $user->syncRoles($this->allowedRoles($actor, $data['roles']));
+        $this->syncExtraPermissions($actor, $user, $data['extra_permissions'] ?? []);
 
         ActivityLogger::log(
             action: 'user.created',
@@ -150,6 +175,10 @@ class UserController extends Controller
             $user->syncRoles($this->allowedRoles($actor, $data['roles']));
         }
 
+        if (array_key_exists('extra_permissions', $data)) {
+            $this->syncExtraPermissions($actor, $user, $data['extra_permissions']);
+        }
+
         ActivityLogger::log(
             action: 'user.updated',
             subject: $user,
@@ -192,6 +221,44 @@ class UserController extends Controller
         );
 
         return back()->with('success', 'Usuario desactivado.');
+    }
+
+    /**
+     * Permisos adicionales de un usuario cliente, por encima de su rol.
+     *
+     * Sólo los administra quien administra roles, y sólo dentro de la lista
+     * para clientes: cualquier otro permiso directo que el usuario tuviera no
+     * lo toca esta pantalla. Al personal interno no se le guardan: su acceso
+     * lo define el rol.
+     *
+     * @param  list<string>  $requested
+     */
+    private function syncExtraPermissions(User $actor, User $user, array $requested): void
+    {
+        if (! $actor->can('manageRoles', User::class)) {
+            return;
+        }
+
+        $grantable = array_keys(Permissions::clientGrantable());
+        $before = $user->getDirectPermissions()->pluck('name')->all();
+        $pedidos = $user->isClientUser() ? array_values(array_intersect($requested, $grantable)) : [];
+
+        $after = [...array_values(array_diff($before, $grantable)), ...$pedidos];
+
+        if (collect($before)->sort()->values()->all() === collect($after)->sort()->values()->all()) {
+            return;
+        }
+
+        $user->syncPermissions($after);
+
+        ActivityLogger::log(
+            action: 'user.permissions_updated',
+            subject: $user,
+            description: "Permisos adicionales de {$user->email}",
+            old: ['permissions' => $before],
+            new: ['permissions' => $after],
+            organizationId: $user->organization_id,
+        );
     }
 
     /**

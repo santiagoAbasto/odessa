@@ -214,4 +214,23 @@ final class Permissions
     {
         return [self::ROLE_CLIENT_OPERATOR, self::ROLE_CLIENT_VIEWER];
     }
+
+    /**
+     * Permisos que el superadmin puede sumarle a un usuario cliente puntual,
+     * por encima de su rol (bloque 2, 27/09/2026: «rol cliente para
+     * cualquiera de los dos, poder darles de alta permisos»).
+     *
+     * Es una lista cerrada a propósito: nunca un permiso del taller ni de
+     * administración, para que dar un permiso no sea una forma de escalar.
+     *
+     * @return array<string, string>
+     */
+    public static function clientGrantable(): array
+    {
+        return [
+            self::SHIPMENTS_CREATE => 'Cargar envíos al taller',
+            self::RECEPTIONS_AUTHORIZE_REPAIR => 'Autorizar reparaciones',
+            self::COMMENTS_CREATE => 'Comentar en la bitácora',
+        ];
+    }
 }

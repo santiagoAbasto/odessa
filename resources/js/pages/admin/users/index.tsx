@@ -26,6 +26,8 @@ interface UserRow {
   roles: string[];
   /** Nombres crudos, para preseleccionar al editar. */
   roleNames: string[];
+  /** Permisos sumados por encima del rol (sólo usuarios cliente). */
+  extraPermissions: string[];
   lastLoginAt: string | null;
   canEdit: boolean;
   canDelete: boolean;
@@ -36,11 +38,30 @@ interface UsersIndexProps {
   filters: Record<string, string | undefined>;
   roleOptions: SelectOption[];
   organizations: { id: string; name: string }[];
-  can: { create: boolean };
+  grantablePermissions: SelectOption[];
+  /** Lo que cada rol de cliente ya incluye de esa lista. */
+  roleGrants: Record<string, string[]>;
+  can: { create: boolean; grantPermissions: boolean };
 }
 
-export default function UsersIndex({ users, filters, roleOptions, organizations, can }: UsersIndexProps) {
+/** Lo que necesita el diálogo para ofrecer permisos adicionales. */
+interface GrantProps {
+  grantable: SelectOption[];
+  roleGrants: Record<string, string[]>;
+  canGrant: boolean;
+}
+
+export default function UsersIndex({
+  users,
+  filters,
+  roleOptions,
+  organizations,
+  grantablePermissions,
+  roleGrants,
+  can,
+}: UsersIndexProps) {
   const [creating, setCreating] = useState(false);
+  const grants: GrantProps = { grantable: grantablePermissions, roleGrants, canGrant: can.grantPermissions };
 
   return (
     <AppLayout
@@ -59,6 +80,7 @@ export default function UsersIndex({ users, filters, roleOptions, organizations,
             <UserDialog
               roleOptions={roleOptions}
               organizations={organizations}
+              grants={grants}
               onDone={() => setCreating(false)}
             />
           </Dialog>
@@ -171,6 +193,11 @@ export default function UsersIndex({ users, filters, roleOptions, organizations,
                             {role}
                           </Badge>
                         ))}
+                        {user.extraPermissions.map((permission) => (
+                          <Badge key={permission} tone="info" withIcon={false}>
+                            + {grantablePermissions.find((p) => p.value === permission)?.label ?? permission}
+                          </Badge>
+                        ))}
                       </div>
                     </td>
                     <td className="px-3 py-2.5 text-[var(--text-secondary)]">
@@ -184,7 +211,7 @@ export default function UsersIndex({ users, filters, roleOptions, organizations,
                     <td className="px-3 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-1">
                       {user.canEdit && (
-                        <EditUserButton user={user} roleOptions={roleOptions} />
+                        <EditUserButton user={user} roleOptions={roleOptions} grants={grants} />
                       )}
                       {user.canDelete && (
                         <ConfirmButton
@@ -216,7 +243,15 @@ export default function UsersIndex({ users, filters, roleOptions, organizations,
 }
 
 /** Abre el diálogo de edición sobre una fila. */
-function EditUserButton({ user, roleOptions }: { user: UserRow; roleOptions: SelectOption[] }) {
+function EditUserButton({
+  user,
+  roleOptions,
+  grants,
+}: {
+  user: UserRow;
+  roleOptions: SelectOption[];
+  grants: GrantProps;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -229,7 +264,9 @@ function EditUserButton({ user, roleOptions }: { user: UserRow; roleOptions: Sel
       </DialogTrigger>
       {/* Se monta recién al abrir para que el formulario arranque con los
           datos de la fila y no con los de la última que se editó. */}
-      {open && <UserDialog user={user} roleOptions={roleOptions} organizations={[]} onDone={() => setOpen(false)} />}
+      {open && (
+        <UserDialog user={user} roleOptions={roleOptions} organizations={[]} grants={grants} onDone={() => setOpen(false)} />
+      )}
     </Dialog>
   );
 }
@@ -245,11 +282,13 @@ function UserDialog({
   user,
   roleOptions,
   organizations,
+  grants,
   onDone,
 }: {
   user?: UserRow;
   roleOptions: SelectOption[];
   organizations: { id: string; name: string }[];
+  grants: GrantProps;
   onDone: () => void;
 }) {
   const editing = user !== undefined;
@@ -262,7 +301,12 @@ function UserDialog({
     organization_id: '',
     is_active: user?.isActive ?? true,
     roles: user?.roleNames ?? ([] as string[]),
+    extra_permissions: user?.extraPermissions ?? ([] as string[]),
   });
+
+  // Un usuario es cliente si pertenece a una organización. Al crear lo decide
+  // la organización elegida; al editar ya viene dado.
+  const isClient = editing ? !user.isStaff : data.organization_id !== '';
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -411,6 +455,48 @@ function UserDialog({
             </div>
           )}
         </Field>
+
+        {/*
+          Permisos puntuales por encima del rol, sólo para usuarios cliente:
+          por ejemplo, que uno de consulta cargue envíos, o que sólo el jefe
+          autorice reparaciones. Lo que el rol ya da se ve tildado y bloqueado.
+        */}
+        {grants.canGrant && isClient && (
+          <Field
+            label="Permisos adicionales"
+            hint="Se suman a los del rol, sólo para este usuario."
+            error={errors.extra_permissions}
+          >
+            {() => (
+              <div className="flex flex-col gap-1.5">
+                {grants.grantable.map((permission) => {
+                  const included = data.roles.some((role) => grants.roleGrants[role]?.includes(permission.value));
+
+                  return (
+                    <label key={permission.value} className="flex items-center gap-2 text-[12.5px]">
+                      <input
+                        type="checkbox"
+                        disabled={included}
+                        checked={included || data.extra_permissions.includes(permission.value)}
+                        onChange={(event) =>
+                          setData(
+                            'extra_permissions',
+                            event.target.checked
+                              ? [...data.extra_permissions, permission.value]
+                              : data.extra_permissions.filter((value) => value !== permission.value),
+                          )
+                        }
+                        className="size-3.5 rounded-xs accent-[var(--accent)]"
+                      />
+                      {permission.label}
+                      {included && <span className="text-[11px] text-[var(--text-muted)]">· incluido en el rol</span>}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </Field>
+        )}
       </form>
     </DialogContent>
   );

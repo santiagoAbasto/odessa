@@ -217,3 +217,19 @@ composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-zip
 El paquete se arma con lista blanca de carpetas, así que `deploy/`, `docs/`,
 `tests/`, `.claude/` y el `.env` no pueden colarse. Si alguna vez se sube algo
 a mano, revisar que no queden.
+
+## Bloque 2 (27/09/2026): revisar la organización de los usuarios cliente
+
+Hasta esta versión, el alta de usuarios desde la pantalla asignaba **todo
+usuario cliente a la organización número 1**, se eligiera la que se eligiera
+(detalle en `docs/cambios-devolucion-negocio.md`, bloque 2, punto 3). Después
+de desplegar, listar los usuarios cliente con su empresa y confirmar uno por
+uno que cada uno esté donde corresponde:
+
+```bash
+php artisan tinker --execute='App\Models\User::withoutGlobalScopes()->whereNotNull("organization_id")->with("organization:id,name")->orderBy("organization_id")->get()->each(fn ($u) => print($u->organization?->name." | ".$u->email." | alta ".$u->created_at.PHP_EOL));'
+```
+
+Si alguno quedó mal, se corrige desde la base (no hay pantalla para mudar
+un usuario de empresa, a propósito): `organization_id` del usuario al id de
+su organización.

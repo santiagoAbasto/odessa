@@ -223,7 +223,7 @@ class PermissionsTest extends TestCase
         $this->actingAs($admin)->post('/administracion/usuarios', [
             'name' => 'Infiltrado',
             'email' => 'infiltrado@cliente.test',
-            'organization_id' => $ajena->getKey(),
+            'organization_id' => $ajena->public_id,
             'roles' => [Permissions::ROLE_CLIENT_VIEWER],
         ]);
 

@@ -257,3 +257,27 @@ Al agregar un equipo con un error de validación, el diálogo se cerraba y el me
 | Pedido por equipo con operación especial | Implementado y probado |
 | Vigencia por empresa en el FMR | Implementado y probado |
 | Lo pedido visible en envíos y en el taller | Implementado y probado |
+
+## 3. Permisos por usuario
+
+Lo pedido: «rol cliente para cualquiera de los dos, poder darles de alta permisos». El ejemplo fue un operador normal y su jefe, que tiene ciertos permisos más. Y también que un usuario de consulta «podría cargar a base de datos».
+
+### Decisiones
+
+- **Consulta es el auditor.** Ve lo que está en curso y pendiente y el progreso de sus equipos, pero no genera envíos. Ya funcionaba así; no cambió.
+- **Permisos adicionales por usuario.** Desde Usuarios, el superadmin puede sumarle a un usuario cliente permisos puntuales por encima de su rol: cargar envíos al taller, autorizar reparaciones o comentar en la bitácora. Es una lista cerrada: nunca un permiso del taller ni de administración. Lo que el rol ya incluye se muestra tildado y bloqueado.
+- **Pendiente del negocio: qué distingue al jefe.** Hoy un Operador ya tiene todo lo que un cliente puede tener, así que al jefe no le queda nada que sumar. Hay que definir qué **no** puede el operador normal. La propuesta es autorizar reparaciones, porque se cobran. Con el mecanismo hecho, el cambio es menor.
+
+### Bug encontrado y corregido: alta de usuarios cliente
+
+El selector de organización del alta de usuarios mandaba **el mismo valor para todas las empresas**: el identificador se casteaba a número y todos los UUID de este año empiezan con «01a0…», que da 1. Consecuencia: **todo usuario cliente creado desde la pantalla quedaba asignado a la organización número 1**, sin importar cuál se eligiera. Además, la validación esperaba un número y el filtro por organización del listado no funcionaba.
+
+Corregido y cubierto por prueba. **En producción hay que revisar** los usuarios cliente que se hayan creado desde la pantalla y confirmar que cada uno esté en su empresa (ver `deploy/elserver/NOTAS-SERVIDOR.md`, consulta de verificación).
+
+### Estado
+
+| Elemento | Estado |
+|---|---|
+| Permisos adicionales por usuario cliente | Implementado y probado |
+| Alta de usuario cliente en la organización correcta | Corregido y probado |
+| Qué distingue al jefe del operador | Pendiente del negocio |
