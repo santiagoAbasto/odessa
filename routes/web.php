@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountRequestController;
 use App\Http\Controllers\Admin\AccountRequestReviewController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\OperationController;
+use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetSetController;
@@ -74,6 +75,11 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Ficha técnica editable: superadministrador y taller.
+    // Alta manual de equipamiento, sin esperar a que llegue en un envío.
+    Route::post('/activos', [AssetController::class, 'store'])
+        ->middleware('permission:'.Permissions::ASSETS_CREATE)
+        ->name('assets.store');
+
     Route::put('/activos/{asset}', [AssetController::class, 'update'])
         ->middleware('permission:'.Permissions::ASSETS_UPDATE)
         ->name('assets.update');
@@ -89,6 +95,24 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/informes', [InspectionReportController::class, 'index'])->name('reports.index');
         Route::get('/informes/{report}', [InspectionReportController::class, 'show'])->name('reports.show');
     });
+    // Alta del informe y carga de los equipos que dictamina. Va antes de
+    // finalizar porque es lo que construye el contenido del FMR.
+    Route::middleware('permission:'.Permissions::REPORTS_CREATE)->group(function () {
+        Route::post('/informes', [InspectionReportController::class, 'store'])->name('reports.store');
+    });
+
+    Route::middleware('permission:'.Permissions::REPORTS_UPDATE)->group(function () {
+        Route::get('/informes/{report}/equipos-disponibles', [InspectionReportController::class, 'availableAssets'])
+            ->name('reports.available_assets');
+        Route::post('/informes/{report}/equipos', [InspectionReportController::class, 'addAssets'])
+            ->name('reports.add_assets');
+        Route::delete('/informes/{report}/equipos/{asset}', [InspectionReportController::class, 'removeAsset'])
+            ->name('reports.remove_asset');
+        // Dictamen en tanda: un FMR típico resuelve varios equipos de una.
+        Route::post('/informes/{report}/dictamen', [InspectionReportController::class, 'updateLines'])
+            ->name('reports.update_lines');
+    });
+
     Route::post('/informes/{report}/finalizar', [InspectionReportController::class, 'finalize'])
         ->middleware('permission:'.Permissions::REPORTS_FINALIZE)
         ->name('reports.finalize');
@@ -197,6 +221,17 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/auditoria', [ActivityLogController::class, 'index'])
             ->middleware('permission:'.Permissions::AUDIT_VIEW)
             ->name('audit.index');
+
+        /*
+         * Empresas cliente. Sin baja: una organización con equipos e informes
+         * no se borra sin romper la trazabilidad, se desactiva.
+         */
+        Route::middleware('permission:'.Permissions::ORGANIZATIONS_MANAGE)->group(function () {
+            Route::get('/organizaciones', [OrganizationController::class, 'index'])->name('organizations.index');
+            Route::post('/organizaciones', [OrganizationController::class, 'store'])->name('organizations.store');
+            Route::put('/organizaciones/{organization}', [OrganizationController::class, 'update'])
+                ->name('organizations.update');
+        });
 
         // Tabla de operaciones: sus tiempos gobiernan vigencias y avisos.
         Route::middleware('permission:'.Permissions::CATALOGS_MANAGE)->group(function () {

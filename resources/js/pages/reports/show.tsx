@@ -1,6 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { DocumentPanel, type DocumentPayload } from '@/components/documents/document-panel';
 import { CheckCheck, Download, FileText, Layers, Package } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { DocumentPanel, type DocumentPayload } from '@/components/documents/document-panel';
+import { AddAssetsDialog, ResolveLinesDialog } from '@/components/reports/line-editor';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmButton } from '@/components/ui/confirm-button';
@@ -67,13 +69,35 @@ export default function ReportShow({
     deleteDocuments: boolean;
   };
 }) {
+  /*
+    Selección para dictaminar en tanda. Se limpia cuando cambian las líneas
+    —después de guardar un dictamen o de agregar equipos— para que no queden
+    marcados ids que ya no están en pantalla.
+  */
+  const [seleccion, setSeleccion] = useState<number[]>([]);
+  useEffect(() => setSeleccion([]), [lines]);
+
+  const editable = can.update && report.status === 'draft';
+  const todasMarcadas = lines.length > 0 && seleccion.length === lines.length;
+
   return (
     <AppLayout
       title={`FMR ${report.number}`}
       description={report.equipment ?? undefined}
       breadcrumbs={[{ label: 'Informes FMR', href: '/informes' }, { label: report.number }]}
       actions={
-        can.finalize && (
+        <>
+          {editable && <AddAssetsDialog reportId={report.id} />}
+
+          {editable && (
+            <ResolveLinesDialog
+              reportId={report.id}
+              lineIds={seleccion}
+              onDone={() => setSeleccion([])}
+            />
+          )}
+
+          {can.finalize && (
           <ConfirmButton
             variant="primary"
             size="sm"
@@ -85,7 +109,8 @@ export default function ReportShow({
             <CheckCheck aria-hidden />
             Finalizar
           </ConfirmButton>
-        )
+          )}
+        </>
       }
     >
       <Head title={`FMR ${report.number}`} />
@@ -164,12 +189,36 @@ export default function ReportShow({
           />
 
           {lines.length === 0 ? (
-            <EmptyState icon={Package} title="Sin piezas asociadas" />
+            <EmptyState
+              icon={Package}
+              title="Sin piezas asociadas"
+              description={
+                editable
+                  ? 'Use «Agregar equipos» para cargar lo que se inspeccionó.'
+                  : undefined
+              }
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] text-[12.5px]">
                 <thead>
                   <tr>
+                    {editable && (
+                      <th
+                        scope="col"
+                        className="h-9 w-9 border-b border-[var(--border-default)] bg-[var(--surface-sunken)] px-3"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={todasMarcadas}
+                          onChange={(event) =>
+                            setSeleccion(event.target.checked ? lines.map((line) => line.id) : [])
+                          }
+                          aria-label="Seleccionar todas las piezas"
+                          className="size-3.5 rounded-xs accent-[var(--accent)]"
+                        />
+                      </th>
+                    )}
                     {['Pieza', 'Serie', 'Servicio', 'Vigencia', 'Resultado'].map((header) => (
                       <th
                         key={header}
@@ -187,6 +236,23 @@ export default function ReportShow({
                       key={line.id}
                       className="border-b border-[var(--border-subtle)] last:border-b-0 hover:bg-[var(--surface-hover)]"
                     >
+                      {editable && (
+                        <td className="px-3 py-2.5">
+                          <input
+                            type="checkbox"
+                            checked={seleccion.includes(line.id)}
+                            onChange={(event) =>
+                              setSeleccion((previa) =>
+                                event.target.checked
+                                  ? [...previa, line.id]
+                                  : previa.filter((id) => id !== line.id),
+                              )
+                            }
+                            aria-label={`Seleccionar ${line.asset.name}`}
+                            className="size-3.5 rounded-xs accent-[var(--accent)]"
+                          />
+                        </td>
+                      )}
                       <td className="px-3 py-2.5">
                         <Link
                           href={`/activos/${line.asset.id}`}

@@ -61,6 +61,9 @@ class UserController extends Controller
                 'isStaff' => $u->isStaff(),
                 'organization' => $u->organization?->name,
                 'roles' => $u->getRoleNames()->map(fn ($r) => Permissions::roleLabels()[$r] ?? $r)->all(),
+                // Los nombres crudos, para preseleccionar al editar. Las
+                // etiquetas de arriba son para mostrar y no sirven de valor.
+                'roleNames' => $u->getRoleNames()->all(),
                 'lastLoginAt' => $u->last_login_at?->toIso8601String(),
                 'canEdit' => $actor->can('update', $u),
                 'canDelete' => $actor->can('delete', $u),

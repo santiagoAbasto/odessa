@@ -1,4 +1,5 @@
 import {
+  Building2,
   ClipboardList,
   FileSearch,
   Layers,
@@ -92,6 +93,13 @@ export const navigation: NavGroup[] = [
   {
     label: 'Administración',
     items: [
+      {
+        label: 'Organizaciones',
+        href: '/administracion/organizaciones',
+        icon: Building2,
+        permission: 'organizations.manage',
+        match: ['/administracion/organizaciones'],
+      },
       {
         label: 'Usuarios',
         href: '/administracion/usuarios',

@@ -24,6 +24,8 @@ use Illuminate\Validation\ValidationException;
  */
 class AuthorizeShipment
 {
+    public function __construct(private CreateAsset $createAsset) {}
+
     public function authorize(Shipment $shipment, ?string $notes = null, ?string $promisedAt = null): Shipment
     {
         if (! $shipment->isPending()) {
@@ -39,13 +41,21 @@ class AuthorizeShipment
                 $asset = $item->asset;
 
                 if ($asset === null) {
-                    $asset = Asset::create([
-                        'organization_id' => $shipment->organization_id,
-                        'kind' => Asset::KIND_PART,
-                        'description' => $item->declared_description,
-                        'serial_number' => $item->declared_serial,
-                        'code' => Str::upper(Str::random(8)),
-                    ]);
+                    /*
+                     * Alta de la pieza que el cliente declaró sin registrar.
+                     * Pasa por CreateAsset para que la comprobación de serie
+                     * repetida valga también acá: antes este camino creaba el
+                     * registro directo y podía duplicar una pieza existente.
+                     */
+                    $asset = ($this->createAsset)(
+                        $shipment->organization,
+                        [
+                            'kind' => Asset::KIND_PART,
+                            'description' => $item->declared_description,
+                            'serial_number' => $item->declared_serial,
+                        ],
+                        "Alta al autorizar el envío {$shipment->reference}",
+                    );
 
                     $item->asset()->associate($asset);
                 }

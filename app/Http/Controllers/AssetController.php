@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\CreateAsset;
 use App\Actions\RecalculateAssetStatus;
 use App\Enums\AssetStatus;
 use App\Models\Asset;
@@ -20,6 +21,7 @@ use App\Support\TableQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -32,6 +34,19 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class AssetController extends Controller
 {
+    /**
+     * Filtros admitidos, compartidos por el listado y la exportación.
+     *
+     * Van juntos a propósito: cuando eran dos listas separadas la exportación
+     * se quedó sin `organization`, de modo que filtrar por cliente y después
+     * descargar traía el inventario de todos.
+     */
+    private const FILTERS = [
+        'search', 'status', 'serial', 'code', 'client_reference',
+        'report_number', 'expires_from', 'expires_to', 'brand', 'model',
+        'organization', 'due_in', 'send_by_in', 'overdue',
+    ];
+
     /** Alias público => columna real. Evita exponer el esquema en la URL. */
     private const SORTABLE = [
         'description' => 'assets.description',
@@ -52,11 +67,7 @@ class AssetController extends Controller
             ? Asset::KIND_GENERIC
             : Asset::KIND_PART;
 
-        $filters = TableQuery::filters($request, [
-            'search', 'status', 'serial', 'code', 'client_reference',
-            'report_number', 'expires_from', 'expires_to', 'brand', 'model',
-            'organization',
-        ]);
+        $filters = TableQuery::filters($request, self::FILTERS);
 
         $query = Asset::query()
             ->where('assets.kind', $kind)
@@ -86,12 +97,8 @@ class AssetController extends Controller
              * de todos los clientes se ve como una sola bolsa.
              */
             'showOrganization' => ! $request->user()->isClientUser(),
-            'organizationOptions' => $request->user()->isClientUser() ? [] : Organization::query()
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(['public_id', 'name'])
-                ->map(fn (Organization $o) => ['value' => $o->public_id, 'label' => $o->name])
-                ->all(),
+            'organizationOptions' => TableQuery::organizationOptions($request),
+            'can' => ['create' => $request->user()->can('create', Asset::class)],
             'summary' => Inertia::defer(fn () => $this->summary($kind)),
         ]);
     }
@@ -113,10 +120,7 @@ class AssetController extends Controller
             ? Asset::KIND_GENERIC
             : Asset::KIND_PART;
 
-        $filters = TableQuery::filters($request, [
-            'search', 'status', 'serial', 'code', 'client_reference',
-            'report_number', 'expires_from', 'expires_to', 'brand', 'model',
-        ]);
+        $filters = TableQuery::filters($request, self::FILTERS);
 
         $query = Asset::query()
             ->where('assets.kind', $kind)
@@ -328,6 +332,53 @@ class AssetController extends Controller
      * El cambio queda en la auditoría con el antes y el después: es la única
      * forma de explicar más tarde por qué a un equipo le cambió el plazo.
      */
+    /**
+     * Alta manual de una pieza en el inventario de una empresa.
+     *
+     * Hasta ahora sólo se daban de alta de rebote: al autorizar un envío que
+     * declaraba algo no registrado, o al recibir un equipo en el taller. Esto
+     * permite cargarlas antes, que es lo normal cuando un cliente entrega su
+     * listado de equipamiento.
+     */
+    public function store(Request $request, CreateAsset $createAsset): RedirectResponse
+    {
+        $this->authorize('create', Asset::class);
+
+        $actor = $request->user();
+
+        $data = $request->validate([
+            'organization_public_id' => [
+                // Un cliente no elige empresa: se le asigna la suya.
+                Rule::requiredIf(fn () => ! $actor->isClientUser()),
+                'nullable', 'uuid',
+            ],
+            'kind' => ['nullable', Rule::in([Asset::KIND_PART, Asset::KIND_GENERIC])],
+            'description' => ['required', 'string', 'min:3', 'max:180'],
+            'serial_number' => ['nullable', 'string', 'max:120'],
+            'client_reference' => ['nullable', 'string', 'max:120'],
+            'manufacturer_reference' => ['nullable', 'string', 'max:120'],
+            'brand' => ['nullable', 'string', 'max:120'],
+            'model' => ['nullable', 'string', 'max:120'],
+            'catalog_item_id' => ['nullable', 'integer', 'exists:catalog_items,id'],
+            'service_id' => ['nullable', 'integer', 'exists:services,id'],
+        ], [
+            'organization_public_id.required' => 'Indique a qué empresa pertenece el equipo.',
+            'description.required' => 'Describa el equipo.',
+        ]);
+
+        $organization = $actor->isClientUser()
+            ? Organization::findOrFail($actor->organization_id)
+            : Organization::query()->where('public_id', $data['organization_public_id'])->first();
+
+        if ($organization === null) {
+            return back()->withErrors(['organization_public_id' => 'La empresa elegida no existe.']);
+        }
+
+        $asset = $createAsset($organization, $data);
+
+        return back()->with('success', "Se dio de alta «{$asset->displayName()}».");
+    }
+
     public function update(Request $request, Asset $asset, RecalculateAssetStatus $recalculate): RedirectResponse
     {
         $this->authorize('update', $asset);
@@ -476,7 +527,30 @@ class AssetController extends Controller
             ->when($filters['report_number'] ?? null, fn (Builder $q, string $v) => $q
                 ->whereHas('currentReport', fn (Builder $r) => $r->where('number', 'like', TableQuery::like($v))))
             ->when($filters['expires_from'] ?? null, fn (Builder $q, string $v) => $q->whereDate('assets.expires_at', '>=', $v))
-            ->when($filters['expires_to'] ?? null, fn (Builder $q, string $v) => $q->whereDate('assets.expires_at', '<=', $v));
+            ->when($filters['expires_to'] ?? null, fn (Builder $q, string $v) => $q->whereDate('assets.expires_at', '<=', $v))
+            /*
+             * Ventanas de vencimiento.
+             *
+             * El rango de fechas ya existía, pero obliga a calcular a mano
+             * "dentro de 60 días" cada vez. Esto responde de un clic la
+             * pregunta real: qué hay que empezar a mover.
+             *
+             * `send_by` es distinto de `expires`: no pregunta cuándo vence
+             * sino hasta cuándo se puede despachar sin perder la vigencia,
+             * que es lo que de verdad limita al cliente.
+             */
+            ->when($filters['due_in'] ?? null, fn (Builder $q, string $v) => $q
+                ->whereNotNull('assets.expires_at')
+                ->whereDate('assets.expires_at', '>=', today())
+                ->whereDate('assets.expires_at', '<=', today()->addDays((int) $v)))
+            ->when($filters['send_by_in'] ?? null, fn (Builder $q, string $v) => $q
+                ->whereNotNull('assets.send_by_at')
+                ->whereDate('assets.send_by_at', '<=', today()->addDays((int) $v)))
+            // Ya vencidos, o cuya fecha límite de envío quedó atrás.
+            ->when(($filters['overdue'] ?? null) === '1', fn (Builder $q) => $q
+                ->where(fn (Builder $i) => $i
+                    ->whereDate('assets.expires_at', '<', today())
+                    ->orWhereDate('assets.send_by_at', '<', today())));
     }
 
     private function toRow(Asset $asset): array

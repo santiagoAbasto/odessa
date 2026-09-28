@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssetStatus;
 use App\Models\AssetSet;
 use App\Support\TableQuery;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,13 +17,28 @@ class AssetSetController extends Controller
     {
         $this->authorize('viewAny', AssetSet::class);
 
-        $filters = TableQuery::filters($request, ['search']);
+        $filters = TableQuery::filters($request, ['search', 'organization', 'status', 'serial', 'code']);
 
         $sets = AssetSet::query()
             ->with('organization:id,name')
             ->withCount('assets')
             ->when($filters['search'] ?? null, fn (Builder $q, string $v) => $q
-                ->where('name', 'like', TableQuery::like($v)))
+                ->where(fn (Builder $i) => $i
+                    ->where('name', 'like', TableQuery::like($v))
+                    ->orWhere('notes', 'like', TableQuery::like($v))))
+            ->tap(fn (Builder $q) => TableQuery::scopeToOrganization($q, $filters['organization'] ?? null))
+            /*
+             * Los tres filtros que siguen son del equipo, no del set: se busca
+             * el set que CONTIENE esa pieza. Es la forma en que realmente se
+             * usa —aparece un número de serie y hay que ubicar a qué conjunto
+             * pertenece— y por eso valía traerlos desde Activos.
+             */
+            ->when($filters['status'] ?? null, fn (Builder $q, string $v) => $q
+                ->whereHas('assets', fn (Builder $a) => $a->where('status', $v)))
+            ->when($filters['serial'] ?? null, fn (Builder $q, string $v) => $q
+                ->whereHas('assets', fn (Builder $a) => $a->where('serial_number', 'like', TableQuery::like($v))))
+            ->when($filters['code'] ?? null, fn (Builder $q, string $v) => $q
+                ->whereHas('assets', fn (Builder $a) => $a->where('code', 'like', TableQuery::like($v))))
             ->orderBy('name')
             ->paginate(TableQuery::perPage($request))
             ->withQueryString()
@@ -38,6 +54,8 @@ class AssetSetController extends Controller
             'sets' => $sets,
             'filters' => $filters,
             'showOrganization' => ! $request->user()->isClientUser(),
+            'organizationOptions' => TableQuery::organizationOptions($request),
+            'statusOptions' => AssetStatus::options(),
         ]);
     }
 

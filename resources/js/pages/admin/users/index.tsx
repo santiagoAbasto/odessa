@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { CircleSlash, Plus, ShieldCheck, UserCog, Users } from 'lucide-react';
+import { CircleSlash, Pencil, Plus, ShieldCheck, UserCog, Users } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,10 @@ interface UserRow {
   isActive: boolean;
   isStaff: boolean;
   organization: string | null;
+  /** Etiquetas para mostrar. */
   roles: string[];
+  /** Nombres crudos, para preseleccionar al editar. */
+  roleNames: string[];
   lastLoginAt: string | null;
   canEdit: boolean;
   canDelete: boolean;
@@ -53,7 +56,7 @@ export default function UsersIndex({ users, filters, roleOptions, organizations,
                 Nuevo usuario
               </Button>
             </DialogTrigger>
-            <CreateUserDialog
+            <UserDialog
               roleOptions={roleOptions}
               organizations={organizations}
               onDone={() => setCreating(false)}
@@ -97,6 +100,30 @@ export default function UsersIndex({ users, filters, roleOptions, organizations,
             <option value="active">Activos</option>
             <option value="inactive">Inactivos</option>
           </Select>
+
+          {/* Sólo el personal interno ve varias organizaciones; un cliente ya
+              tiene el listado acotado a la suya y el selector sobraría. */}
+          {organizations.length > 0 && (
+            <Select
+              value={filters.organization ?? ''}
+              onChange={(event) =>
+                router.get(
+                  '/administracion/usuarios',
+                  { ...filters, organization: event.target.value || undefined },
+                  { preserveState: true, preserveScroll: true, replace: true },
+                )
+              }
+              aria-label="Filtrar por organización"
+              className="h-8 w-auto text-[12.5px]"
+            >
+              <option value="">Todas las organizaciones</option>
+              {organizations.map((organization) => (
+                <option key={organization.id} value={organization.id}>
+                  {organization.name}
+                </option>
+              ))}
+            </Select>
+          )}
         </div>
 
         {users.data.length === 0 ? (
@@ -155,6 +182,10 @@ export default function UsersIndex({ users, filters, roleOptions, organizations,
                       </Badge>
                     </td>
                     <td className="px-3 py-2.5 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                      {user.canEdit && (
+                        <EditUserButton user={user} roleOptions={roleOptions} />
+                      )}
                       {user.canDelete && (
                         <ConfirmButton
                           variant="ghost"
@@ -171,6 +202,7 @@ export default function UsersIndex({ users, filters, roleOptions, organizations,
                           Desactivar
                         </ConfirmButton>
                       )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -183,39 +215,78 @@ export default function UsersIndex({ users, filters, roleOptions, organizations,
   );
 }
 
-function CreateUserDialog({
+/** Abre el diálogo de edición sobre una fila. */
+function EditUserButton({ user, roleOptions }: { user: UserRow; roleOptions: SelectOption[] }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <Pencil aria-hidden />
+          Editar
+        </Button>
+      </DialogTrigger>
+      {/* Se monta recién al abrir para que el formulario arranque con los
+          datos de la fila y no con los de la última que se editó. */}
+      {open && <UserDialog user={user} roleOptions={roleOptions} organizations={[]} onDone={() => setOpen(false)} />}
+    </Dialog>
+  );
+}
+
+/**
+ * Alta y edición de usuario.
+ *
+ * Es el mismo formulario porque son los mismos campos. Las dos diferencias
+ * van por `user`: al crear se elige organización —después no se cambia, un
+ * usuario no se muda de empresa— y al editar aparece el estado de acceso.
+ */
+function UserDialog({
+  user,
   roleOptions,
   organizations,
   onDone,
 }: {
+  user?: UserRow;
   roleOptions: SelectOption[];
   organizations: { id: string; name: string }[];
   onDone: () => void;
 }) {
-  const { data, setData, post, processing, errors, reset } = useForm({
-    name: '',
-    email: '',
-    phone: '',
-    job_title: '',
+  const editing = user !== undefined;
+
+  const { data, setData, post, put, processing, errors, reset } = useForm({
+    name: user?.name ?? '',
+    email: user?.email ?? '',
+    phone: user?.phone ?? '',
+    job_title: user?.jobTitle ?? '',
     organization_id: '',
-    roles: [] as string[],
+    is_active: user?.isActive ?? true,
+    roles: user?.roleNames ?? ([] as string[]),
   });
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    post('/administracion/usuarios', {
-      preserveScroll: true,
-      onSuccess: () => {
-        reset();
-        onDone();
-      },
-    });
+
+    const onSuccess = () => {
+      reset();
+      onDone();
+    };
+
+    if (editing) {
+      put(`/administracion/usuarios/${user.id}`, { preserveScroll: true, onSuccess });
+    } else {
+      post('/administracion/usuarios', { preserveScroll: true, onSuccess });
+    }
   };
 
   return (
     <DialogContent
-      title="Nuevo usuario"
-      description="Se enviará un enlace al correo indicado para que defina su contraseña."
+      title={editing ? `Editar a ${user.name}` : 'Nuevo usuario'}
+      description={
+        editing
+          ? 'Los cambios quedan registrados en la auditoría con el usuario que los hizo.'
+          : 'Se enviará un enlace al correo indicado para que defina su contraseña.'
+      }
       footer={
         <>
           <DialogClose asChild>
@@ -223,14 +294,14 @@ function CreateUserDialog({
               Cancelar
             </Button>
           </DialogClose>
-          <Button type="submit" form="form-nuevo-usuario" variant="primary" size="sm" loading={processing}>
+          <Button type="submit" form="form-usuario" variant="primary" size="sm" loading={processing}>
             <UserCog aria-hidden />
-            Crear usuario
+            {editing ? 'Guardar cambios' : 'Crear usuario'}
           </Button>
         </>
       }
     >
-      <form id="form-nuevo-usuario" onSubmit={submit} className="flex flex-col gap-4" noValidate>
+      <form id="form-usuario" onSubmit={submit} className="flex flex-col gap-4" noValidate>
         <Field label="Nombre y apellido" error={errors.name} required>
           {(props) => (
             <Input
@@ -277,7 +348,23 @@ function CreateUserDialog({
           </Field>
         </div>
 
-        {organizations.length > 0 && (
+        {editing && (
+          <Field label="Acceso" hint="Un usuario inactivo pierde el acceso en su siguiente petición.">
+            {() => (
+              <label className="flex items-center gap-2 text-[12.5px]">
+                <input
+                  type="checkbox"
+                  checked={data.is_active}
+                  onChange={(event) => setData('is_active', event.target.checked)}
+                  className="size-3.5 rounded-xs accent-[var(--accent)]"
+                />
+                Activo
+              </label>
+            )}
+          </Field>
+        )}
+
+        {!editing && organizations.length > 0 && (
           <Field
             label="Organización"
             hint="Vacío crea un usuario interno de Odessa Oil, con acceso a todas las organizaciones."

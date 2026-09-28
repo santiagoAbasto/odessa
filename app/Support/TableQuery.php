@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Organization;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
@@ -61,5 +62,35 @@ class TableQuery
         $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], (string) $term);
 
         return '%'.$escaped.'%';
+    }
+
+    /**
+     * Opciones del filtro por empresa.
+     *
+     * Vacío para un usuario cliente: todo lo que ve ya es suyo, y ofrecerle un
+     * selector con una sola opción —o peor, con los nombres de las demás
+     * empresas— no tendría sentido.
+     *
+     * @return array<int, array{value: string, label: string}>
+     */
+    public static function organizationOptions(Request $request): array
+    {
+        if ($request->user()?->isClientUser()) {
+            return [];
+        }
+
+        return Organization::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['public_id', 'name'])
+            ->map(fn (Organization $o) => ['value' => $o->public_id, 'label' => $o->name])
+            ->all();
+    }
+
+    /** Acota una consulta a la empresa elegida en el filtro. */
+    public static function scopeToOrganization(Builder $query, ?string $publicId): Builder
+    {
+        return $query->when($publicId, fn (Builder $q, string $v) => $q
+            ->whereHas('organization', fn (Builder $o) => $o->where('public_id', $v)));
     }
 }

@@ -26,6 +26,8 @@ use Illuminate\Validation\ValidationException;
  */
 class RegisterDirectReception
 {
+    public function __construct(private CreateAsset $createAsset) {}
+
     /**
      * @param  array<string, mixed>  $data
      */
@@ -92,40 +94,13 @@ class RegisterDirectReception
         /*
          * Un número de serie repetido dentro de la misma empresa casi siempre
          * es la misma pieza volviendo al taller, no una nueva. Darla de alta
-         * otra vez partiría su historial en dos y rompería la trazabilidad.
+         * otra vez partiría su historial en dos. La comprobación vive en
+         * CreateAsset, que es por donde entra toda pieza nueva.
          */
-        if (! blank($data['serial_number'] ?? null)) {
-            $existente = Asset::query()
-                ->forOrganization($organization->getKey())
-                ->where('serial_number', $data['serial_number'])
-                ->first();
-
-            if ($existente !== null) {
-                throw ValidationException::withMessages([
-                    'serial_number' => sprintf(
-                        'Ya existe una pieza de esta empresa con ese número de serie: «%s». Elíjala del listado.',
-                        $existente->displayName(),
-                    ),
-                ]);
-            }
-        }
-
-        $asset = Asset::create([
-            'organization_id' => $organization->getKey(),
-            'kind' => $data['kind'] ?? Asset::KIND_PART,
-            'description' => $data['description'],
-            'serial_number' => $data['serial_number'] ?? null,
-            'client_reference' => $data['client_reference'] ?? null,
-            'code' => Str::upper(Str::random(8)),
-        ]);
-
-        ActivityLogger::log(
-            action: 'asset.created',
-            subject: $asset,
-            description: "Alta desde el taller al recibir {$asset->displayName()}",
-            organizationId: $organization->getKey(),
+        return ($this->createAsset)(
+            $organization,
+            $data,
+            "Alta desde el taller al recibir {$data['description']}",
         );
-
-        return $asset;
     }
 }

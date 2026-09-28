@@ -1,12 +1,12 @@
 import { Head, Link } from '@inertiajs/react';
-import { Layers, Search } from 'lucide-react';
-import { router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { Layers } from 'lucide-react';
+import { useMemo } from 'react';
+import { FilterBar, type FilterDefinition } from '@/components/tables/filter-bar';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Panel } from '@/components/ui/panel';
 import AppLayout from '@/layouts/app-layout';
 import { formatNumber } from '@/lib/format';
-import type { Paginated } from '@/types';
+import type { Paginated, SelectOption } from '@/types';
 
 interface SetRow {
   id: string;
@@ -21,28 +21,32 @@ export default function SetsIndex({
   sets,
   filters,
   showOrganization,
+  organizationOptions,
+  statusOptions,
 }: {
   sets: Paginated<SetRow>;
   filters: Record<string, string | undefined>;
   showOrganization: boolean;
+  organizationOptions: SelectOption[];
+  statusOptions: SelectOption[];
 }) {
-  const [search, setSearch] = useState(filters.search ?? '');
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    if (!mounted) {
-      setMounted(true);
-      return;
-    }
-    const timer = setTimeout(() => {
-      router.get('/sets', search ? { search } : {}, {
-        preserveState: true,
-        preserveScroll: true,
-        replace: true,
-      });
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [search]);
+  /*
+    Los mismos filtros que Activos, porque la pregunta que se hace acá es la
+    misma: aparece un número de serie suelto y hay que saber a qué conjunto
+    pertenece. Estado, serie y código filtran por las PIEZAS del set.
+  */
+  const filterDefinitions = useMemo<FilterDefinition[]>(
+    () => [
+      { key: 'search', label: 'Set', type: 'text' },
+      ...(organizationOptions.length > 0
+        ? [{ key: 'organization', label: 'Cliente', type: 'select' as const, options: organizationOptions }]
+        : []),
+      { key: 'status', label: 'Estado de sus piezas', type: 'select', options: statusOptions },
+      { key: 'serial', label: 'Número de serie', type: 'text' },
+      { key: 'code', label: 'Código', type: 'text' },
+    ],
+    [organizationOptions, statusOptions],
+  );
 
   return (
     <AppLayout
@@ -52,23 +56,12 @@ export default function SetsIndex({
     >
       <Head title="Sets de equipo" />
 
-      <div className="mb-4 relative max-w-xs">
-        <label htmlFor="buscar-set" className="sr-only">
-          Buscar set por nombre
-        </label>
-        <Search
-          className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-[var(--text-muted)]"
-          aria-hidden
-        />
-        <input
-          id="buscar-set"
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Buscar set…"
-          className="h-8 w-full rounded-xs border border-[var(--border-default)] bg-[var(--surface-raised)] pr-2.5 pl-8 text-[12.5px] outline-none focus:border-[var(--focus-ring)]"
-        />
-      </div>
+      <FilterBar
+        baseUrl="/sets"
+        filters={filters}
+        definitions={filterDefinitions}
+        searchPlaceholder="Buscar set por nombre o nota…"
+      />
 
       {sets.data.length === 0 ? (
         <Panel>
