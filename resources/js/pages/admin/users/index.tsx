@@ -420,6 +420,18 @@ function UserDialog({
           </Field>
         </div>
 
+        {/* La organización no se cambia al editar —un usuario no se muda de
+            empresa—, pero sí se muestra para saber de quién es la cuenta. */}
+        {editing && (
+          <Field label="Organización">
+            {() => (
+              <p className="text-[12.5px]">
+                {user.isStaff ? 'Personal interno de Odessa Oil' : (user.organization ?? '—')}
+              </p>
+            )}
+          </Field>
+        )}
+
         {editing && (
           <Field label="Acceso" hint="Un usuario inactivo pierde el acceso en su siguiente petición.">
             {() => (
