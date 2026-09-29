@@ -269,6 +269,22 @@ El paquete se arma con lista blanca de carpetas, así que `deploy/`, `docs/`,
 `tests/`, `.claude/` y el `.env` no pueden colarse. Si alguna vez se sube algo
 a mano, revisar que no queden.
 
+## Bloque 3 (29/09/2026): re-sembrar permisos al desplegar
+
+El rol **Taller** ganó el permiso `shipments.create` (cargar envíos por una
+organización). Como es un permiso nuevo asignado a un rol, hay que correr el
+seeder de permisos en el despliegue, o el botón «Nuevo envío» no le va a
+aparecer al taller:
+
+```bash
+php artisan db:seed --class=RolePermissionSeeder --force
+```
+
+Es idempotente y no toca las asignaciones usuario-rol. Además, este paquete
+trae dos migraciones nuevas (`must_change_password` en usuarios y el ensanche
+de `contact_email` a texto), así que el `php artisan migrate --force` es
+obligatorio.
+
 ## Bloque 2 (27/09/2026): revisar la organización de los usuarios cliente
 
 Hasta esta versión, el alta de usuarios desde la pantalla asignaba **todo

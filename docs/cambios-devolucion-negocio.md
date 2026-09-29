@@ -345,3 +345,43 @@ El cliente preguntó desde dónde se configura la contraseña de un usuario nuev
 - No es una contraseña fija igual para todos: con una así, cualquiera que la conociera podría entrar a la cuenta de otro.
 - Nadie restablece su propio acceso desde esta pantalla: se le cerraría la sesión antes de ver la clave nueva.
 - «¿Olvidó su contraseña?» del login sigue igual. Va a servir cuando funcione el correo.
+
+## 9. Bloque 3 — respuestas de Agustín (29/09/2026)
+
+Segunda tanda de ajustes sobre lo probado en producción.
+
+### Circuito de reparación, simplificado
+
+Se eliminaron los estados intermedios de reparación (Reparación, En reparación, Reparada, reparación fallida). Ahora, desde una recepción rechazada:
+
+- **El cliente autoriza** → el equipo **vuelve a Pendiente** y el taller lo re-trabaja como cualquier otro (empezar → dictaminar). Se consulta una sola vez: si se lo vuelve a rechazar, la única salida es «Sin solución».
+- **El cliente no autoriza** → queda **listo para despachar** (se devuelve sin certificar, no apto).
+- **«Sin solución»** (decisión del taller) se mantiene.
+
+La consulta y la respuesta del cliente quedan en la auditoría; el detalle del primer rechazo se conserva en el registro de actividad.
+
+### Nombres
+
+- **«Recepción de equipos» → «Gestión de equipos»**.
+- **Todo «FMR» visible pasa a «Informe» / «Informe N°»** (el concepto interno sigue siendo el mismo informe de inspección).
+- En Operaciones, **«Días que tarda» → «Demora estimada»**.
+
+### Organizaciones
+
+- **Varios correos de contacto**, uno por línea. Los avisos (reparación, sin solución) llegan a todas las casillas, descartando vacíos, repetidos y las que ya son de un usuario del sistema. Sirve para las comunicaciones masivas.
+- La **vigencia se configura desde la organización** (ya estaba, del bloque 2): cada empresa fija la vigencia de cada operación; el catálogo global queda como valor por defecto.
+
+### Usuarios
+
+- **Al editar un usuario se muestra su organización** (no se cambia: un usuario no se muda de empresa).
+- **Restablecer contraseña**: es la contraseña temporal del punto 8, disponible desde el superadmin. No se hace una fija igual para todos (sería insegura).
+- **Permisos granulares del Cliente**: se togglean por usuario (cargar envíos, autorizar reparaciones, comentar la bitácora); ver la bitácora, ver avances en el Panel y descargar el Excel de estado vienen por el rol de cliente. **El alta de nuevos usuarios la hace Odessa**, no el cliente (lo confirmó Agustín): el cliente la solicita.
+
+### Taller
+
+- **Puede cargar un envío por una organización** cuando el cliente no lo hace por su cuenta: elige la empresa en «Nuevo envío» y carga por ella. El resto de sus funciones (carga individual de activos, bitácora de todas las organizaciones, gestión en el taller, informes y sus fechas, finalización) ya existían.
+
+### Pendiente del lado del cliente
+
+- **Carga masiva de activos por .xls**: falta que manden el **formato .xls** de ejemplo para armar el importador.
+- **Correos de difusión** («día del trabajador»): dependen de que **funcione el correo del servidor** (CloudSMTP).
