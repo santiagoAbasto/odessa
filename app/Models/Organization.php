@@ -27,6 +27,39 @@ class Organization extends Model
         return $this->hasMany(User::class);
     }
 
+    /**
+     * Correos de contacto de la empresa, uno por línea en `contact_email`.
+     *
+     * Son las casillas que reciben los avisos aunque no sean usuarios del
+     * sistema —típicamente compras, que aprueba el gasto de una reparación—.
+     * El negocio pidió poder cargar varias para las comunicaciones masivas.
+     *
+     * @return list<string>
+     */
+    public function contactEmails(): array
+    {
+        return self::splitEmails($this->contact_email);
+    }
+
+    /**
+     * Separa una lista de correos escrita a mano: admite saltos de línea,
+     * comas y punto y coma, descarta vacíos y repetidos sin distinguir
+     * mayúsculas.
+     *
+     * @return list<string>
+     */
+    public static function splitEmails(?string $raw): array
+    {
+        $emails = preg_split('/[\r\n,;]+/', (string) $raw) ?: [];
+
+        return collect($emails)
+            ->map(fn (string $e) => trim($e))
+            ->filter()
+            ->unique(fn (string $e) => mb_strtolower($e))
+            ->values()
+            ->all();
+    }
+
     public function assets(): HasMany
     {
         return $this->hasMany(Asset::class);

@@ -292,6 +292,21 @@ class WorkshopFlowTest extends TestCase
         Notification::assertSentOnDemand(ReceptionDeclaredUnrepairable::class);
     }
 
+    public function test_los_avisos_llegan_a_todos_los_correos_de_contacto_de_la_organizacion(): void
+    {
+        Notification::fake();
+        $org = $this->organization();
+        // Varios correos, uno por línea, con un vacío y un repetido en otra caja.
+        $org->forceFill(['contact_email' => "compras@cliente.test\noperaciones@cliente.test\n\nCOMPRAS@cliente.test"])->save();
+        $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP));
+
+        $r = $this->recepcion($this->hitos('rejected'), $org);
+        $this->post("/taller/recepciones/{$r->public_id}/consultar-reparacion")->assertRedirect();
+
+        // Dos casillas distintas, sin contar el repetido.
+        Notification::assertSentOnDemandTimes(RepairAuthorizationRequested::class, 2);
+    }
+
     public function test_el_correo_de_contacto_no_se_duplica_si_ya_es_de_un_usuario(): void
     {
         Notification::fake();

@@ -197,7 +197,14 @@ class OrganizationController extends Controller
                     ->withoutTrashed(),
             ],
             'tax_id' => ['nullable', 'string', 'max:32'],
-            'contact_email' => ['nullable', 'email:filter', 'max:180'],
+            // Varios correos, uno por línea: se valida cada uno por separado.
+            'contact_email' => ['nullable', 'string', 'max:2000', function (string $attribute, mixed $value, \Closure $fail) {
+                foreach (Organization::splitEmails($value) as $email) {
+                    if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $fail("«{$email}» no es un correo válido.");
+                    }
+                }
+            }],
             'contact_phone' => ['nullable', 'string', 'max:40'],
             'is_active' => ['boolean'],
         ], [
@@ -205,6 +212,7 @@ class OrganizationController extends Controller
             'short_code.required' => 'Indique un código corto.',
             'short_code.unique' => 'Ya hay una organización con ese código.',
             'short_code.alpha_dash' => 'El código admite letras, números y guiones.',
+            'contact_email.max' => 'La lista de correos es demasiado larga.',
         ]);
     }
 }

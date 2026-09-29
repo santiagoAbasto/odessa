@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
-import { Input, Select } from '@/components/ui/input';
+import { Input, Select, Textarea } from '@/components/ui/input';
 import { Panel } from '@/components/ui/panel';
 import AppLayout from '@/layouts/app-layout';
 import { formatNumber } from '@/lib/format';
@@ -124,7 +124,18 @@ export default function Organizations({
                       </p>
                     </td>
                     <td className="px-3 py-2.5 text-[var(--text-secondary)]">
-                      {organization.contactEmail ?? '—'}
+                      {(() => {
+                        const emails = (organization.contactEmail ?? '').split(/[\r\n,;]+/).map((e) => e.trim()).filter(Boolean);
+                        if (emails.length === 0) return '—';
+                        return (
+                          <span>
+                            {emails[0]}
+                            {emails.length > 1 && (
+                              <span className="text-[var(--text-muted)]"> +{emails.length - 1} más</span>
+                            )}
+                          </span>
+                        );
+                      })()}
                       {organization.contactPhone && (
                         <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">{organization.contactPhone}</p>
                       )}
@@ -460,16 +471,17 @@ function OrganizationDialog({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
-            label="Correo de contacto"
-            hint="A esta casilla llegan los avisos de recertificación."
+            label="Correos de contacto"
+            hint="Uno por línea. A estas casillas llegan los avisos, aunque no sean usuarios del sistema."
             error={errors.contact_email}
           >
             {(props) => (
-              <Input
+              <Textarea
                 {...props}
-                type="email"
+                rows={3}
                 value={data.contact_email}
                 onChange={(event) => setData('contact_email', event.target.value)}
+                placeholder={'compras@empresa.com\noperaciones@empresa.com'}
                 invalid={Boolean(errors.contact_email)}
               />
             )}

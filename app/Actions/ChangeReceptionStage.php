@@ -197,10 +197,16 @@ class ChangeReceptionStage
             Notifier::send($users, $notification);
         }
 
-        $contact = Organization::query()->whereKey($reception->organization_id)->value('contact_email');
+        // Los correos de contacto de la ficha que no sean ya de un usuario.
+        // Suele estar el de compras, que aprueba el gasto de la reparación.
+        $contacts = Organization::splitEmails(
+            Organization::query()->whereKey($reception->organization_id)->value('contact_email')
+        );
 
-        if (filled($contact) && ! $users->contains(fn (User $u) => strcasecmp($u->email, $contact) === 0)) {
-            Notifier::route('mail', $contact)->notify($notification);
+        foreach ($contacts as $contact) {
+            if (! $users->contains(fn (User $u) => strcasecmp($u->email, $contact) === 0)) {
+                Notifier::route('mail', $contact)->notify($notification);
+            }
         }
     }
 
