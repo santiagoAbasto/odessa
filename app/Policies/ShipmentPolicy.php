@@ -21,8 +21,11 @@ class ShipmentPolicy
 
     public function create(User $user): bool
     {
-        // Sólo un usuario de cliente pre-carga envíos: es su declaración.
-        return $user->can(Permissions::SHIPMENTS_CREATE) && $user->isClientUser();
+        // El cliente pre-carga su propia declaración; el taller puede cargar
+        // un envío por una organización cuando el cliente no lo hace. A qué
+        // empresa va lo resuelve el controlador: el cliente, la suya; el
+        // taller, la que elige.
+        return $user->can(Permissions::SHIPMENTS_CREATE);
     }
 
     /** Un envío enviado o ya revisado deja de ser editable por el cliente. */

@@ -75,6 +75,30 @@ class ShipmentWorkflowTest extends TestCase
         $this->assertSame($organizacion->getKey(), $shipment->organization_id);
     }
 
+    public function test_el_taller_carga_un_envio_por_una_organizacion(): void
+    {
+        $organizacion = $this->organization();
+
+        $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP))
+            ->post('/envios', $this->datosDeEnvio(['organization_id' => $organizacion->public_id]))
+            ->assertRedirect();
+
+        $shipment = Shipment::withoutGlobalScope('organization')->firstOrFail();
+        $this->assertSame($organizacion->getKey(), $shipment->organization_id);
+        $this->assertMatchesRegularExpression('/^ENV-\d{4}-\d{4}$/', $shipment->reference);
+    }
+
+    public function test_al_taller_se_le_exige_la_empresa_al_cargar_un_envio(): void
+    {
+        $this->organization();
+
+        $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP))
+            ->post('/envios', $this->datosDeEnvio())
+            ->assertSessionHasErrors('organization_id');
+
+        $this->assertSame(0, Shipment::withoutGlobalScope('organization')->count());
+    }
+
     public function test_el_cliente_de_consulta_no_puede_crear_envios(): void
     {
         $organizacion = $this->organization();

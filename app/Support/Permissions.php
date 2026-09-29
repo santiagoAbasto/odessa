@@ -183,7 +183,9 @@ final class Permissions
             self::RECEPTIONS_RELEASE, self::RECEPTIONS_DISPATCH,
             // Para transcribir la respuesta que el cliente dio por fuera.
             self::RECEPTIONS_AUTHORIZE_REPAIR,
-            self::SHIPMENTS_VIEW, self::SHIPMENTS_AUTHORIZE,
+            // Puede cargar un envío por una organización cuando el cliente
+            // no lo hace por su cuenta, además de autorizarlos.
+            self::SHIPMENTS_VIEW, self::SHIPMENTS_CREATE, self::SHIPMENTS_AUTHORIZE,
             self::COMMENTS_VIEW, self::COMMENTS_CREATE, self::COMMENTS_INTERNAL,
             self::ORGANIZATIONS_VIEW,
             self::CATALOGS_MANAGE,

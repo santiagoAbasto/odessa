@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\AuthorizeShipment;
 use App\Models\Asset;
+use App\Models\Organization;
 use App\Models\Service;
 use App\Models\Shipment;
 use App\Support\ActivityLogger;
@@ -84,6 +85,13 @@ class ShipmentController extends Controller
                 'create' => $user->can('create', Shipment::class),
                 'authorize' => $user->can(Permissions::SHIPMENTS_AUTHORIZE),
             ],
+            // Para que el taller pueda elegir la empresa al cargar por ella.
+            'organizations' => $user->isStaff()
+                ? Organization::query()->where('is_active', true)->orderBy('name')
+                    ->get(['public_id', 'name'])
+                    ->map(fn (Organization $o) => ['id' => $o->public_id, 'name' => $o->name])
+                    ->all()
+                : [],
             // Lo que el sistema ya sabe y el formulario rellena solo.
             'prefill' => [
                 'organization' => $user->organization?->name,
@@ -195,7 +203,14 @@ class ShipmentController extends Controller
 
         $user = $request->user();
 
+        // El cliente carga por su propia empresa; el taller elige la empresa
+        // por la que carga, así que a él sí se le pide.
+        $staff = $user->isStaff();
+
         $data = $request->validate([
+            'organization_id' => $staff
+                ? ['required', 'uuid', Rule::exists('organizations', 'public_id')->where('is_active', true)]
+                : ['nullable'],
             'client_reference' => ['required', 'string', 'max:60'],
             'expected_at' => ['required', 'date', 'after_or_equal:today'],
             'contact_name' => ['required', 'string', 'min:3', 'max:120'],
@@ -204,6 +219,7 @@ class ShipmentController extends Controller
             'origin' => ['nullable', 'string', 'max:160'],
             'notes' => ['nullable', 'string', 'max:500'],
         ], [
+            'organization_id.required' => 'Elija la empresa por la que carga el envío.',
             'client_reference.required' => 'Indique su remito o referencia interna.',
             'expected_at.required' => 'Indique cuándo estima que llega al taller.',
             'expected_at.after_or_equal' => 'La fecha estimada no puede ser anterior a hoy.',
@@ -211,10 +227,14 @@ class ShipmentController extends Controller
             'contact_phone.regex' => 'El teléfono sólo admite números, espacios y los signos + ( ) -',
         ]);
 
+        $organizationId = $staff
+            ? Organization::query()->where('public_id', $data['organization_id'])->value('id')
+            : $user->organization_id;
+
         $shipment = Shipment::create([
-            // La empresa y la referencia interna no se piden: las sabe el sistema.
-            'organization_id' => $user->organization_id,
-            'reference' => $this->nextReference($user->organization_id),
+            // Para el cliente, su empresa; para el taller, la que eligió.
+            'organization_id' => $organizationId,
+            'reference' => $this->nextReference($organizationId),
             'client_reference' => $data['client_reference'],
             'expected_at' => $data['expected_at'],
             'contact_name' => $data['contact_name'],

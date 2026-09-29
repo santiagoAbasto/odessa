@@ -42,6 +42,7 @@ export default function ShipmentsIndex({
   statusOptions,
   can,
   prefill,
+  organizations,
   pendingCount,
 }: {
   shipments: Paginated<ShipmentRow>;
@@ -49,6 +50,8 @@ export default function ShipmentsIndex({
   statusOptions: SelectOption[];
   can: { create: boolean; authorize: boolean };
   prefill: Prefill;
+  /** Empresas entre las que el taller elige al cargar por una. Vacío para un cliente. */
+  organizations: { id: string; name: string }[];
   pendingCount?: number;
 }) {
   const [creating, setCreating] = useState(false);
@@ -71,7 +74,7 @@ export default function ShipmentsIndex({
                 Nuevo envío
               </Button>
             </DialogTrigger>
-            <CreateShipmentDialog prefill={prefill} onDone={() => setCreating(false)} />
+            <CreateShipmentDialog prefill={prefill} organizations={organizations} onDone={() => setCreating(false)} />
           </Dialog>
         )
       }
@@ -217,8 +220,19 @@ function PendingBanner({ count }: { count: number }) {
   );
 }
 
-function CreateShipmentDialog({ prefill, onDone }: { prefill: Prefill; onDone: () => void }) {
+function CreateShipmentDialog({
+  prefill,
+  organizations,
+  onDone,
+}: {
+  prefill: Prefill;
+  organizations: { id: string; name: string }[];
+  onDone: () => void;
+}) {
+  // El taller elige la empresa; el cliente ya la tiene y no aparece el selector.
+  const forStaff = organizations.length > 0;
   const { data, setData, post, processing, errors, reset } = useForm({
+    organization_id: '',
     client_reference: '',
     expected_at: '',
     // Se autocompletan con los datos del usuario, pero son editables:
@@ -259,24 +273,49 @@ function CreateShipmentDialog({ prefill, onDone }: { prefill: Prefill; onDone: (
       }
     >
       <form id="form-envio" onSubmit={submit} className="flex flex-col gap-4" noValidate>
-        {/* Lo que el sistema ya sabe: se muestra, no se pide. */}
-        <div className="grid gap-3 rounded-sm border border-[var(--border-subtle)] bg-[var(--surface-sunken)] p-3 sm:grid-cols-2">
-          <div>
-            <p className="text-[10px] font-semibold tracking-[0.1em] text-[var(--text-muted)] uppercase">
-              Empresa
+        {forStaff ? (
+          <Field
+            label="Empresa"
+            hint="Cargue el envío por la empresa que no lo hizo por su cuenta."
+            error={errors.organization_id}
+            required
+          >
+            {(props) => (
+              <Select
+                {...props}
+                value={data.organization_id}
+                onChange={(event) => setData('organization_id', event.target.value)}
+                invalid={Boolean(errors.organization_id)}
+              >
+                <option value="">Elija la empresa…</option>
+                {organizations.map((organization) => (
+                  <option key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+        ) : (
+          /* Lo que el sistema ya sabe: se muestra, no se pide. */
+          <div className="grid gap-3 rounded-sm border border-[var(--border-subtle)] bg-[var(--surface-sunken)] p-3 sm:grid-cols-2">
+            <div>
+              <p className="text-[10px] font-semibold tracking-[0.1em] text-[var(--text-muted)] uppercase">
+                Empresa
+              </p>
+              <p className="mt-1 text-[13px] font-medium">{prefill.organization ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold tracking-[0.1em] text-[var(--text-muted)] uppercase">
+                Referencia del envío
+              </p>
+              <p className="mt-1 font-mono text-[13px] font-medium">{prefill.nextReference ?? '—'}</p>
+            </div>
+            <p className="text-[11px] text-[var(--text-muted)] sm:col-span-2">
+              Ambos datos los completa el sistema automáticamente.
             </p>
-            <p className="mt-1 text-[13px] font-medium">{prefill.organization ?? '—'}</p>
           </div>
-          <div>
-            <p className="text-[10px] font-semibold tracking-[0.1em] text-[var(--text-muted)] uppercase">
-              Referencia del envío
-            </p>
-            <p className="mt-1 font-mono text-[13px] font-medium">{prefill.nextReference ?? '—'}</p>
-          </div>
-          <p className="text-[11px] text-[var(--text-muted)] sm:col-span-2">
-            Ambos datos los completa el sistema automáticamente.
-          </p>
-        </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
