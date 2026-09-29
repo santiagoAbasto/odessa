@@ -58,7 +58,7 @@ class PermissionsTest extends TestCase
                 'received_at' => now()->subDays(3)->toDateString(),
             ]);
 
-            foreach (['empezar', 'dictamen', 'consultar-reparacion', 'reparar', 'reparada', 'despachar'] as $accion) {
+            foreach (['empezar', 'dictamen', 'consultar-reparacion', 'sin-solucion', 'despachar'] as $accion) {
                 $this->actingAs($user)
                     ->post("/taller/recepciones/{$recepcion->public_id}/{$accion}")
                     ->assertForbidden();

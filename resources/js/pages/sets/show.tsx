@@ -106,7 +106,7 @@ export default function SetShow({ set, assets }: { set: SetDetail; assets: SetAs
             <table className="w-full min-w-[640px] text-[12.5px]">
               <thead>
                 <tr>
-                  {['#', 'Pieza', 'Serie', 'FMR', 'Vencimiento', 'Estado'].map((header) => (
+                  {['#', 'Pieza', 'Serie', 'Informe', 'Vencimiento', 'Estado'].map((header) => (
                     <th
                       key={header}
                       scope="col"

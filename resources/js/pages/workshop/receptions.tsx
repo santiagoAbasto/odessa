@@ -38,7 +38,6 @@ interface StageCounts {
   in_progress: number;
   rejected: number;
   awaiting_client: number;
-  repair: number;
   ready: number;
   in_workshop: number;
   dispatched: number;
@@ -52,14 +51,14 @@ interface StageCounts {
     Pendientes → En proceso → Aprobar ─────────────────────────→ Listas para despachar
                      ↑          ↘ Rechazar
                      │        Rechazadas ─ Consultar → Esperando al cliente ─ NO → Listas (no apto)
-                     │            │                        └ SÍ → Reparación ─ Iniciar ┐
-                     └────────────┼────────────────────────────────────────────────────┘
-                                  └ Sin solución → Listas (no apto)
+                     │            │                        └ SÍ → vuelve a Pendientes (se re-trabaja)
+                     │            └ Sin solución → Listas (no apto)
+                     └──────────────────────────────────────────────┘
 
   "En taller" agrupa todo lo que no salió todavía, y es la vista con la que
-  el taller arranca el día. La reparación en curso aparece en "En proceso":
-  se aprueba o se rechaza como cualquier trabajo. "Listas" junta todo lo que
-  puede despacharse, que es lo único que importa a la hora de cargar el camión.
+  el taller arranca el día. Cuando el cliente autoriza una reparación, la
+  pieza vuelve a Pendientes y se re-trabaja como cualquier otra. "Listas"
+  junta todo lo que puede despacharse, lo único que importa para cargar el camión.
 */
 const stageTabs = [
   // El paso anterior a En taller: lo que los clientes remitieron y falta
@@ -72,7 +71,6 @@ const stageTabs = [
   // La cola que traba el taller sin que sea culpa del taller: conviene poder
   // verla de un vistazo para reclamarle al cliente.
   { value: 'awaiting_client', label: 'Esperando al cliente' },
-  { value: 'repair', label: 'Reparación' },
   { value: 'ready', label: 'Listas para despachar' },
   { value: 'dispatched', label: 'Despachadas' },
   { value: 'all', label: 'Todas' },
@@ -109,7 +107,7 @@ export default function Receptions({
   const filterDefinitions = useMemo<FilterDefinition[]>(
     () => [
       { key: 'search', label: 'Pieza', type: 'text' },
-      { key: 'report_number', label: 'Número de FMR', type: 'text' },
+      { key: 'report_number', label: 'Número de informe', type: 'text' },
       {
         key: 'urgent',
         label: 'Sólo urgentes',
@@ -180,7 +178,7 @@ export default function Receptions({
         : []),
       {
         id: 'report',
-        header: 'FMR',
+        header: 'Informe',
         cell: ({ row }) =>
           row.original.reportId ? (
             <Link
@@ -232,7 +230,6 @@ export default function Receptions({
           // El motivo más reciente es lo que explica todo lo que sigue.
           const note =
             row.original.unrepairableNotes ??
-            row.original.repairFailureNotes ??
             (row.original.outcome === 'rejected' ? row.original.outcomeNotes : null);
 
           return (
@@ -342,51 +339,6 @@ export default function Receptions({
               />
             )}
 
-            {row.original.can.sendToRepair && (
-              <ConfirmButton
-                variant="secondary"
-                size="sm"
-                title="Iniciar la reparación"
-                description="El cliente autorizó. La pieza pasa a En proceso para repararla; al terminar se aprueba o se rechaza."
-                confirmLabel="Iniciar"
-                onConfirm={() =>
-                  router.post(`/taller/recepciones/${row.original.id}/reparar`, {}, { preserveScroll: true })
-                }
-              >
-                <Play aria-hidden />
-                Iniciar
-              </ConfirmButton>
-            )}
-
-            {/* La reparación se dictamina como cualquier trabajo. */}
-            {row.original.can.markRepaired && (
-              <ConfirmButton
-                variant="secondary"
-                size="sm"
-                title="Aprobar la reparación"
-                description="La reparación dio resultado y la pieza queda lista para despachar."
-                confirmLabel="Aprobar"
-                onConfirm={() =>
-                  router.post(`/taller/recepciones/${row.original.id}/reparada`, {}, { preserveScroll: true })
-                }
-              >
-                <PackageCheck aria-hidden />
-                Aprobar
-              </ConfirmButton>
-            )}
-
-            {row.original.can.failRepair && (
-              <NotesActionButton
-                url={`/taller/recepciones/${row.original.id}/reparacion-fallida`}
-                field="repair_failure_notes"
-                icon={X}
-                label="Rechazar"
-                title="Rechazar la reparación"
-                description="La reparación no dio resultado. La pieza vuelve a Rechazadas y sólo queda marcarla sin solución: no se repara dos veces."
-                notesLabel="Por qué se rechaza la reparación"
-              />
-            )}
-
             {row.original.can.dispatch && (
               <ConfirmButton
                 variant="primary"
@@ -413,9 +365,9 @@ export default function Receptions({
 
   return (
     <AppLayout
-      title="Recepción de equipos"
+      title="Gestión de equipos"
       description="Recorrido del equipo en el taller: ingreso, dictamen, reparación si hace falta, y despacho."
-      breadcrumbs={[{ label: 'Taller' }, { label: 'Recepción de equipos' }]}
+      breadcrumbs={[{ label: 'Taller' }, { label: 'Gestión de equipos' }]}
       actions={
         /*
           Ingreso directo. El circuito normal es que el cliente declare el
@@ -438,7 +390,7 @@ export default function Receptions({
         )
       }
     >
-      <Head title="Recepción de equipos" />
+      <Head title="Gestión de equipos" />
 
       <Deferred data="counts" fallback={<Skeleton className="mb-5 h-[88px]" />}>
         <StageSummary counts={counts} />
@@ -633,7 +585,6 @@ function StageSummary({ counts }: { counts?: StageCounts }) {
       href: '?stage=awaiting_client',
       tone: 'warning' as Tone,
     },
-    { label: 'Reparación', value: counts.repair, href: '?stage=repair', tone: 'warning' as Tone },
     { label: 'Listas para despachar', value: counts.ready, href: '?stage=ready' },
     { label: 'Despachadas', value: counts.dispatched, href: '?stage=dispatched' },
   ];

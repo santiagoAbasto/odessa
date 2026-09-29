@@ -17,16 +17,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * El recorrido completo, tal como lo definió el negocio (revisado el 27/09/2026):
  *
- *   Pendiente → En proceso → Aprobada ─────────────────────────────→ Despachada
- *                   ↑      ↘ Rechazada ─ consulta ─┬─ SÍ → Reparación ─ Iniciar ─┘ (vuelve a En proceso)
+ *   Pendiente → En proceso → Aprobada ───────────────────────────────→ Despachada
+ *                   ↑      ↘ Rechazada ─ consulta ─┬─ SÍ → vuelve a Pendiente ┘ (se re-trabaja)
  *                   │                (lo decide    └─ NO → Despachada sin reparar
  *                   │                 el cliente)
  *                   └─ Sin solución (lo decide el taller) → Despachada sin reparar
  *
  * No es un recorrido lineal: se bifurca, y la bifurcación de la reparación no
- * la decide el taller sino el cliente, porque se le cobra. La reparación se
- * intenta una sola vez: si también se rechaza, la única salida es "sin
- * solución".
+ * la decide el taller sino el cliente, porque se le cobra. Cuando el cliente
+ * autoriza, no hay un estado "reparación" aparte: el equipo vuelve a Pendiente
+ * y se re-trabaja como cualquier otro. Se consulta una sola vez: si se lo
+ * re-rechaza, la única salida que queda es "sin solución".
  *
  * Si el equipo sale sin reparar —porque el cliente no autorizó o porque no
  * tenía arreglo— igual vuelve al cliente, pero sin certificar: el activo queda
@@ -213,11 +214,7 @@ class Reception extends Model
         'approved' => 'Aprobada',
         'rejected' => 'Rechazada',
         'awaiting_client' => 'Esperando al cliente',
-        'repair_authorized' => 'Reparación',
         'repair_declined' => 'Sin reparar · a devolver',
-        'in_repair' => 'En proceso · reparación',
-        'repaired' => 'Reparada',
-        'repair_failed' => 'Rechazada · reparación fallida',
         'unrepairable' => 'Sin solución · a devolver',
         'dispatched' => 'Despachada',
         'returned_unrepaired' => 'Despachada sin reparar',
@@ -229,11 +226,7 @@ class Reception extends Model
         'approved' => 'El trabajo se aprobó. Lista para despachar.',
         'rejected' => 'El trabajo se rechazó. Falta consultarle al cliente si autoriza la reparación, o marcarla sin solución.',
         'awaiting_client' => 'Se le pidió al cliente que autorice la reparación. El equipo espera su respuesta.',
-        'repair_authorized' => 'El cliente autorizó la reparación. Falta que el taller la inicie.',
         'repair_declined' => 'El cliente no autorizó la reparación. Se le devuelve como está, sin certificar.',
-        'in_repair' => 'El taller está reparando el equipo. Al terminar se aprueba o se rechaza.',
-        'repaired' => 'Reparada. Lista para despachar.',
-        'repair_failed' => 'La reparación no dio resultado. Sólo queda marcarla sin solución y devolverla.',
         'unrepairable' => 'El taller determinó que no tiene solución. Se devuelve sin certificar.',
         'dispatched' => 'Se envió al cliente.',
         'returned_unrepaired' => 'Se le devolvió al cliente sin reparar. El equipo quedó no apto.',
@@ -255,15 +248,14 @@ class Reception extends Model
             $this->dispatched_at !== null => 'dispatched',
 
             $this->unrepairable_at !== null => 'unrepairable',
-            $this->repair_failed_at !== null => 'repair_failed',
-            $this->repaired_at !== null => 'repaired',
-            $this->repair_started_at !== null => 'in_repair',
 
-            // La respuesta del cliente pesa más que la consulta: una vez que
-            // contestó, la recepción deja de estar "esperando".
+            // El cliente no autorizó: el equipo se devuelve como está.
             $this->repairWasDeclined() => 'repair_declined',
-            $this->repairWasApproved() => 'repair_authorized',
-            $this->repair_requested_at !== null => 'awaiting_client',
+
+            // Consulta hecha y todavía sin respuesta. Si el cliente autorizó,
+            // los hitos de trabajo se reiniciaron y la pieza volvió a
+            // Pendiente para re-trabajarse, así que no cae acá.
+            $this->repair_requested_at !== null && $this->repair_decision === null => 'awaiting_client',
 
             $this->released_at !== null && $this->outcome === self::OUTCOME_REJECTED => 'rejected',
             $this->released_at !== null => 'approved',
@@ -280,14 +272,14 @@ class Reception extends Model
     public function stageTone(): string
     {
         return match ($this->stage()) {
-            'dispatched', 'repaired' => 'success',
-            'approved', 'repair_authorized' => 'info',
+            'dispatched' => 'success',
+            'approved' => 'info',
             // Devuelta sin reparar no es un éxito ni un error: es una salida
             // legítima que conviene que se vea distinta de una despachada
             // certificada, porque el equipo se fue no apto.
             'returned_unrepaired' => 'danger',
-            'rejected', 'repair_declined', 'repair_failed', 'unrepairable' => 'danger',
-            'awaiting_client', 'in_repair', 'in_progress' => 'warning',
+            'rejected', 'repair_declined', 'unrepairable' => 'danger',
+            'awaiting_client', 'in_progress' => 'warning',
             default => 'neutral',
         };
     }
@@ -324,11 +316,6 @@ class Reception extends Model
         return $this->repair_decision === self::REPAIR_DECLINED;
     }
 
-    public function repairFailed(): bool
-    {
-        return $this->repair_failed_at !== null;
-    }
-
     public function isUnrepairable(): bool
     {
         return $this->unrepairable_at !== null;
@@ -363,9 +350,9 @@ class Reception extends Model
     /**
      * ¿Puede despacharse?
      *
-     * Cuatro salidas legítimas, y ninguna más:
-     *  - se aprobó el trabajo;
-     *  - se rechazó, se reparó, y ahora sí sale certificada;
+     * Tres salidas legítimas, y ninguna más:
+     *  - se aprobó el trabajo (sea la primera vez o tras re-trabajar una
+     *    reparación autorizada);
      *  - se rechazó y el cliente decidió no repararla;
      *  - se rechazó y el taller determinó que no tiene solución.
      * En los dos últimos casos se devuelve como está: sale sin certificar, y
@@ -380,8 +367,7 @@ class Reception extends Model
             return false;
         }
 
-        return $this->repaired_at !== null
-            || $this->leavesUnrepaired()
+        return $this->leavesUnrepaired()
             || ($this->isResolved() && ! $this->wasRejected());
     }
 
@@ -418,48 +404,31 @@ class Reception extends Model
         return $query->open()->whereNull('started_at');
     }
 
-    /**
-     * Sobre la mesa del taller: el trabajo empezado y sin dictamen, y la
-     * reparación iniciada y sin dictamen. Las dos se aprueban o se rechazan.
-     */
+    /** Sobre la mesa del taller: empezado y sin dictamen. Se aprueba o se rechaza. */
     public function scopeInProgress(Builder $query): Builder
     {
-        return $query->where(fn (Builder $q) => $q
-            ->where(fn (Builder $w) => $w->open()->whereNotNull('started_at'))
-            ->orWhere(fn (Builder $r) => $r->inRepair()));
+        return $query->open()->whereNotNull('started_at');
     }
 
     /**
      * Rechazadas que esperan una decisión del taller: consultar al cliente o
-     * marcarlas sin solución. Lo ya consultado sale de acá —espera al
-     * cliente—, salvo que la reparación haya fallado y vuelva.
+     * marcarlas sin solución. Lo que ya está esperando al cliente sale de acá.
+     * Una que el cliente autorizó y se re-trabajó, si se la vuelve a rechazar,
+     * cae de nuevo acá: su única salida ya es "sin solución".
      */
     public function scopeRejected(Builder $query): Builder
     {
         return $query->where('outcome', self::OUTCOME_REJECTED)
-            ->whereNull('repaired_at')
             ->whereNull('unrepairable_at')
             ->whereNull('dispatched_at')
+            // No está esperando al cliente (consultada y sin respuesta).
             ->where(fn (Builder $q) => $q
                 ->whereNull('repair_requested_at')
-                ->orWhereNotNull('repair_failed_at'));
-    }
-
-    /** Reparación iniciada, todavía sin dictamen. */
-    public function scopeInRepair(Builder $query): Builder
-    {
-        return $query->whereNotNull('repair_started_at')
-            ->whereNull('repaired_at')
-            ->whereNull('repair_failed_at')
-            ->whereNull('dispatched_at');
-    }
-
-    /** Autorizada por el cliente y esperando que el taller la inicie. */
-    public function scopeRepairQueue(Builder $query): Builder
-    {
-        return $query->where('repair_decision', self::REPAIR_APPROVED)
-            ->whereNull('repair_started_at')
-            ->whereNull('dispatched_at');
+                ->orWhereNotNull('repair_decision'))
+            // Y el cliente no la rechazó (esas ya están para despachar).
+            ->where(fn (Builder $q) => $q
+                ->whereNull('repair_decision')
+                ->orWhere('repair_decision', '!=', self::REPAIR_DECLINED));
     }
 
     /**
@@ -476,9 +445,9 @@ class Reception extends Model
     }
 
     /**
-     * Listas para salir, en cualquiera de sus cuatro formas: aprobadas,
-     * reparadas, rechazadas cuyo cliente decidió no repararlas, o sin
-     * solución —esas dos vuelven como están, sin certificar.
+     * Listas para salir, en cualquiera de sus tres formas: aprobadas,
+     * rechazadas cuyo cliente decidió no repararlas, o sin solución —esas dos
+     * vuelven como están, sin certificar.
      *
      * Tiene que coincidir con `isDispatchable()`; si divergen, la lista
      * mostraría filas cuyo botón de despachar da error.
@@ -487,8 +456,7 @@ class Reception extends Model
     {
         return $query->whereNull('dispatched_at')
             ->where(fn (Builder $q) => $q
-                ->whereNotNull('repaired_at')
-                ->orWhere('repair_decision', self::REPAIR_DECLINED)
+                ->where('repair_decision', self::REPAIR_DECLINED)
                 ->orWhereNotNull('unrepairable_at')
                 ->orWhere(fn (Builder $i) => $i
                     ->whereNotNull('released_at')

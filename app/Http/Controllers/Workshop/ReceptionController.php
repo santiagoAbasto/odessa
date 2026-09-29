@@ -12,18 +12,18 @@ use App\Models\Organization;
 use App\Models\Reception;
 use App\Models\Shipment;
 use App\Support\TableQuery;
-use Illuminate\Validation\Rule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Recepción de equipos (área Taller).
+ * Gestión de equipos (área Taller).
  *
  * El sistema auditado separaba "En taller" y "Despachados" en dos vistas con
  * querystring. Aquí es una sola tabla con un filtro de etapa explícito, y las
@@ -65,7 +65,6 @@ class ReceptionController extends Controller
             'ready' => $query->readyToDispatch(),
             'rejected' => $query->rejected(),
             'awaiting_client' => $query->awaitingClient(),
-            'repair' => $query->repairQueue(),
             'pending' => $query->pending(),
             'in_progress' => $query->inProgress(),
             'all' => $query,
@@ -96,79 +95,71 @@ class ReceptionController extends Controller
         $nombres = $this->clientNames($page->getCollection()->pluck('organization_id'));
 
         $receptions = $page->through(fn (Reception $r) => [
-                'id' => $r->public_id,
-                'isUrgent' => $r->is_urgent,
-                'receivedAt' => $r->received_at?->toDateString(),
-                'promisedAt' => $r->promised_at?->toDateString(),
-                'isOverdue' => $r->isOverdue(),
-                'stage' => $r->stage(),
-                'stageLabel' => $r->stageLabel(),
-                'stageTone' => $r->stageTone(),
-                'startedAt' => $r->started_at?->toIso8601String(),
-                'releasedAt' => $r->released_at?->toIso8601String(),
-                'outcome' => $r->outcome,
-                'outcomeNotes' => $r->outcome_notes,
-                'repairRequestedAt' => $r->repair_requested_at?->toIso8601String(),
-                'repairRequestNotes' => $r->repair_request_notes,
-                'repairDecision' => $r->repair_decision,
-                'repairDecidedAt' => $r->repair_decided_at?->toIso8601String(),
-                'repairDecisionChannel' => $r->decisionChannelLabel(),
-                'repairDecisionNotes' => $r->repair_decision_notes,
-                'repairStartedAt' => $r->repair_started_at?->toIso8601String(),
-                'repairedAt' => $r->repaired_at?->toIso8601String(),
-                'repairFailedAt' => $r->repair_failed_at?->toIso8601String(),
-                'repairFailureNotes' => $r->repair_failure_notes,
-                'unrepairableAt' => $r->unrepairable_at?->toIso8601String(),
-                'unrepairableNotes' => $r->unrepairable_notes,
-                'dispatchedAt' => $r->dispatched_at?->toIso8601String(),
-                'reportNumber' => $r->inspectionReport?->number,
-                'reportId' => $r->inspectionReport?->public_id,
-                'requested' => $r->shipmentItem?->requestedNames(
-                    $nombres->get($r->organization_id, []),
-                    withCode: ! $user->isClientUser(),
-                ) ?? [],
-                'specialOperation' => $r->shipmentItem?->special_operation,
-                'asset' => [
-                    'id' => $r->asset->public_id,
-                    'name' => $r->asset->workshop_description ?: $r->asset->displayName(),
-                    // De qué cliente es la pieza. En el taller conviven equipos
-                    // de todas las empresas: sin esto no hay forma de saberlo.
-                    'organization' => $r->asset->organization?->name,
-                    'serialNumber' => $r->asset->serial_number,
-                    'code' => $r->asset->code,
-                    'expiresAt' => $r->asset->expires_at?->toDateString(),
-                    'status' => $r->asset->status->value,
-                    'statusLabel' => $r->asset->status->label(),
-                    'statusTone' => $r->asset->status->tone(),
-                ],
-                /*
+            'id' => $r->public_id,
+            'isUrgent' => $r->is_urgent,
+            'receivedAt' => $r->received_at?->toDateString(),
+            'promisedAt' => $r->promised_at?->toDateString(),
+            'isOverdue' => $r->isOverdue(),
+            'stage' => $r->stage(),
+            'stageLabel' => $r->stageLabel(),
+            'stageTone' => $r->stageTone(),
+            'startedAt' => $r->started_at?->toIso8601String(),
+            'releasedAt' => $r->released_at?->toIso8601String(),
+            'outcome' => $r->outcome,
+            'outcomeNotes' => $r->outcome_notes,
+            'repairRequestedAt' => $r->repair_requested_at?->toIso8601String(),
+            'repairRequestNotes' => $r->repair_request_notes,
+            'repairDecision' => $r->repair_decision,
+            'repairDecidedAt' => $r->repair_decided_at?->toIso8601String(),
+            'repairDecisionChannel' => $r->decisionChannelLabel(),
+            'repairDecisionNotes' => $r->repair_decision_notes,
+            'unrepairableAt' => $r->unrepairable_at?->toIso8601String(),
+            'unrepairableNotes' => $r->unrepairable_notes,
+            'dispatchedAt' => $r->dispatched_at?->toIso8601String(),
+            'reportNumber' => $r->inspectionReport?->number,
+            'reportId' => $r->inspectionReport?->public_id,
+            'requested' => $r->shipmentItem?->requestedNames(
+                $nombres->get($r->organization_id, []),
+                withCode: ! $user->isClientUser(),
+            ) ?? [],
+            'specialOperation' => $r->shipmentItem?->special_operation,
+            'asset' => [
+                'id' => $r->asset->public_id,
+                'name' => $r->asset->workshop_description ?: $r->asset->displayName(),
+                // De qué cliente es la pieza. En el taller conviven equipos
+                // de todas las empresas: sin esto no hay forma de saberlo.
+                'organization' => $r->asset->organization?->name,
+                'serialNumber' => $r->asset->serial_number,
+                'code' => $r->asset->code,
+                'expiresAt' => $r->asset->expires_at?->toDateString(),
+                'status' => $r->asset->status->value,
+                'statusLabel' => $r->asset->status->label(),
+                'statusTone' => $r->asset->status->tone(),
+            ],
+            /*
                  * Cada acción se ofrece sólo en la etapa donde tiene sentido.
                  * Así el taller no elige entre botones que van a fallar.
                  */
-                'can' => (function () use ($r, $user) {
-                    $stage = $r->stage();
-                    $release = $user->can('release', $r);
+            'can' => (function () use ($r, $user) {
+                $stage = $r->stage();
+                $release = $user->can('release', $r);
 
-                    return [
-                        'start' => ! $r->hasStarted() && ! $r->isResolved() && $release,
-                        'resolve' => $r->hasStarted() && ! $r->isResolved() && $release,
-                        // Desde Rechazadas, dos salidas: consultar al cliente
-                        // (una sola vez) o marcarla sin solución.
-                        'requestRepair' => $stage === 'rejected' && $release,
-                        'markUnrepairable' => in_array($stage, ['rejected', 'repair_failed'], true) && $release,
-                        // Contestar la consulta. Es lo único que un usuario
-                        // cliente puede hacer sobre una recepción. La etapa se
-                        // comprueba acá además de en la Policy: el superadmin
-                        // la atraviesa y veía el botón en todas las filas.
-                        'decideRepair' => $stage === 'awaiting_client' && $user->can('authorizeRepair', $r),
-                        'sendToRepair' => $stage === 'repair_authorized' && $release,
-                        // La reparación en curso se dictamina como cualquier trabajo.
-                        'markRepaired' => $stage === 'in_repair' && $release,
-                        'failRepair' => $stage === 'in_repair' && $release,
-                        'dispatch' => $r->isDispatchable() && $user->can('dispatchReception', $r),
-                    ];
-                })(),
-            ]);
+                return [
+                    'start' => ! $r->hasStarted() && ! $r->isResolved() && $release,
+                    'resolve' => $r->hasStarted() && ! $r->isResolved() && $release,
+                    // Desde Rechazadas, dos salidas: consultar al cliente
+                    // (una sola vez) o marcarla sin solución.
+                    'requestRepair' => $stage === 'rejected' && $release,
+                    'markUnrepairable' => $stage === 'rejected' && $release,
+                    // Contestar la consulta. Es lo único que un usuario
+                    // cliente puede hacer sobre una recepción. La etapa se
+                    // comprueba acá además de en la Policy: el superadmin
+                    // la atraviesa y veía el botón en todas las filas.
+                    'decideRepair' => $stage === 'awaiting_client' && $user->can('authorizeRepair', $r),
+                    'dispatch' => $r->isDispatchable() && $user->can('dispatchReception', $r),
+                ];
+            })(),
+        ]);
 
         return Inertia::render('workshop/receptions', [
             'receptions' => $receptions,
@@ -403,38 +394,9 @@ class ReceptionController extends Controller
         return back()->with(
             'success',
             $request->string('decision')->value() === Reception::REPAIR_APPROVED
-                ? 'Reparación autorizada. La pieza queda lista para repararse.'
+                ? 'Reparación autorizada. La pieza vuelve a Pendiente para re-trabajarse.'
                 : 'Se registró que no se autoriza. La pieza se devuelve sin reparar.',
         );
-    }
-
-    public function sendToRepair(Reception $reception, ChangeReceptionStage $stages): RedirectResponse
-    {
-        $this->authorize('release', $reception);
-
-        $stages->sendToRepair($reception);
-
-        return back()->with('success', 'Reparación iniciada. La pieza pasa a En proceso.');
-    }
-
-    public function markRepaired(Reception $reception, ChangeReceptionStage $stages): RedirectResponse
-    {
-        $this->authorize('release', $reception);
-
-        $stages->markRepaired($reception);
-
-        return back()->with('success', 'Reparación aprobada. La pieza queda lista para despachar.');
-    }
-
-    public function failRepair(Request $request, Reception $reception, ChangeReceptionStage $stages): RedirectResponse
-    {
-        $this->authorize('release', $reception);
-
-        $data = $request->validate(['repair_failure_notes' => ['nullable', 'string', 'max:2000']]);
-
-        $stages->failRepair($reception, $data['repair_failure_notes'] ?? null);
-
-        return back()->with('success', 'Reparación rechazada. La pieza vuelve a Rechazadas.');
     }
 
     public function markUnrepairable(Request $request, Reception $reception, ChangeReceptionStage $stages): RedirectResponse
@@ -469,7 +431,6 @@ class ReceptionController extends Controller
             'in_progress' => Reception::query()->inProgress()->count(),
             'rejected' => Reception::query()->rejected()->count(),
             'awaiting_client' => Reception::query()->awaitingClient()->count(),
-            'repair' => Reception::query()->repairQueue()->count(),
             'ready' => Reception::query()->readyToDispatch()->count(),
             'in_workshop' => Reception::query()->inWorkshop()->count(),
             'dispatched' => Reception::query()->dispatched()->count(),

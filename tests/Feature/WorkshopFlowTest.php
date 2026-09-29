@@ -10,18 +10,21 @@ use App\Notifications\ReceptionDeclaredUnrepairable;
 use App\Notifications\RepairAuthorizationRequested;
 use App\Support\Permissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 /**
- * Recorrido del taller tal como lo redefinió el negocio el 27/09/2026:
+ * Recorrido del taller tal como lo redefinió el negocio (revisado el 28/09/2026):
  *
  *   Pendientes → En proceso → Aprobar → Listas para despachar
  *                    ↓ Rechazar
- *               Rechazadas ─ Consultar → Esperando cliente ─ SÍ → Reparación → Iniciar → En proceso
+ *               Rechazadas ─ Consultar → Esperando cliente ─ SÍ → vuelve a Pendientes (se re-trabaja)
  *                    └─ Sin solución → Listas para despachar (no apto)
  *
- * La reparación se intenta una sola vez: si se rechaza vuelve a Rechazadas y
+ * Al autorizar la reparación no hay un estado aparte: el equipo vuelve a
+ * Pendientes y se re-trabaja. Se consulta una sola vez: si se lo re-rechaza,
  * la única salida es "sin solución".
  */
 class WorkshopFlowTest extends TestCase
@@ -29,8 +32,8 @@ class WorkshopFlowTest extends TestCase
     use RefreshDatabase;
 
     private const ETAPAS = [
-        'pending', 'in_progress', 'approved', 'rejected', 'awaiting_client', 'repair_declined',
-        'repair_authorized', 'in_repair', 'repaired', 'repair_failed', 'unrepairable',
+        'pending', 'in_progress', 'approved', 'rejected', 'awaiting_client',
+        'repair_declined', 'unrepairable',
     ];
 
     protected function setUp(): void
@@ -64,8 +67,6 @@ class WorkshopFlowTest extends TestCase
             'outcome_notes' => 'Rosca gastada.',
         ];
         $consultada = $rechazada + ['repair_requested_at' => now()->subDays(3)];
-        $autorizada = $consultada + ['repair_decision' => Reception::REPAIR_APPROVED, 'repair_decided_at' => now()->subDays(2)];
-        $enReparacion = $autorizada + ['repair_started_at' => now()->subDay()];
 
         return match ($etapa) {
             'pending' => [],
@@ -78,16 +79,26 @@ class WorkshopFlowTest extends TestCase
                 'repair_decided_at' => now()->subDays(2),
                 'repair_decision_notes' => 'No justifica el arreglo.',
             ],
-            'repair_authorized' => $autorizada,
-            'in_repair' => $enReparacion,
-            'repaired' => $enReparacion + ['repaired_at' => now()],
-            'repair_failed' => $enReparacion + ['repair_failed_at' => now(), 'repair_failure_notes' => 'Sigue perdiendo.'],
             'unrepairable' => $rechazada + ['unrepairable_at' => now(), 'unrepairable_notes' => 'Cuerpo fisurado.'],
         };
     }
 
+    /**
+     * Reproduce una reparación ya autorizada: se consultó y el cliente dijo
+     * que sí, así que los hitos del trabajo se reiniciaron y la pieza volvió a
+     * Pendiente. Queda constancia de la consulta para no volver a preguntar.
+     */
+    private function autorizadaVueltaAPendiente(): array
+    {
+        return [
+            'repair_requested_at' => now()->subDays(3),
+            'repair_decision' => Reception::REPAIR_APPROVED,
+            'repair_decided_at' => now()->subDays(2),
+        ];
+    }
+
     /** Ids públicos que muestra una pestaña del taller. */
-    private function pestaña(string $stage): \Illuminate\Support\Collection
+    private function pestaña(string $stage): Collection
     {
         return collect(
             $this->get("/taller/recepciones?stage={$stage}")->viewData('page')['props']['receptions']['data']
@@ -106,26 +117,35 @@ class WorkshopFlowTest extends TestCase
         $this->assertSame('returned_unrepaired', $devuelta->stage());
     }
 
+    /** Una reparación autorizada, con el trabajo reiniciado, deriva a Pendiente. */
+    public function test_la_reparacion_autorizada_vuelve_a_pendiente(): void
+    {
+        $r = $this->recepcion($this->autorizadaVueltaAPendiente());
+        $this->assertSame('pending', $r->stage());
+    }
+
     public function test_las_colas_agrupan_segun_el_recorrido_nuevo(): void
     {
         $r = fn (string $etapa) => $this->recepcion($this->hitos($etapa));
         $ids = fn (string $scope) => Reception::query()->{$scope}()->pluck('id')->all();
 
         $enProceso = $r('in_progress');
-        $enReparacion = $r('in_repair');
         $rechazada = $r('rejected');
         $esperando = $r('awaiting_client');
-        $fallida = $r('repair_failed');
-        $autorizada = $r('repair_authorized');
+        $declinada = $r('repair_declined');
         $sinSolucion = $r('unrepairable');
+        $vueltaPendiente = $this->recepcion($this->autorizadaVueltaAPendiente());
 
-        // La reparación en curso se trabaja como cualquier otro trabajo.
-        $this->assertEqualsCanonicalizing([$enProceso->id, $enReparacion->id], $ids('inProgress'));
-        // Lo consultado sale de Rechazadas; la reparación fallida vuelve.
-        $this->assertEqualsCanonicalizing([$rechazada->id, $fallida->id], $ids('rejected'));
-        $this->assertEqualsCanonicalizing([$autorizada->id], $ids('repairQueue'));
+        // La autorizada se re-trabaja como cualquier otra: no está en proceso hasta empezar.
+        $this->assertEqualsCanonicalizing([$enProceso->id], $ids('inProgress'));
+        // Lo consultado y lo declinado salen de Rechazadas.
+        $this->assertEqualsCanonicalizing([$rechazada->id], $ids('rejected'));
         $this->assertEqualsCanonicalizing([$esperando->id], $ids('awaitingClient'));
+        // La declinada y la sin solución ya están para despachar.
+        $this->assertContains($declinada->id, $ids('readyToDispatch'));
         $this->assertContains($sinSolucion->id, $ids('readyToDispatch'));
+        // La vuelta a pendiente todavía no puede despacharse: falta re-trabajarla.
+        $this->assertNotContains($vueltaPendiente->id, $ids('readyToDispatch'));
     }
 
     /**
@@ -153,58 +173,29 @@ class WorkshopFlowTest extends TestCase
 
     // --- Acciones ------------------------------------------------------------
 
-    public function test_el_recorrido_completo_con_reparacion_vuelve_a_en_proceso(): void
+    public function test_autorizar_devuelve_la_pieza_a_pendientes_y_se_re_trabaja(): void
     {
         Notification::fake();
-        $r = $this->recepcion($this->hitos('repair_authorized'));
+        $org = $this->organization();
+        $r = $this->recepcion($this->hitos('awaiting_client'), $org);
         $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP));
 
-        $this->assertTrue($this->pestaña('repair')->contains($r->public_id));
+        $this->assertTrue($this->pestaña('awaiting_client')->contains($r->public_id));
 
-        $this->post("/taller/recepciones/{$r->public_id}/reparar")->assertRedirect();
-        $this->assertTrue($this->pestaña('in_progress')->contains($r->public_id));
-        $this->assertFalse($this->pestaña('repair')->contains($r->public_id));
+        $this->post("/taller/recepciones/{$r->public_id}/autorizacion", [
+            'decision' => 'approved',
+            'channel' => 'phone',
+            'evidence' => UploadedFile::fake()->image('ok.jpg'),
+        ])->assertRedirect();
 
-        $this->post("/taller/recepciones/{$r->public_id}/reparada")->assertRedirect();
+        // Vuelve a Pendientes y sale de Esperando al cliente.
+        $this->assertTrue($this->pestaña('pending')->contains($r->public_id));
+        $this->assertFalse($this->pestaña('awaiting_client')->contains($r->public_id));
+
+        // Se re-trabaja y queda lista para despachar.
+        $this->post("/taller/recepciones/{$r->public_id}/empezar")->assertRedirect();
+        $this->post("/taller/recepciones/{$r->public_id}/dictamen", ['outcome' => 'approved'])->assertRedirect();
         $this->assertTrue($this->pestaña('ready')->contains($r->public_id));
-    }
-
-    public function test_la_reparacion_fallida_solo_admite_sin_solucion_y_deja_no_apto(): void
-    {
-        Notification::fake();
-        $r = $this->recepcion($this->hitos('in_repair'));
-        $r->asset->forceFill(['status' => AssetStatus::Fit, 'expires_at' => now()->addYear()])->save();
-        $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP));
-
-        $this->post("/taller/recepciones/{$r->public_id}/reparacion-fallida")
-            ->assertSessionHasErrors('repair_failure_notes');
-
-        $this->post("/taller/recepciones/{$r->public_id}/reparacion-fallida", [
-            'repair_failure_notes' => 'Sigue perdiendo presión.',
-        ])->assertRedirect();
-
-        $this->assertSame('repair_failed', $r->fresh()->stage());
-        $this->assertTrue($this->pestaña('rejected')->contains($r->public_id));
-        $this->assertDatabaseHas('activity_logs', ['action' => 'reception.repair_failed']);
-
-        // Una sola reparación: no hay segunda consulta ni se puede dar por reparada.
-        $this->post("/taller/recepciones/{$r->public_id}/consultar-reparacion")
-            ->assertSessionHasErrors('repair_requested_at');
-        $this->post("/taller/recepciones/{$r->public_id}/reparada")
-            ->assertSessionHasErrors('repaired_at');
-
-        $this->post("/taller/recepciones/{$r->public_id}/sin-solucion", [
-            'unrepairable_notes' => 'Cuerpo fisurado.',
-        ])->assertRedirect();
-
-        $this->post("/taller/recepciones/{$r->public_id}/despachar")->assertRedirect();
-
-        $this->assertSame('returned_unrepaired', $r->fresh()->stage());
-
-        $activo = $r->asset->fresh();
-        $this->assertSame(AssetStatus::Unfit, $activo->status);
-        $this->assertNull($activo->expires_at);
-        $this->assertNull($activo->send_by_at);
     }
 
     public function test_sin_solucion_directo_desde_el_primer_rechazo_exige_motivo(): void
@@ -225,11 +216,31 @@ class WorkshopFlowTest extends TestCase
         $this->assertDatabaseHas('activity_logs', ['action' => 'reception.unrepairable']);
     }
 
+    public function test_sin_solucion_y_devolucion_dejan_el_activo_no_apto(): void
+    {
+        Notification::fake();
+        $r = $this->recepcion($this->hitos('rejected'));
+        $r->asset->forceFill(['status' => AssetStatus::Fit, 'expires_at' => now()->addYear()])->save();
+        $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP));
+
+        $this->post("/taller/recepciones/{$r->public_id}/sin-solucion", [
+            'unrepairable_notes' => 'Cuerpo fisurado.',
+        ])->assertRedirect();
+        $this->post("/taller/recepciones/{$r->public_id}/despachar")->assertRedirect();
+
+        $this->assertSame('returned_unrepaired', $r->fresh()->stage());
+
+        $activo = $r->asset->fresh();
+        $this->assertSame(AssetStatus::Unfit, $activo->status);
+        $this->assertNull($activo->expires_at);
+        $this->assertNull($activo->send_by_at);
+    }
+
     public function test_sin_solucion_no_se_marca_fuera_de_rechazadas(): void
     {
         $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP));
 
-        foreach (['awaiting_client', 'repair_authorized', 'approved', 'in_repair'] as $etapa) {
+        foreach (['awaiting_client', 'approved', 'in_progress'] as $etapa) {
             $r = $this->recepcion($this->hitos($etapa));
 
             $this->post("/taller/recepciones/{$r->public_id}/sin-solucion", ['unrepairable_notes' => 'x'])

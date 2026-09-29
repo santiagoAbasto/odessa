@@ -53,7 +53,7 @@ export default function AssetsIndex({
       { key: 'serial', label: 'Número de serie', type: 'text' },
       { key: 'code', label: 'Código', type: 'text' },
       { key: 'client_reference', label: 'Referencia del cliente', type: 'text' },
-      { key: 'report_number', label: 'Número de FMR', type: 'text' },
+      { key: 'report_number', label: 'Número de informe', type: 'text' },
       /*
         Ventanas listas en vez de obligar a calcular la fecha a mano.
         "Hay que mandarlo antes de" es distinto de "vence en": contempla el
@@ -166,7 +166,7 @@ export default function AssetsIndex({
       },
       {
         id: 'report',
-        header: 'FMR',
+        header: 'Informe',
         cell: ({ row }) =>
           row.original.reportId ? (
             <Link

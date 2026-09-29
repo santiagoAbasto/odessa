@@ -12,9 +12,9 @@ use Tests\TestCase;
 /**
  * Recorrido del equipo en el taller.
  *
- *   Pendiente → En proceso → Aprobada ──────────────────────────→ Despachada
- *                          ↘ Rechazada → A reparar ─┬─ SÍ → Reparada ↗
- *                                     (lo decide    │
+ *   Pendiente → En proceso → Aprobada ──────────────────────────────→ Despachada
+ *                          ↘ Rechazada → consulta ─┬─ SÍ → vuelve a Pendiente ↗
+ *                                     (lo decide    │       (se re-trabaja)
  *                                      el cliente)  └─ NO → Despachada sin reparar
  */
 class ReceptionWorkflowTest extends TestCase
@@ -227,19 +227,15 @@ class ReceptionWorkflowTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertSame('repair_authorized', $recepcion->fresh()->stage());
+        // Autorizar devuelve la pieza a Pendiente: se re-trabaja como cualquier otra.
+        $this->assertSame('pending', $recepcion->fresh()->stage());
 
+        $this->actingAs($usuario)->post("/taller/recepciones/{$recepcion->public_id}/empezar")->assertRedirect();
         $this->actingAs($usuario)
-            ->post("/taller/recepciones/{$recepcion->public_id}/reparar")
+            ->post("/taller/recepciones/{$recepcion->public_id}/dictamen", ['outcome' => 'approved'])
             ->assertRedirect();
 
-        $this->assertSame('in_repair', $recepcion->fresh()->stage());
-
-        $this->actingAs($usuario)
-            ->post("/taller/recepciones/{$recepcion->public_id}/reparada")
-            ->assertRedirect();
-
-        $this->assertSame('repaired', $recepcion->fresh()->stage());
+        $this->assertSame('approved', $recepcion->fresh()->stage());
 
         // Recién ahora puede salir.
         $this->actingAs($usuario)
@@ -267,16 +263,6 @@ class ReceptionWorkflowTest extends TestCase
             ->assertForbidden();
 
         $this->assertNull($recepcion->fresh()->dispatched_at);
-    }
-
-    public function test_solo_se_manda_a_reparar_lo_rechazado(): void
-    {
-        $recepcion = $this->recepcion();
-        $recepcion->forceFill(['released_at' => now(), 'outcome' => 'approved'])->save();
-
-        $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP))
-            ->post("/taller/recepciones/{$recepcion->public_id}/reparar")
-            ->assertSessionHasErrors('repair_started_at');
     }
 
     public function test_el_filtro_separa_pendientes_de_en_proceso(): void

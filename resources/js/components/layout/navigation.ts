@@ -64,7 +64,7 @@ export const navigation: NavGroup[] = [
         match: ['/sets'],
       },
       {
-        label: 'Informes FMR',
+        label: 'Informes',
         href: '/informes',
         icon: FileSearch,
         permission: 'reports.view',
@@ -90,7 +90,7 @@ export const navigation: NavGroup[] = [
     label: 'Taller',
     items: [
       {
-        label: 'Recepción de equipos',
+        label: 'Gestión de equipos',
         href: '/taller/recepciones',
         icon: Warehouse,
         permission: 'receptions.view',

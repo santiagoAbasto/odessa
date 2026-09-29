@@ -20,7 +20,7 @@ use Tests\TestCase;
 /**
  * La reparación la decide el cliente, no el taller.
  *
- *   Rechazada → A reparar ─┬─ SÍ  → Reparada → Despachada
+ *   Rechazada → consulta ─┬─ SÍ  → vuelve a Pendiente (se re-trabaja) → Despachada
  *                          └─ NO  → Despachada sin reparar (queda no apta)
  *
  * Dos cosas se prueban acá y las dos importan por el mismo motivo, que es el
@@ -57,17 +57,6 @@ class RepairAuthorizationTest extends TestCase
         ])->save();
 
         return $recepcion;
-    }
-
-    public function test_no_se_manda_a_reparar_sin_que_el_cliente_lo_autorice(): void
-    {
-        $recepcion = $this->rechazada();
-
-        $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP))
-            ->post("/taller/recepciones/{$recepcion->public_id}/reparar")
-            ->assertSessionHasErrors('repair_started_at');
-
-        $this->assertNull($recepcion->fresh()->repair_started_at);
     }
 
     public function test_consultar_deja_la_recepcion_esperando_al_cliente(): void
@@ -268,9 +257,82 @@ class RepairAuthorizationTest extends TestCase
             ->assertRedirect();
 
         $fresca = $recepcion->fresh();
-        $this->assertSame('repair_authorized', $fresca->stage());
+        // Autorizar no abre un estado aparte: la pieza vuelve a Pendiente y se
+        // reinician los hitos del trabajo para re-trabajarla.
+        $this->assertSame('pending', $fresca->stage());
+        $this->assertNull($fresca->started_at);
+        $this->assertNull($fresca->released_at);
+        $this->assertNull($fresca->outcome);
         $this->assertSame('panel', $fresca->repair_decision_channel);
+        $this->assertSame(Reception::REPAIR_APPROVED, $fresca->repair_decision);
         $this->assertSame(0, $fresca->documents()->count());
+    }
+
+    /**
+     * El circuito completo de una reparación autorizada: vuelve a Pendiente,
+     * el taller la re-trabaja y esta vez la aprueba y la despacha. Ya no hay
+     * estados intermedios de reparación.
+     */
+    public function test_autorizada_vuelve_a_pendiente_se_re_trabaja_y_se_despacha(): void
+    {
+        $organizacion = $this->organization();
+        $recepcion = $this->rechazada($organizacion);
+        $usuario = $this->staffUser(Permissions::ROLE_WORKSHOP);
+
+        $this->actingAs($usuario)
+            ->post("/taller/recepciones/{$recepcion->public_id}/consultar-reparacion")
+            ->assertRedirect();
+
+        $this->actingAs($this->clientUser($organizacion))
+            ->post("/taller/recepciones/{$recepcion->public_id}/autorizacion", ['decision' => 'approved'])
+            ->assertRedirect();
+
+        $this->assertSame('pending', $recepcion->fresh()->stage());
+
+        // Se re-trabaja como cualquier pieza pendiente.
+        $this->actingAs($usuario)->post("/taller/recepciones/{$recepcion->public_id}/empezar")->assertRedirect();
+        $this->actingAs($usuario)
+            ->post("/taller/recepciones/{$recepcion->public_id}/dictamen", ['outcome' => 'approved'])
+            ->assertRedirect();
+        $this->assertSame('approved', $recepcion->fresh()->stage());
+
+        $this->actingAs($usuario)->post("/taller/recepciones/{$recepcion->public_id}/despachar")->assertRedirect();
+        $this->assertSame('dispatched', $recepcion->fresh()->stage());
+    }
+
+    /**
+     * Se consulta una sola vez: si la reparación autorizada se re-trabaja y se
+     * vuelve a rechazar, no hay segunda consulta; la única salida es "sin
+     * solución".
+     */
+    public function test_una_autorizada_re_rechazada_solo_puede_marcarse_sin_solucion(): void
+    {
+        $organizacion = $this->organization();
+        $recepcion = $this->rechazada($organizacion);
+        $usuario = $this->staffUser(Permissions::ROLE_WORKSHOP);
+
+        $this->actingAs($usuario)->post("/taller/recepciones/{$recepcion->public_id}/consultar-reparacion")->assertRedirect();
+        $this->actingAs($this->clientUser($organizacion))
+            ->post("/taller/recepciones/{$recepcion->public_id}/autorizacion", ['decision' => 'approved'])
+            ->assertRedirect();
+
+        // Re-trabajada y re-rechazada.
+        $this->actingAs($usuario)->post("/taller/recepciones/{$recepcion->public_id}/empezar")->assertRedirect();
+        $this->actingAs($usuario)
+            ->post("/taller/recepciones/{$recepcion->public_id}/dictamen", ['outcome' => 'rejected', 'outcome_notes' => 'Sigue perdiendo.'])
+            ->assertRedirect();
+        $this->assertSame('rejected', $recepcion->fresh()->stage());
+
+        // No hay segunda consulta.
+        $this->actingAs($usuario)
+            ->post("/taller/recepciones/{$recepcion->public_id}/consultar-reparacion")
+            ->assertSessionHasErrors('repair_requested_at');
+
+        // Sí queda "sin solución".
+        $this->actingAs($usuario)
+            ->post("/taller/recepciones/{$recepcion->public_id}/sin-solucion", ['unrepairable_notes' => 'No tiene arreglo.'])
+            ->assertRedirect();
+        $this->assertSame('unrepairable', $recepcion->fresh()->stage());
     }
 
     public function test_el_cliente_de_consulta_no_puede_autorizar(): void

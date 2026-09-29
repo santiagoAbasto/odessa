@@ -64,7 +64,7 @@ export default function Operations({
       */}
       <Panel className="mb-5">
         <div className="grid gap-px bg-[var(--border-subtle)] sm:grid-cols-3">
-          <Metric label="Tiempo de taller por defecto" value={`${defaults.turnaroundDays} días`} />
+          <Metric label="Demora estimada por defecto" value={`${defaults.turnaroundDays} días`} />
           <Metric label="Margen de seguridad" value={`${defaults.safetyMarginDays} días`} />
           <Metric label="Vigencia por defecto" value={`${defaults.validityDays} días`} />
         </div>
@@ -84,7 +84,7 @@ export default function Operations({
           <table className="w-full min-w-[820px] text-[12.5px]">
             <thead>
               <tr>
-                {['Operación', 'Tipo', 'Tarda', 'Vigencia que emite', 'Estado', ''].map((header) => (
+                {['Operación', 'Tipo', 'Demora', 'Vigencia que emite', 'Estado', ''].map((header) => (
                   <th
                     key={header}
                     scope="col"
@@ -292,7 +292,7 @@ function OperationDialog({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
-            label="Días que tarda"
+            label="Demora estimada"
             hint={`Vacío usa ${defaults.turnaroundDays}.`}
             error={errors.turnaround_days}
           >

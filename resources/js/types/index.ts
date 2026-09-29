@@ -107,12 +107,8 @@ export interface ReceptionRow {
     /* La reparación la decide el cliente: entre el rechazo y el arreglo hay
        una consulta, y de su respuesta salen dos finales distintos. */
     | 'awaiting_client'
-    | 'repair_authorized'
     | 'repair_declined'
-    | 'in_repair'
-    | 'repaired'
-    /* La reparación se intenta una vez: si falla, sólo queda "sin solución". */
-    | 'repair_failed'
+    /* El taller puede determinar que no tiene solución: vuelve sin certificar. */
     | 'unrepairable'
     | 'dispatched'
     | 'returned_unrepaired';
@@ -130,10 +126,6 @@ export interface ReceptionRow {
   /** Por dónde llegó la respuesta, ya traducido a algo legible. */
   repairDecisionChannel: string | null;
   repairDecisionNotes: string | null;
-  repairStartedAt: string | null;
-  repairedAt: string | null;
-  repairFailedAt: string | null;
-  repairFailureNotes: string | null;
   unrepairableAt: string | null;
   unrepairableNotes: string | null;
   dispatchedAt: string | null;
@@ -161,11 +153,6 @@ export interface ReceptionRow {
     requestRepair: boolean;
     /** Contestar esa consulta. Es lo único que un cliente ejecuta acá. */
     decideRepair: boolean;
-    /** Iniciar la reparación autorizada: la pieza vuelve a En proceso. */
-    sendToRepair: boolean;
-    /** Aprobar o rechazar la reparación en curso. */
-    markRepaired: boolean;
-    failRepair: boolean;
     /** Salida de Rechazadas sin consultar al cliente. */
     markUnrepairable: boolean;
     dispatch: boolean;

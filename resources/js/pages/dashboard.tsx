@@ -174,7 +174,7 @@ export default function Dashboard({
         <Panel>
           <PanelHeader
             title="Informes recientes"
-            description="Últimos FMR registrados."
+            description="Últimos informes registrados."
             actions={
               <Link
                 href="/informes"
@@ -202,7 +202,7 @@ function WorkshopPanel({ stats }: { stats: WorkshopStats | null }) {
         <EmptyState
           icon={Warehouse}
           title="Sin acceso al área de taller"
-          description="Su rol no incluye la vista de recepción de equipos."
+          description="Su rol no incluye la vista de gestión de equipos."
         />
       </Panel>
     );
@@ -218,7 +218,7 @@ function WorkshopPanel({ stats }: { stats: WorkshopStats | null }) {
 
   return (
     <Panel className="h-full">
-      <PanelHeader title="Taller" description="Pipeline de recepción de equipos." />
+      <PanelHeader title="Taller" description="Pipeline de gestión de equipos." />
       <ul className="divide-y divide-[var(--border-subtle)]">
         {metrics.map((metric) => (
           <li key={metric.label}>
@@ -298,7 +298,7 @@ function RecentReports({ reports }: { reports: ReportRow[] }) {
       <EmptyState
         icon={FileSearch}
         title="Sin informes registrados"
-        description="Los FMR aparecerán aquí en cuanto se carguen."
+        description="Los informes aparecerán aquí en cuanto se carguen."
       />
     );
   }
@@ -312,7 +312,7 @@ function RecentReports({ reports }: { reports: ReportRow[] }) {
             className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--surface-hover)]"
           >
             <span className="grid size-8 shrink-0 place-items-center rounded-xs bg-[var(--accent-soft)] font-mono text-[10px] font-semibold text-[var(--text-accent)]">
-              FMR
+              Informe
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[12.5px] font-medium">

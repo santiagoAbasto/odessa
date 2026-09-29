@@ -197,18 +197,12 @@ Route::middleware(['auth'])->group(function () {
             ->middleware('permission:'.Permissions::RECEPTIONS_RELEASE)
             ->name('receptions.start');
 
-        // Dictamen del trabajo y, si fue rechazado, el circuito de reparación.
+        // Dictamen del trabajo y, si fue rechazado, la consulta al cliente.
         Route::middleware('permission:'.Permissions::RECEPTIONS_RELEASE)->group(function () {
             Route::post('/recepciones/{reception}/dictamen', [ReceptionController::class, 'resolve'])
                 ->name('receptions.resolve');
             Route::post('/recepciones/{reception}/consultar-reparacion', [ReceptionController::class, 'requestRepair'])
                 ->name('receptions.request_repair');
-            Route::post('/recepciones/{reception}/reparar', [ReceptionController::class, 'sendToRepair'])
-                ->name('receptions.repair');
-            Route::post('/recepciones/{reception}/reparada', [ReceptionController::class, 'markRepaired'])
-                ->name('receptions.repaired');
-            Route::post('/recepciones/{reception}/reparacion-fallida', [ReceptionController::class, 'failRepair'])
-                ->name('receptions.repair_failed');
             Route::post('/recepciones/{reception}/sin-solucion', [ReceptionController::class, 'markUnrepairable'])
                 ->name('receptions.unrepairable');
         });

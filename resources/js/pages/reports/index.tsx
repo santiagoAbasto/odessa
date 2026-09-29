@@ -58,7 +58,7 @@ export default function ReportsIndex({
     () => [
       {
         id: 'number',
-        header: 'Nº FMR',
+        header: 'Nº informe',
         meta: { sortKey: 'number', locked: true } satisfies ColumnMeta,
         cell: ({ row }) => (
           <span className="font-mono text-[12.5px] font-semibold">{row.original.number}</span>
@@ -117,9 +117,9 @@ export default function ReportsIndex({
 
   return (
     <AppLayout
-      title="Informes FMR"
+      title="Informes"
       description="Registro de inspecciones realizadas, con sus piezas y documentación asociada."
-      breadcrumbs={[{ label: 'Informes FMR' }]}
+      breadcrumbs={[{ label: 'Informes' }]}
       actions={
         can.create && (
           <Dialog open={creating} onOpenChange={setCreating}>
@@ -140,7 +140,7 @@ export default function ReportsIndex({
         )
       }
     >
-      <Head title="Informes FMR" />
+      <Head title="Informes" />
 
       <Panel>
         <DataTable
@@ -156,14 +156,14 @@ export default function ReportsIndex({
               baseUrl="/informes"
               filters={filters}
               definitions={filterDefinitions}
-              searchPlaceholder="Número de FMR…"
+              searchPlaceholder="Número de informe…"
             />
           }
           emptyState={
             <EmptyState
               icon={FileSearch}
               title="Sin informes"
-              description="No hay FMR que coincidan con los filtros aplicados."
+              description="No hay informes que coincidan con los filtros aplicados."
               action={
                 <Button asChild variant="secondary" size="sm">
                   <Link href="/informes">Quitar filtros</Link>
@@ -214,7 +214,7 @@ function CreateReportDialog({
 
   return (
     <DialogContent
-      title="Nuevo informe FMR"
+      title="Nuevo informe"
       description="Se crea en borrador. Al guardarlo se abre para cargarle los equipos inspeccionados."
       footer={
         <>
@@ -251,7 +251,7 @@ function CreateReportDialog({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
-            label="Número de FMR"
+            label="Número de informe"
             hint="No puede repetirse dentro de la misma empresa."
             error={errors.number}
             required

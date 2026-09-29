@@ -82,9 +82,9 @@ export default function ReportShow({
 
   return (
     <AppLayout
-      title={`FMR ${report.number}`}
+      title={`Informe N° ${report.number}`}
       description={report.equipment ?? undefined}
-      breadcrumbs={[{ label: 'Informes FMR', href: '/informes' }, { label: report.number }]}
+      breadcrumbs={[{ label: 'Informes', href: '/informes' }, { label: report.number }]}
       actions={
         <>
           {editable && <AddAssetsDialog reportId={report.id} />}
@@ -101,7 +101,7 @@ export default function ReportShow({
           <ConfirmButton
             variant="primary"
             size="sm"
-            title={`Finalizar el FMR ${report.number}`}
+            title={`Finalizar el informe N° ${report.number}`}
             description="Al finalizar se calculan los vencimientos y se actualiza el estado de todas las piezas incluidas. El informe deja de ser editable."
             confirmLabel="Finalizar informe"
             onConfirm={() => router.post(`/informes/${report.id}/finalizar`)}
@@ -113,7 +113,7 @@ export default function ReportShow({
         </>
       }
     >
-      <Head title={`FMR ${report.number}`} />
+      <Head title={`Informe N° ${report.number}`} />
 
       {/* ================= Cabecera ================= */}
       <Panel className="mb-5">
@@ -297,13 +297,13 @@ export default function ReportShow({
         {/* ================= Documentos ================= */}
         <DocumentPanel
           title="Documentos del informe"
-          description="Certificados e informes que cubren todas las piezas del FMR."
+          description="Certificados e informes que cubren todas las piezas del informe."
           documents={files}
           categories={categories}
           uploadUrl={`/informes/${report.id}/documentos`}
           canUpload={can.upload}
           canDelete={can.deleteDocuments}
-          emptyHint="Adjunte aquí el informe firmado o el certificado del FMR."
+          emptyHint="Adjunte aquí el informe firmado o el certificado del informe."
         />
       </div>
     </AppLayout>

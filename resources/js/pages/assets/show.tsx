@@ -164,7 +164,7 @@ export default function AssetShow({
             <Button asChild variant="secondary" size="sm">
               <Link href={`/informes/${asset.currentReport.id}`}>
                 <FileText aria-hidden />
-                FMR {asset.currentReport.number}
+                Informe N° {asset.currentReport.number}
               </Link>
             </Button>
           )}
@@ -241,7 +241,7 @@ export default function AssetShow({
                   {asset.currentReport.number}
                 </Link>
                 <p className="mt-1.5 text-[11.5px] text-[var(--text-muted)]">
-                  Último FMR con dictamen apto o no apto
+                  Último informe con dictamen apto o no apto
                 </p>
               </>
             ) : (
@@ -423,7 +423,7 @@ export default function AssetShow({
                           href={`/informes/${entry.report.id}`}
                           className="font-mono text-[13px] font-semibold text-[var(--text-accent)] hover:underline"
                         >
-                          FMR {entry.report.number}
+                          Informe N° {entry.report.number}
                         </Link>
                         <Badge tone={entry.resultTone}>{entry.resultLabel}</Badge>
                         {entry.determinesFitness && (

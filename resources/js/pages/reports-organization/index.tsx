@@ -33,7 +33,7 @@ interface Report {
     }[];
   };
   work: {
-    now: Record<'in_workshop' | 'pending' | 'in_progress' | 'rejected' | 'awaiting_client' | 'repair' | 'ready', number>;
+    now: Record<'in_workshop' | 'pending' | 'in_progress' | 'rejected' | 'awaiting_client' | 'ready', number>;
     period: { received: number; dispatched: number; returnedUnrepaired: number; reportsIssued: number };
     receptions: {
       id: string;
@@ -206,7 +206,6 @@ export default function OrganizationReport({
             { label: 'En proceso', value: report.work.now.in_progress },
             { label: 'Rechazadas', value: report.work.now.rejected, tone: 'danger' as Tone },
             { label: 'Esperando al cliente', value: report.work.now.awaiting_client, tone: 'warning' as Tone },
-            { label: 'Reparación', value: report.work.now.repair, tone: 'warning' as Tone },
             { label: 'Listas para despachar', value: report.work.now.ready },
           ]}
         />
@@ -222,7 +221,7 @@ export default function OrganizationReport({
             { label: 'Recibidos', value: report.work.period.received },
             { label: 'Despachados', value: report.work.period.dispatched },
             { label: 'Devueltos sin reparar', value: report.work.period.returnedUnrepaired, tone: 'danger' as Tone },
-            { label: 'FMR emitidos', value: report.work.period.reportsIssued },
+            { label: 'Informes emitidos', value: report.work.period.reportsIssued },
           ]}
         />
         {report.work.receptions.length > 0 && (
@@ -251,9 +250,9 @@ export default function OrganizationReport({
       </Panel>
 
       <Panel>
-        <PanelHeader title="FMR emitidos en el período" />
+        <PanelHeader title="Informes emitidos en el período" />
         {report.work.reports.length === 0 ? (
-          <EmptyState icon={BarChart3} title="Sin FMR en el período" description="No se emitieron informes en esas fechas." />
+          <EmptyState icon={BarChart3} title="Sin informes en el período" description="No se emitieron informes en esas fechas." />
         ) : (
           <Table
             headers={['Número', 'Fecha', 'Equipo', 'Piezas', ...(showOrganization ? ['Empresa'] : [])]}

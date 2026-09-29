@@ -79,7 +79,6 @@ class OrganizationReportController extends Controller
             ['En taller ahora · en proceso', $report['work']['now']['in_progress']],
             ['En taller ahora · rechazadas', $report['work']['now']['rejected']],
             ['En taller ahora · esperando al cliente', $report['work']['now']['awaiting_client']],
-            ['En taller ahora · reparación', $report['work']['now']['repair']],
             ['En taller ahora · listas para despachar', $report['work']['now']['ready']],
             ['Período · recibidos', $report['work']['period']['received']],
             ['Período · despachados', $report['work']['period']['dispatched']],
@@ -194,7 +193,6 @@ class OrganizationReportController extends Controller
                     'in_progress' => $receptions()->inProgress()->count(),
                     'rejected' => $receptions()->rejected()->count(),
                     'awaiting_client' => $receptions()->awaitingClient()->count(),
-                    'repair' => $receptions()->repairQueue()->count(),
                     'ready' => $receptions()->readyToDispatch()->count(),
                 ],
                 'period' => [

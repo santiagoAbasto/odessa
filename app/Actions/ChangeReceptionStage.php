@@ -19,16 +19,16 @@ use Illuminate\Validation\ValidationException;
  *
  * Los hitos están ordenados, pero el recorrido no es una sola línea:
  *
- *   empezar → dictaminar ─┬─ aprobado ──────────────────────────────────────→ despachar
+ *   empezar → dictaminar ─┬─ aprobado ─────────────────────────────→ despachar
  *                         │
- *                         └─ rechazado ─┬─ consultar al cliente ─┬─ SÍ → iniciar reparación → dictaminar ─┬─ aprobada → despachar
- *                                       │                        │                                        └─ rechazada ─┐
- *                                       │                        └─ NO → despachar sin reparar                          │
- *                                       └─ sin solución → despachar sin reparar  ←──────────────────────────────────────┘
+ *                         └─ rechazado ─┬─ consultar al cliente ─┬─ SÍ → vuelve a Pendiente (se re-trabaja)
+ *                                       │                        └─ NO → despachar sin reparar
+ *                                       └─ sin solución → despachar sin reparar
  *
- * No se puede saltar un hito hacia atrás ni repetir uno ya cumplido. La
- * reparación se intenta una sola vez. Y no se puede despachar un equipo
- * rechazado sobre el que nadie decidió nada.
+ * No se puede saltar un hito hacia atrás ni repetir uno ya cumplido. Al
+ * autorizar la reparación no hay un estado aparte: el equipo vuelve a
+ * Pendiente y se re-trabaja. Se consulta una sola vez. Y no se puede despachar
+ * un equipo rechazado sobre el que nadie decidió nada.
  */
 class ChangeReceptionStage
 {
@@ -144,12 +144,6 @@ class ChangeReceptionStage
         if ($reception->isUnrepairable()) {
             throw ValidationException::withMessages([
                 'repair_requested_at' => 'Esta pieza ya se marcó sin solución.',
-            ]);
-        }
-
-        if ($reception->repairFailed()) {
-            throw ValidationException::withMessages([
-                'repair_requested_at' => 'La reparación ya se intentó y no dio resultado: sólo queda marcarla sin solución.',
             ]);
         }
 
@@ -270,6 +264,21 @@ class ChangeReceptionStage
             ])->save();
 
             /*
+             * Autorizar no abre un estado "reparación" aparte: el negocio pidió
+             * que el equipo vuelva a Pendiente y se re-trabaje como cualquier
+             * otro. Se reinician los hitos del trabajo —no la consulta, que se
+             * conserva para no volver a preguntar— y la etapa se deriva de nuevo
+             * a 'pending'. Si se lo re-rechaza, ya sólo queda "sin solución".
+             */
+            if ($decision === Reception::REPAIR_APPROVED) {
+                $reception->forceFill([
+                    'started_at' => null, 'started_by' => null,
+                    'released_at' => null, 'released_by' => null,
+                    'outcome' => null, 'outcome_notes' => null,
+                ])->save();
+            }
+
+            /*
              * No autorizar cambia la aptitud del equipo: vuelve al cliente sin
              * arreglar, así que no puede seguir figurando certificado. El
              * estado no se escribe acá —se recalcula—, porque la aptitud
@@ -295,137 +304,11 @@ class ChangeReceptionStage
     }
 
     /**
-     * El taller inicia la reparación que el cliente autorizó.
-     *
-     * Se mantiene como paso propio y no se dispara solo al autorizar, porque
-     * entre una cosa y la otra suele pasar tiempo: saber cuánto es justamente
-     * lo que permite medir la demora del taller aparte de la del cliente.
-     * Una vez iniciada, la reparación vuelve a En proceso y se dictamina
-     * como cualquier trabajo: aprobada (`markRepaired`) o rechazada
-     * (`failRepair`).
-     */
-    public function sendToRepair(Reception $reception): Reception
-    {
-        if (! $reception->wasRejected()) {
-            throw ValidationException::withMessages([
-                'repair_started_at' => 'Sólo se manda a reparar lo que fue rechazado.',
-            ]);
-        }
-
-        if (! $reception->repairWasApproved()) {
-            throw ValidationException::withMessages([
-                'repair_started_at' => $reception->repairWasDeclined()
-                    ? 'El cliente no autorizó esta reparación.'
-                    : 'Falta que el cliente autorice la reparación.',
-            ]);
-        }
-
-        if ($reception->repair_started_at !== null) {
-            throw ValidationException::withMessages([
-                'repair_started_at' => 'Esta recepción ya está en reparación.',
-            ]);
-        }
-
-        DB::transaction(function () use ($reception) {
-            $reception->forceFill([
-                'repair_started_at' => now(),
-                'repair_started_by' => Auth::id(),
-            ])->save();
-        });
-
-        ActivityLogger::log(
-            action: 'reception.sent_to_repair',
-            subject: $reception,
-            description: 'Enviada a reparación tras el rechazo',
-        );
-
-        return $reception;
-    }
-
-    /** Reparación aprobada: el equipo vuelve a poder despacharse. */
-    public function markRepaired(Reception $reception): Reception
-    {
-        if ($reception->repair_started_at === null) {
-            throw ValidationException::withMessages([
-                'repaired_at' => 'Esta recepción no está en reparación.',
-            ]);
-        }
-
-        if ($reception->repairFailed()) {
-            throw ValidationException::withMessages([
-                'repaired_at' => 'La reparación se rechazó: ya no puede darse por terminada.',
-            ]);
-        }
-
-        if ($reception->repaired_at !== null) {
-            throw ValidationException::withMessages([
-                'repaired_at' => 'Esta reparación ya se dio por terminada.',
-            ]);
-        }
-
-        DB::transaction(function () use ($reception) {
-            $reception->forceFill([
-                'repaired_at' => now(),
-                'repaired_by' => Auth::id(),
-            ])->save();
-        });
-
-        ActivityLogger::log(
-            action: 'reception.repaired',
-            subject: $reception,
-            description: 'Reparación terminada',
-        );
-
-        return $reception;
-    }
-
-    /**
-     * La reparación no dio resultado.
-     *
-     * Vuelve a Rechazadas, pero no a empezar de nuevo: el negocio definió que
-     * se repara una sola vez, así que la única salida que le queda es "sin
-     * solución". El motivo es obligatorio por lo mismo que en el primer
-     * rechazo: es lo que después explica por qué el equipo volvió así.
-     */
-    public function failRepair(Reception $reception, ?string $notes): Reception
-    {
-        if ($reception->stage() !== 'in_repair') {
-            throw ValidationException::withMessages([
-                'repair_failed_at' => 'Sólo se rechaza una reparación en curso.',
-            ]);
-        }
-
-        if (blank($notes)) {
-            throw ValidationException::withMessages([
-                'repair_failure_notes' => 'Indique por qué se rechaza la reparación.',
-            ]);
-        }
-
-        DB::transaction(function () use ($reception, $notes) {
-            $reception->forceFill([
-                'repair_failed_at' => now(),
-                'repair_failed_by' => Auth::id(),
-                'repair_failure_notes' => $notes,
-            ])->save();
-        });
-
-        ActivityLogger::log(
-            action: 'reception.repair_failed',
-            subject: $reception,
-            description: 'Se rechazó la reparación',
-            new: ['notes' => $notes],
-        );
-
-        return $reception;
-    }
-
-    /**
      * El taller determina que la pieza no tiene solución.
      *
      * Es la salida que el negocio pidió para Rechazadas: no hace falta
      * consultarle al cliente si no hay nada que ofrecerle. Sólo vale desde
-     * ahí —el rechazo original o una reparación fallida—; lo que está
-     * esperando al cliente o ya autorizado sigue su propio curso.
+     * ahí; lo que está esperando al cliente sigue su propio curso.
      *
      * Cambia la aptitud igual que cuando el cliente no autoriza: el equipo
      * vuelve sin arreglar, así que no puede seguir figurando certificado. Se
@@ -433,7 +316,7 @@ class ChangeReceptionStage
      */
     public function markUnrepairable(Reception $reception, ?string $notes): Reception
     {
-        if (! in_array($reception->stage(), ['rejected', 'repair_failed'], true)) {
+        if ($reception->stage() !== 'rejected') {
             throw ValidationException::withMessages([
                 'unrepairable_at' => 'Sólo se marca sin solución una pieza rechazada que no esté esperando al cliente.',
             ]);
@@ -486,9 +369,8 @@ class ChangeReceptionStage
             throw ValidationException::withMessages([
                 'dispatched_at' => match (true) {
                     ! $reception->wasRejected() => 'La pieza debe tener dictamen antes de despacharse.',
-                    $reception->repairFailed() => 'La reparación no dio resultado: márquela sin solución para devolverla.',
                     ! $reception->repairWasRequested() => 'La pieza fue rechazada: consulte al cliente o márquela sin solución.',
-                    $reception->repairWasApproved() => 'El cliente autorizó la reparación: debe completarse antes de despachar.',
+                    $reception->repairWasApproved() => 'El cliente autorizó la reparación: debe volver a trabajarse y aprobarse antes de despachar.',
                     default => 'Falta que el cliente conteste si autoriza la reparación.',
                 },
             ]);
