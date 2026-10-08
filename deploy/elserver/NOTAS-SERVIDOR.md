@@ -74,6 +74,36 @@ Incluye a `bootstrap/cache/config.php`, que también es un archivo PHP.
 `opcache.enable_cli` está en `Off`, así que los comandos de artisan no se ven
 afectados y no hace falta reiniciar para correr una migración.
 
+Vale también para un cambio de una sola variable: si corrés `config:cache` sin
+reiniciar, la consola usa el valor nuevo y la web el viejo. Eso se ve como un
+problema de credenciales que no existe — pasó el 08/10/2026 rotando la clave
+del cron, y el síntoma era un 401 con la clave correcta.
+
+### Si no aparece el botón de reiniciar
+
+Pasó el 08/10/2026: ni `my.latincloud.com` ni `panel.elserver.com` mostraban la
+opción, no hay procesos `php-fpm` a nombre del usuario y el hosting no da
+ningún comando para recargarlos.
+
+La salida es vaciar el opcache desde adentro. Un archivo PHP **nuevo** nunca
+pasó por el opcache, así que se compila fresco aunque todo lo demás esté
+cacheado, y desde ahí se puede vaciar el resto. Se crea, se pide y se borra en
+una sola línea, para que no quede expuesto ni dependa de acordarse:
+
+```bash
+F="public/reset-$(LC_ALL=C tr -dc 'a-z0-9' < /dev/urandom | head -c 24).php" \
+  && printf '<?php var_dump(function_exists("opcache_reset") ? opcache_reset() : "sin opcache");\n' > "$F" \
+  && curl -s "https://sistema.odessaoil.com/$(basename "$F")"; echo; rm -f public/reset-*.php
+```
+
+Tiene que imprimir `bool(true)`. El nombre va al azar y el archivo se borra en
+el mismo comando: crearlo y borrarlo en dos pasos separados termina en un
+`reset-*.php` olvidado en `public/`, o —lo que pasó la primera vez— en borrarlo
+antes de pedirlo, con lo cual no se ejecuta nada.
+
+Otra opción, si se prefiere no tocar archivos: en el panel, cambiar la versión
+de PHP del sitio y volverla a la original. Cada cambio recrea el pool.
+
 ---
 
 ## 3. La base de datos no está en el mismo contenedor
