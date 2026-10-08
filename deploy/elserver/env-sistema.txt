@@ -62,28 +62,34 @@ BROADCAST_CONNECTION=log
 FILESYSTEM_DISK=local
 
 # --- Correo -----------------------------------------------------------
-# ATENCION: en este servidor la salida SMTP esta BLOQUEADA. Se probaron los
-# puertos 587, 465, 25 y 2525 hacia afuera, y 25/587/1025 en local: todos
-# cerrados. La configuracion "smtp" de mas abajo NO funciona tal cual esta;
-# queda documentada por si habilitan la salida o contratan CloudSMTP.
+# RESUELTO el 08/10/2026: LatinCloud activo CloudSMTP para odessaoil.com, que
+# es el relay propio del hosting y por eso atraviesa el bloqueo de salida.
+# Antes de esto la salida SMTP estaba cerrada por completo (se probaron 587,
+# 465, 25 y 2525 hacia afuera, y 25/587/1025 en local), y "sendmail" tampoco
+# servia: phpinfo muestra /usr/bin/sendmail, pero el binario no existe.
 #
-# "sendmail" TAMPOCO sirve: phpinfo muestra la ruta /usr/bin/sendmail, pero
-# es solo el valor por defecto de PHP; el binario no esta instalado.
-#
-# Hasta que haya una via de salida, dejar "log": los avisos quedan escritos
-# en storage/logs/ en vez de perderse en silencio.
-MAIL_MAILER=log
+# Si alguna vez hay que volver atras, "log" deja los avisos escritos en
+# storage/logs/ en vez de perderse en silencio.
+MAIL_MAILER=smtp
 
-# Los dos caminos posibles:
-#   a) contratar CloudSMTP y completar los datos de abajo con MAIL_MAILER=smtp
-#   b) usar un proveedor por API HTTPS (Resend, Postmark, Brevo), que no
-#      depende de puertos SMTP y por eso atraviesa este bloqueo. Requiere
-#      instalar el paquete en el servidor y agregar registros DNS al dominio.
-#
 # Puerto 587 con STARTTLS: el esquema va "smtp", no "smtps" (ese es para el
 # 465, cifrado desde el saludo). El remitente debe ser la MISMA casilla que
 # el usuario autenticado, o el relay rechaza con 535.
-MAIL_HOST=COMPLETAR_SERVIDOR_SALIENTE
+#
+# OJO CON EL HOST. En el ticket LatinCloud indico "vsmtp.odessaoil.com", pero
+# ese nombre NO sirve: el relay presenta un certificado emitido para
+# smtp.correoseguro.co y la validacion TLS falla con
+#   Peer certificate CN=`smtp.correoseguro.co' did not match expected CN=...
+# El nombre correcto es el que figura en el propio panel, en Correo >
+# Configuracion de tu cuenta de correo > Servidor Saliente. Los dos apuntan al
+# mismo relay (190.105.202.10 y .12), asi que el SPF cubre a ambos y NO hay que
+# tocar DNS: el include _spf.godns.net ya autoriza 190.105.202.0/24.
+#
+# La contrasena es la de la CASILLA noreply@odessaoil.com, no la del panel ni
+# la de SSH. No se puede consultar, solo reemplazar: Correo > buscar noreply >
+# Modificar. Ahi mismo se le fija el cupo de envios por dia, que si queda en 0
+# la casilla no manda nada.
+MAIL_HOST=smtp.correoseguro.co
 MAIL_PORT=587
 MAIL_SCHEME=smtp
 MAIL_USERNAME=noreply@odessaoil.com
@@ -105,6 +111,26 @@ ODESSA_SAFETY_MARGIN_DAYS=15
 ODESSA_RECERT_NOTICE_DAYS=30
 ODESSA_RECERT_DIGEST_DAY=1
 ODESSA_RECERT_COPY_TO=info@odessaoil.com
+
+# --- Tarea programada por HTTP ----------------------------------------
+# Este hosting NO tiene cron de consola: las dos pantallas de tareas
+# programadas (my.latincloud.com y panel.elserver.com) solo saben pedir una
+# URL. Por eso el programador se dispara desde la ruta /cron, protegida con
+# autenticacion basica, que es lo que esos formularios saben enviar.
+#
+# En el panel se carga:
+#   URL       https://sistema.odessaoil.com/cron
+#   Frecuencia  cada minuto  (* * * * *)
+#   Usuario HTTP / Contrasena HTTP  los dos valores de abajo
+#
+# Si estas dos lineas quedan vacias, la ruta responde 404 y no se ejecuta
+# nada: sin la tarea cargada, los correos se acumulan en la tabla `jobs` y no
+# sale ningun aviso de recertificacion.
+#
+# La clave se genera al azar y se escribe con nano, nunca se pega por chat:
+#   LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 40; echo
+ODESSA_CRON_USER=cron
+ODESSA_CRON_PASSWORD=COMPLETAR_CLAVE_CRON
 
 # --- Herramientas de desarrollo ---------------------------------------
 INERTIA_DEVTOOLS_ENABLED=false

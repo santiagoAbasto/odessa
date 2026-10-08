@@ -20,6 +20,8 @@ use App\Http\Controllers\PublicSiteController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\Workshop\ReceptionController;
 use App\Support\Permissions;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -268,3 +270,49 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Disparador del programador
+|--------------------------------------------------------------------------
+|
+| El hosting no tiene cron de consola: sus dos pantallas de tareas programadas
+| (LatinCloud y CloudPanel) sólo saben pedir una URL. Esta ruta existe para que
+| esa URL ejecute `schedule:run`, que es lo que vacía la cola de correos cada
+| minuto y dispara los avisos de recertificación.
+|
+| Va con autenticación básica, que los dos paneles saben enviar, en vez de un
+| token en la dirección: la URL queda escrita en el panel, en los accesos del
+| servidor y en cualquier referer, y una credencial no debe estar en ninguno de
+| esos lugares.
+*/
+Route::get('/cron', function (Request $request) {
+    $user = (string) config('odessa.cron.user');
+    $password = (string) config('odessa.cron.password');
+
+    // Sin credenciales configuradas la ruta no existe, para no dejarla abierta
+    // por olvido en un entorno donde no se usa.
+    abort_if($user === '' || $password === '', 404);
+
+    // Una sola comparación de tiempo constante sobre usuario y clave juntos.
+    if (! hash_equals(
+        $user.':'.$password,
+        (string) $request->getUser().':'.(string) $request->getPassword()
+    )) {
+        return response('', 401, ['WWW-Authenticate' => 'Basic realm="cron"']);
+    }
+
+    // La corrida puede pasarse del tiempo de una petición web: el worker de
+    // cola trabaja hasta 50 segundos. Que el panel corte la conexión no debe
+    // dejar el trabajo a medio hacer.
+    @set_time_limit(0);
+    ignore_user_abort(true);
+
+    Artisan::call('schedule:run');
+
+    // Al mismo archivo que usaría un cron de consola, para que comprobar si la
+    // tarea se está disparando sea mirar un solo lugar.
+    file_put_contents(storage_path('logs/cron.log'), Artisan::output(), FILE_APPEND);
+
+    return response('ok');
+})->middleware('throttle:10,1')->name('cron.run');

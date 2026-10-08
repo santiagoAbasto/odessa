@@ -57,4 +57,17 @@ return [
     /** Minutos de validez de una URL firmada de descarga. */
     'download_link_ttl' => (int) env('ODESSA_DOWNLOAD_TTL', 5),
 
+    /**
+     * Credenciales del disparador del programador por HTTP.
+     *
+     * El hosting no ofrece cron de consola: sus dos pantallas de tareas
+     * programadas sólo saben pedir una URL. Con usuario y clave cargados, la
+     * ruta /cron queda habilitada; vacíos, responde 404, así no queda expuesta
+     * por olvido donde no se usa.
+     */
+    'cron' => [
+        'user' => env('ODESSA_CRON_USER'),
+        'password' => env('ODESSA_CRON_PASSWORD'),
+    ],
+
 ];
