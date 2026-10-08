@@ -29,6 +29,20 @@ final class Permissions
 
     public const ASSETS_EXPORT = 'assets.export';
 
+    // --- Catálogo de productos ------------------------------------------
+    public const PRODUCTS_VIEW = 'products.view';
+
+    /**
+     * Dar de alta y editar productos del catálogo.
+     *
+     * Queda sólo para el superadministrador por pedido textual del negocio:
+     * «la columna descripción no es editable por nadie, sólo el súper la da de
+     * alta, así controlamos el filtro». Si lo pudiera tocar el taller, el
+     * catálogo se llenaría de variantes de la misma cosa y dejaría de servir
+     * para filtrar, que es para lo único que existe.
+     */
+    public const PRODUCTS_MANAGE = 'products.manage';
+
     // --- Sets -----------------------------------------------------------
     public const SETS_VIEW = 'sets.view';
 
@@ -175,6 +189,8 @@ final class Permissions
          */
         $workshop = [
             self::ASSETS_VIEW, self::ASSETS_CREATE, self::ASSETS_UPDATE, self::ASSETS_EXPORT,
+            // Consulta el catálogo para clasificar un equipo, pero no lo edita.
+            self::PRODUCTS_VIEW,
             self::SETS_VIEW, self::SETS_MANAGE,
             self::REPORTS_VIEW, self::REPORTS_CREATE, self::REPORTS_UPDATE,
             self::REPORTS_FINALIZE, self::REPORTS_CANCEL, self::REPORTS_EXPORT,

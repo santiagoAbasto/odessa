@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AccountRequestReviewController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\OperationController;
 use App\Http\Controllers\Admin\OrganizationController;
+use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetSetController;
@@ -267,6 +268,21 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/operaciones', [OperationController::class, 'index'])->name('operations.index');
             Route::post('/operaciones', [OperationController::class, 'store'])->name('operations.store');
             Route::put('/operaciones/{service}', [OperationController::class, 'update'])->name('operations.update');
+        });
+
+        /*
+         * Maestro de productos. El taller lo consulta para clasificar; sólo el
+         * superadministrador da de alta y edita, que es lo que mantiene el
+         * catálogo usable como filtro.
+         */
+        Route::get('/productos', [ProductController::class, 'index'])
+            ->middleware('permission:'.Permissions::PRODUCTS_VIEW)
+            ->name('products.index');
+
+        Route::middleware('permission:'.Permissions::PRODUCTS_MANAGE)->group(function () {
+            Route::post('/productos', [ProductController::class, 'store'])->name('products.store');
+            Route::put('/productos/{product}', [ProductController::class, 'update'])->name('products.update');
+            Route::delete('/productos/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
         });
     });
 });

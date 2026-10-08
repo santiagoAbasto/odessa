@@ -5,6 +5,7 @@ import {
   FileSearch,
   Layers,
   LayoutDashboard,
+  Package,
   ScrollText,
   Settings2,
   ShieldCheck,
@@ -121,6 +122,13 @@ export const navigation: NavGroup[] = [
         icon: UserPlus,
         permission: 'account_requests.manage',
         match: ['/administracion/solicitudes'],
+      },
+      {
+        label: 'Productos',
+        href: '/administracion/productos',
+        icon: Package,
+        permission: 'products.view',
+        match: ['/administracion/productos'],
       },
       {
         label: 'Operaciones',

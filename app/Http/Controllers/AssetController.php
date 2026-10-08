@@ -44,7 +44,7 @@ class AssetController extends Controller
     private const FILTERS = [
         'search', 'status', 'serial', 'code', 'client_reference',
         'report_number', 'expires_from', 'expires_to', 'brand', 'model',
-        'organization', 'due_in', 'send_by_in', 'overdue',
+        'organization', 'due_in', 'send_by_in', 'overdue', 'product',
     ];
 
     /** Alias público => columna real. Evita exponer el esquema en la URL. */
@@ -229,7 +229,7 @@ class AssetController extends Controller
                 'description' => $asset->description,
                 'workshopDescription' => $asset->workshop_description,
                 'serialNumber' => $asset->serial_number,
-                    'clientReference' => $asset->client_reference,
+                'clientReference' => $asset->client_reference,
                 'manufacturerReference' => $asset->manufacturer_reference,
                 'partNumber' => $asset->catalogItem?->part_number,
                 'catalogDescription' => $asset->catalogItem?->description,
@@ -518,6 +518,14 @@ class AssetController extends Controller
                             ->orWhere('part_number', 'like', $like));
                 });
             })
+            /*
+             * Todas las series de un mismo producto, de todos los clientes.
+             *
+             * Es la pregunta para la que existe el catálogo: elegís el
+             * producto y se abren las unidades que hay en la calle. A un
+             * cliente el scope de organización le deja sólo las suyas.
+             */
+            ->when($filters['product'] ?? null, fn (Builder $q, string $v) => $q->where('assets.catalog_item_id', $v))
             ->when($filters['status'] ?? null, fn (Builder $q, string $s) => $q->where('assets.status', $s))
             ->when($filters['serial'] ?? null, fn (Builder $q, string $v) => $q->where('assets.serial_number', 'like', TableQuery::like($v)))
             ->when($filters['code'] ?? null, fn (Builder $q, string $v) => $q->where('assets.code', 'like', TableQuery::like($v)))
