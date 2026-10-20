@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\Organization;
 use App\Models\User;
+use App\Notifications\WelcomeUser;
 use App\Support\ActivityLogger;
 use App\Support\Permissions;
 use App\Support\TableQuery;
@@ -15,6 +16,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -141,6 +143,17 @@ class UserController extends Controller
             organizationId: $organizationId,
         );
 
+        /*
+         * Dos caminos para el mismo acceso. El correo lleva un enlace para que
+         * elija su contraseña; la temporal queda en pantalla para mandarla por
+         * WhatsApp si el correo no llega. Cualquiera de los dos termina en una
+         * contraseña elegida por él, y al usar uno el otro deja de servir.
+         */
+        $user->notify(new WelcomeUser(route('welcome.show', [
+            'token' => Password::broker('invitations')->createToken($user),
+            'email' => $user->email,
+        ])));
+
         return back()->with('temporaryAccess', $this->temporaryAccess($user, $temporal, created: true));
     }
 
@@ -165,6 +178,10 @@ class UserController extends Controller
 
         // ponytail: sólo corta sesiones con SESSION_DRIVER=database, el de producción.
         DB::table('sessions')->where('user_id', $user->getKey())->delete();
+
+        // Restablecer corta TODO acceso anterior, también un enlace de
+        // bienvenida o de recuperación que haya quedado sin usar en un correo.
+        $user->revokeEmailLinks();
 
         ActivityLogger::log(
             action: 'user.access_reset',

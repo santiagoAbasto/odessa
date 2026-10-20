@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Password;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password', 'organization_id', 'phone', 'job_title', 'is_active', 'must_change_password'])]
@@ -72,5 +73,21 @@ class User extends Authenticatable
     public function hasTwoFactorEnabled(): bool
     {
         return $this->two_factor_confirmed_at !== null;
+    }
+
+    /**
+     * Anula todo enlace por correo que tenga pendiente: el de recuperación y el
+     * de bienvenida, que viven en tablas separadas.
+     *
+     * Se llama cada vez que el usuario termina con una contraseña elegida o un
+     * administrador le corta el acceso. Un enlace sin usar en una casilla es una
+     * forma de cambiar la contraseña; una vez resuelto el acceso, no tiene por
+     * qué seguir existiendo.
+     */
+    public function revokeEmailLinks(): void
+    {
+        foreach (['users', 'invitations'] as $broker) {
+            Password::broker($broker)->deleteToken($this);
+        }
     }
 }

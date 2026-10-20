@@ -545,6 +545,10 @@ function UserDialog({
 /**
  * La contraseña temporal, lista para pasársela al usuario.
  *
+ * En un alta es el respaldo: al usuario ya le sale un correo de bienvenida con
+ * un enlace para elegir su contraseña, y esto es para mandarle por WhatsApp si
+ * el correo no le llega. Al restablecer el acceso es el único camino.
+ *
  * Se ve una sola vez: no se guarda en claro. Si se pierde, se vuelve a
  * restablecer el acceso y sale otra.
  */
@@ -558,6 +562,9 @@ function TemporaryAccessDialog({ access }: { access: TemporaryAccess }) {
     `Usuario: ${access.email}`,
     `Contraseña temporal: ${access.password}`,
     'Al entrar, el sistema le pide que elija una contraseña propia.',
+    ...(access.created
+      ? ['También le enviamos un correo con un enlace para elegirla: puede usar cualquiera de los dos.']
+      : []),
   ].join('\n');
 
   const copy = () => {
@@ -568,7 +575,11 @@ function TemporaryAccessDialog({ access }: { access: TemporaryAccess }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         title={access.created ? 'Usuario creado' : 'Acceso restablecido'}
-        description="Pásele estos datos al usuario. La contraseña se muestra sólo ahora; al entrar, el sistema le pide que elija una propia."
+        description={
+          access.created
+            ? `Le enviamos un correo de bienvenida a ${access.email} con un enlace para que elija su contraseña. Si no le llega, mándele estos datos por WhatsApp: la contraseña temporal se muestra sólo ahora.`
+            : 'Pásele estos datos al usuario. La contraseña se muestra sólo ahora; al entrar, el sistema le pide que elija una propia.'
+        }
         footer={
           <>
             <DialogClose asChild>
@@ -578,7 +589,7 @@ function TemporaryAccessDialog({ access }: { access: TemporaryAccess }) {
             </DialogClose>
             <Button variant="primary" size="sm" onClick={copy}>
               {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
-              {copied ? 'Copiado' : 'Copiar mensaje'}
+              {copied ? 'Copiado' : 'Copiar para WhatsApp'}
             </Button>
           </>
         }

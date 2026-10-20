@@ -58,6 +58,13 @@ Route::middleware('guest')->group(function () {
     Route::post('/restablecer-clave', [PasswordResetController::class, 'update'])
         ->middleware('throttle:10,10')
         ->name('password.update');
+
+    // Enlace del correo de bienvenida: el mismo formulario, con un vencimiento
+    // de días en vez de una hora.
+    Route::get('/bienvenida/{token}', [PasswordResetController::class, 'welcome'])->name('welcome.show');
+    Route::post('/bienvenida', [PasswordResetController::class, 'storeWelcome'])
+        ->middleware('throttle:10,10')
+        ->name('welcome.store');
 });
 
 /*

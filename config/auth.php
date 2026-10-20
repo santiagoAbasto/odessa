@@ -99,6 +99,24 @@ return [
             'expire' => (int) env('AUTH_PASSWORD_RESET_EXPIRE', 60),
             'throttle' => (int) env('AUTH_PASSWORD_RESET_THROTTLE', 60),
         ],
+
+        /*
+         * Enlace del correo de bienvenida de un usuario recién creado.
+         *
+         * Vence en días y no en minutos: una persona nueva puede tardar en abrir
+         * el correo, y con los 60 minutos del "olvidé mi contraseña" el enlace
+         * llegaría vencido. Sigue siendo de un solo uso.
+         *
+         * Tiene su PROPIA tabla a propósito. Si compartiera la de recuperación,
+         * un enlace de "olvidé mi contraseña" se podría validar como si fuera de
+         * bienvenida y pasaría de vivir una hora a vivir una semana.
+         */
+        'invitations' => [
+            'provider' => 'users',
+            'table' => 'password_invitation_tokens',
+            'expire' => (int) env('AUTH_INVITATION_EXPIRE', 60 * 24 * 7),
+            'throttle' => 0,
+        ],
     ],
 
     /*

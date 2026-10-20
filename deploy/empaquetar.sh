@@ -14,7 +14,9 @@ OUTPUT="$PROJECT_ROOT/dist/odessaoil-$(date +%Y%m%d-%H%M%S).zip"
 test ! -e "$OUTPUT"
 
 # Lista positiva: .env, ZIP, logs y datos de storage nunca se copian.
-for ITEM in app artisan bootstrap config database public resources routes composer.json composer.lock package.json package-lock.json vite.config.js; do
+# `lang` lleva las traducciones de los correos: sin ella, los textos que agrega
+# Laravel (el pie del botón, "Todos los derechos reservados") salen en inglés.
+for ITEM in app artisan bootstrap config database lang public resources routes composer.json composer.lock package.json package-lock.json vite.config.js; do
     rsync -a --exclude='.DS_Store' --exclude='*.sqlite*' \
         --exclude='cache/*.php' --exclude='storage' --exclude='hot' \
         "$ITEM" "$STAGING/"

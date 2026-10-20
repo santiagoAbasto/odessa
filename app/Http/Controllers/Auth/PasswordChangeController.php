@@ -56,6 +56,11 @@ class PasswordChangeController extends Controller
             'must_change_password' => false,
         ])->save();
 
+        // Si entró con la temporal, el enlace del correo de bienvenida queda
+        // vivo en su casilla una semana. Ya eligió contraseña: se anula, para
+        // que nadie con acceso a ese correo pueda volver a cambiarla.
+        $user->revokeEmailLinks();
+
         ActivityLogger::log('auth.password_changed', $user, 'Contraseña temporal reemplazada');
 
         return redirect()->route('dashboard');
