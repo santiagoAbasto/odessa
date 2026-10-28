@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Support\Permissions;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -48,6 +49,15 @@ class AppServiceProvider extends ServiceProvider
 
         // El superadministrador no depende de la asignación de permisos.
         Gate::before(fn (User $user, string $ability) => $user->hasRole(Permissions::ROLE_SUPER_ADMIN) ? true : null);
+
+        /**
+         * Copia interna de todo correo del sistema, si está configurada. Va
+         * como copia oculta para no exponer la dirección al destinatario; cubre
+         * también los correos del framework, como la recuperación de contraseña.
+         */
+        if (filled($copia = config('odessa.mail_copy_to'))) {
+            Mail::alwaysBcc($copia);
+        }
 
         if ($this->app->environment('production')) {
             URL::forceScheme('https');

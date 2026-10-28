@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreAccountRequestRequest;
 use App\Models\AccountRequest;
 use App\Models\User;
+use App\Notifications\AccountRequestConfirmation;
 use App\Notifications\AccountRequestReceived;
 use App\Support\ActivityLogger;
 use App\Support\Permissions;
@@ -39,9 +40,10 @@ class AccountRequestController extends Controller
         );
 
         /**
-         * Aviso a quien puede resolverla: correo más alerta en la aplicación,
-         * para no tener que entrar a comprobar si hay solicitudes nuevas.
-         * Va encolado, así el visitante no espera al servidor de correo.
+         * Alerta inmediata en la aplicación (la campana) para quien puede
+         * resolverla, así no tiene que entrar a comprobar si hay solicitudes
+         * nuevas. El correo no sale por cada solicitud: va en un resumen un par
+         * de veces al día (`odessa:resumen-solicitudes`), para no llenar la casilla.
          */
         $reviewers = User::query()
             ->where('is_active', true)
@@ -53,8 +55,24 @@ class AccountRequestController extends Controller
 
         Notification::send($reviewers, new AccountRequestReceived($accountRequest));
 
+        /*
+         * Constancia al solicitante, una por día y por correo. El formulario
+         * es público y el límite por IP no frena a quien cambia de IP: sin
+         * este tope serviría para llenarle la casilla a un tercero.
+         */
+        $yaConfirmado = AccountRequest::query()
+            ->where('email', $accountRequest->email)
+            ->whereKeyNot($accountRequest->getKey())
+            ->where('created_at', '>=', now()->subDay())
+            ->exists();
+
+        if (! $yaConfirmado) {
+            Notification::route('mail', $accountRequest->email)
+                ->notify(new AccountRequestConfirmation($accountRequest));
+        }
+
         return redirect()
             ->route('access.request')
-            ->with('success', 'Recibimos su solicitud. Un administrador la revisará y le escribirá al correo indicado.');
+            ->with('success', 'Recibimos su solicitud y le enviamos una constancia por correo. Un administrador la revisará y le escribirá a esa dirección.');
     }
 }

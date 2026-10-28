@@ -38,3 +38,14 @@ Schedule::command('queue:work --stop-when-empty --tries=3 --max-time=50')
 Schedule::command('odessa:avisar-recertificacion')
     ->dailyAt('07:00')
     ->withoutOverlapping();
+
+/*
+ * Resumen de solicitudes de acceso pendientes.
+ *
+ * El negocio pidió un par de avisos al día —no uno por cada solicitud— con lo
+ * que queda por aprobar, para tener el control. La alerta de la campana dentro
+ * de la aplicación es inmediata y aparte; esto es sólo el correo.
+ */
+Schedule::command('odessa:resumen-solicitudes')
+    ->twiceDaily(8, 16)
+    ->withoutOverlapping();

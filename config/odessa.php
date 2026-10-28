@@ -45,6 +45,16 @@ return [
         'copy_to' => env('ODESSA_RECERT_COPY_TO'),
     ],
 
+    /**
+     * Copia interna de todos los correos del sistema.
+     *
+     * El negocio pidió recibir una copia de cada correo que sale, para tener
+     * control. Vacío, no se agrega copia. Se aplica como copia oculta (BCC) en
+     * AppServiceProvider, así la dirección interna no queda expuesta al
+     * destinatario externo —por ejemplo, quien pide acceso desde la web—.
+     */
+    'mail_copy_to' => env('ODESSA_MAIL_COPY_TO'),
+
     /** Disco privado para documentos. Nunca debe apuntar a public/. */
     'documents_disk' => env('ODESSA_DOCUMENTS_DISK', 'documents'),
 
