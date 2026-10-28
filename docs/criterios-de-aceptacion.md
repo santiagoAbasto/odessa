@@ -1,6 +1,6 @@
 # Criterios de aceptación
 
-Cada criterio indica la prueba que lo verifica. Estado a 28 de octubre de 2026: **338 pruebas, 1050 aserciones, todas en verde** (`php artisan test`).
+Cada criterio indica la prueba que lo verifica. Estado a 28 de octubre de 2026: **340 pruebas, 1054 aserciones, todas en verde** (`php artisan test`).
 
 Las tablas detallan los criterios originales, ya alineados con el circuito del taller y los cuatro roles definidos por el negocio el 27/09/2026. Lo que se agregó después está agrupado por archivo de pruebas al final.
 
@@ -168,7 +168,7 @@ Cada archivo agrupa los criterios de un tema; el nombre de cada prueba dice qué
 | Ventana y avisos de recertificación | `RecertificationWindowTest`, `RecertificationAlertsTest` | 17 |
 | Correo de bienvenida con enlace | `WelcomeEmailTest` | 11 |
 | Contraseña temporal | `TemporaryPasswordTest` | 4 |
-| Cola de correos, campana, resumen de solicitudes pendientes y constancia al solicitante | `NotificationQueueTest`, `NotificationBellTest`, `AccountRequestNotificationTest`, `PendingAccountRequestsDigestTest` | 21 |
+| Cola de correos, campana, resumen de solicitudes, constancia al solicitante y copia interna de los correos | `NotificationQueueTest`, `NotificationBellTest`, `AccountRequestNotificationTest`, `PendingAccountRequestsDigestTest`, `GlobalMailBccTest` | 23 |
 | Disparo del programador por URL (`/cron`) | `CronTriggerTest` | 7 |
 | Maestro de productos | `ProductCatalogTest` | 13 |
 | Equipos: alta, edición, conjuntos, filtros y exportación | `AssetCreationTest`, `AssetEditTest`, `CompositeAssetTest`, `AssetExpiryFiltersTest`, `AssetExportTest` | 32 |

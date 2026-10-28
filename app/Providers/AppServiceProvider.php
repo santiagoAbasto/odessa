@@ -5,8 +5,9 @@ namespace App\Providers;
 use App\Models\User;
 use App\Support\Permissions;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Mail\Events\MessageSending;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -51,13 +52,18 @@ class AppServiceProvider extends ServiceProvider
         Gate::before(fn (User $user, string $ability) => $user->hasRole(Permissions::ROLE_SUPER_ADMIN) ? true : null);
 
         /**
-         * Copia interna de todo correo del sistema, si está configurada. Va
-         * como copia oculta para no exponer la dirección al destinatario; cubre
-         * también los correos del framework, como la recuperación de contraseña.
+         * Copia interna de todo correo del sistema. Cuando hay una casilla
+         * configurada, se le agrega como copia oculta a cada mensaje que sale
+         * —incluidos los del framework, como la recuperación de contraseña—,
+         * para no exponer la dirección al destinatario. Se hace sobre el evento
+         * de envío porque el Mailer no tiene un «always bcc» propio; el chequeo
+         * va adentro para respetar la configuración vigente en cada envío.
          */
-        if (filled($copia = config('odessa.mail_copy_to'))) {
-            Mail::alwaysBcc($copia);
-        }
+        Event::listen(function (MessageSending $event): void {
+            if (filled($copia = config('odessa.mail_copy_to'))) {
+                $event->message->addBcc($copia);
+            }
+        });
 
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
