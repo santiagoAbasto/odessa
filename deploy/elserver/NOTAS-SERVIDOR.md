@@ -70,7 +70,9 @@ versión vieja hasta que se recicla solo.
 Es la causa de "subí el arreglo, corrí `config:cache`, y no pasó nada".
 Incluye a `bootstrap/cache/config.php`, que también es un archivo PHP.
 
-**Después de cada despliegue hay que reiniciar PHP-FPM desde el panel.**
+**Después de cada despliegue hay que reciclar PHP-FPM.** Ninguno de los dos
+paneles tiene el botón, así que en la práctica es vaciar el opcache con el
+archivo temporal de más abajo.
 `opcache.enable_cli` está en `Off`, así que los comandos de artisan no se ven
 afectados y no hace falta reiniciar para correr una migración.
 
@@ -79,7 +81,7 @@ reiniciar, la consola usa el valor nuevo y la web el viejo. Eso se ve como un
 problema de credenciales que no existe — pasó el 08/10/2026 rotando la clave
 del cron, y el síntoma era un 401 con la clave correcta.
 
-### Si no aparece el botón de reiniciar
+### No hay botón de reiniciar: vaciar el opcache
 
 Pasó el 08/10/2026: ni `my.latincloud.com` ni `panel.elserver.com` mostraban la
 opción, no hay procesos `php-fpm` a nombre del usuario y el hosting no da
@@ -124,7 +126,16 @@ El motor es **MariaDB**, compatible con MySQL: `DB_CONNECTION=mysql`.
 
 ---
 
-## 4. La salida SMTP está bloqueada
+## 4. La salida SMTP está bloqueada — resuelto con CloudSMTP
+
+Desde el 08/10/2026 el correo sale por **CloudSMTP**: `smtp.correoseguro.co`,
+puerto 587, StartTLS, autenticando con la casilla `noreply@odessaoil.com`.
+Ojo con el servidor: al activar el servicio el panel muestra
+`vsmtp.odessaoil.com`, pero su certificado está emitido a nombre de
+`smtp.correoseguro.co` y la conexión falla por TLS. El correcto figura en
+Correo Electrónico → la casilla → «Configuración de tu cuenta de correo».
+
+Lo que sigue es el diagnóstico original, para entender por qué hizo falta.
 
 Probados y cerrados: 587, 465, 25 y 2525 hacia afuera; 25, 587 y 1025 en
 local. No es un problema de credenciales ni de configuración de Laravel.
@@ -167,17 +178,15 @@ Paquete necesario según el transporte, confirmado en `MailManager.php`:
 Ambos exigen verificar el dominio con registros DNS (SPF y DKIM) antes de
 poder enviar.
 
-Mientras no haya salida, dejar `MAIL_MAILER=log`: los avisos quedan escritos
-en `storage/logs/` en lugar de perderse en silencio.
+Si alguna vez se pierde la salida, dejar `MAIL_MAILER=log`: los avisos quedan
+escritos en `storage/logs/` en lugar de perderse en silencio.
 
 ---
 
-## 5. Certificado SSL — RESUELTO
+## 5. Certificado SSL
 
-Verificado el 28/09/2026: certificado de Let's Encrypt para
-`sistema.odessaoil.com`, válido del 01/09/2026 al 30/11/2026. Se renueva solo.
-
-Para volver a verificarlo:
+Lo emite y lo renueva LatinCloud desde el panel (Let's Encrypt). Para
+verificarlo:
 
 ```bash
 echo | openssl s_client -connect sistema.odessaoil.com:443 \
@@ -187,33 +196,74 @@ echo | openssl s_client -connect sistema.odessaoil.com:443 \
 
 Tiene que decir `CN=sistema.odessaoil.com`, emitido por Let's Encrypt.
 
-> Aparte, y sin relación con el sistema: el dominio principal **sin** `www`
-> también tiene el certificado vencido (desde el 19/11/2024). `www` está bien.
+### Incidente del 20/10/2026 — abierto
+
+Ese día el DNS de `odessaoil.com`, `www` y `sistema` pasó a apuntar a otro
+proxy de LatinCloud, que entrega un certificado genérico autofirmado
+(`CN=default`, vencido en 2018). El proxy anterior sigue sirviendo el de
+Let's Encrypt, y los dos sirven el mismo código: es un problema de
+aprovisionamiento del hosting, no del sistema ni del despliegue de ese día.
+
+- **Síntoma:** el navegador muestra `NET::ERR_CERT_AUTHORITY_INVALID` y `curl`
+  dice `self-signed certificate`. El panel sigue mostrando el SSL activado.
+- **Lo resuelve el soporte de LatinCloud:** tiene que emitir o cargar el
+  certificado del dominio en el proxy nuevo.
+- **No apagar y prender el SSL del panel para forzarlo.** Se probó, no
+  reemitió nada, y cada intento cuenta para los límites de Let's Encrypt.
+- **Mientras dure, el vaciado del opcache (punto 2) falla en silencio:** usa
+  `curl -s`, que corta por el certificado y no imprime nada. Agregarle `-k`
+  hasta que el certificado vuelva a estar bien.
 
 ---
 
-## 6. Tarea programada — PENDIENTE
+## 6. Tarea programada
 
-Sin esta tarea **no sale ningún correo de aviso**. No hay un proceso
-escuchando la cola: cada minuto la tarea corre el planificador y éste vacía la
-cola de correos (`queue:work --stop-when-empty`). También genera los avisos de
-recertificación. Se carga en el panel, en Cloud Hosting → Tareas programadas,
-para que corra cada minuto:
+Sin esta tarea **casi no sale correo**. No hay un proceso escuchando la cola:
+cada minuto la tarea corre el planificador (`routes/console.php`), que vacía la
+cola de correos (`queue:work --stop-when-empty`) y a las 07:00 genera los
+avisos de recertificación.
 
-```
-cd /www/odessaoil.com/sistema.odessaoil.com && php artisan schedule:run >> /dev/null 2>&1
+### Es una URL, no un comando
+
+Las pantallas de tareas programadas de los dos paneles sólo aceptan una URL:
+este hosting no tiene cron de consola. Por eso el sistema expone la ruta
+`/cron` (`routes/web.php`, nombre `cron.run`), que ejecuta `schedule:run`. Está
+cargada así desde el 08/10/2026, para que corra cada minuto:
+
+- **URL:** `https://sistema.odessaoil.com/cron`
+- **Autenticación básica:** usuario y clave de `ODESSA_CRON_USER` y
+  `ODESSA_CRON_PASSWORD` del `.env`, en los campos de autenticación del panel.
+  Nunca en la URL: queda escrita en el panel, en los accesos del servidor y en
+  cualquier referer.
+- Si alguna de las dos variables está vacía, la ruta responde 404: no queda
+  abierta por olvido. Acepta hasta 10 llamadas por minuto.
+
+Para cambiar la clave: editarla con `nano .env`, correr `config:cache`, vaciar
+el opcache (punto 2) y recién ahí actualizarla en el panel. Saltear el opcache
+da un 401 con la clave correcta: es lo que pasó el 08/10/2026.
+
+### Cómo saber si está andando
+
+Cada corrida se agrega a `storage/logs/cron.log`. Tiene que haber una por
+minuto:
+
+```bash
+tail -5 storage/logs/cron.log
 ```
 
 Lo que **no** depende de la tarea:
-- El aviso de la campana: se escribe en el momento, aunque la tarea falte.
-- El correo de «olvidé mi contraseña»: sale en el momento, si el correo está
-  configurado.
-- El alta de usuarios y el «Restablecer acceso» de la pantalla de Usuarios: no
-  mandan correo. Generan una contraseña temporal que el administrador le pasa
-  al usuario, y éste la cambia al entrar. Funcionan aunque no haya correo.
+- El aviso de la campana: se escribe en el momento.
+- El correo de «olvidé mi contraseña»: no pasa por la cola, sale en el momento.
+- El «Restablecer acceso» de Usuarios: no manda correo. Genera una contraseña
+  temporal que el administrador le pasa al usuario.
 
-Para ver si quedaron correos esperando en la cola (tiene que tender a 0 una
-vez que la tarea está cargada):
+Todos los demás correos esperan en la cola, **incluido el de bienvenida** que
+sale al crear un usuario, con el enlace para elegir su contraseña (vale 7 días
+y sirve una sola vez). Sin la tarea, el usuario se crea igual y la contraseña
+temporal para WhatsApp funciona, pero el correo no sale hasta que la tarea
+corra.
+
+Para ver si quedaron correos esperando en la cola (tiene que tender a 0):
 
 ```bash
 php artisan tinker --execute='echo DB::table("jobs")->count().PHP_EOL;'
@@ -245,7 +295,8 @@ Ojo: la primera vez que corra, manda de una vez todo lo que se haya acumulado.
    `MAIL_MAILER=smtp`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`,
    `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`. Para el puerto 587 va
    `MAIL_SCHEME=smtp`; para el 465, `MAIL_SCHEME=smtps`.
-5. `php artisan config:cache` y **reiniciar PHP-FPM** (punto 2).
+5. `php artisan config:cache` y **vaciar el opcache** (punto 2: no hay botón
+   para reiniciar PHP-FPM).
 6. **Prueba de envío** (reemplazar el correo):
 
    ```bash
@@ -277,7 +328,7 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-# 4. Reiniciar PHP-FPM desde el panel  <-- ver punto 2, no es opcional
+# 4. Vaciar el opcache  <-- ver punto 2, no es opcional
 ```
 
 Sólo si por algún motivo hay que reinstalar dependencias en el servidor
@@ -292,7 +343,8 @@ composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-zip
 - [ ] `APP_DEBUG=false` en el `.env`
 - [ ] No quedó ningún `test.php`, `phpinfo.php` ni similar en `public/`
 - [ ] `.env` con `chmod 600`, y **fuera** de `public/`
-- [ ] Se reinició PHP-FPM (si no, seguís viendo la versión anterior)
+- [ ] Se vació el opcache y el comando del punto 2 imprimió `bool(true)` (si
+      no, seguís viendo la versión anterior)
 - [ ] Las contraseñas de demostración se cambiaron después de las pruebas
 
 El paquete se arma con lista blanca de carpetas, así que `deploy/`, `docs/`,

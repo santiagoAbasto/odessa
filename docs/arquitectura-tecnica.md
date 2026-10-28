@@ -5,8 +5,8 @@
 | Capa | Tecnología | Versión instalada |
 |---|---|---|
 | Framework | Laravel | 13.x |
-| Lenguaje | PHP | 8.5 |
-| Base de datos | MySQL | 9.x (compatible con 8.0+) |
+| Lenguaje | PHP | 8.5 en desarrollo. En producción, 8.3 en consola y 8.4 en la web |
+| Base de datos | MySQL / MariaDB | MySQL 9.x en desarrollo; MariaDB en producción |
 | Puente | Inertia.js | 3.x |
 | Interfaz | React | 19.2 |
 | Tipos | TypeScript | estricto |
@@ -22,6 +22,8 @@
 | Permisos | spatie/laravel-permission | 8 |
 | Pruebas | PHPUnit | 12 |
 
+**El piso es PHP 8.3, no el 8.5 de desarrollo.** `composer.json` exige `^8.3` y fija `config.platform.php` en 8.3.11, que es la consola del servidor: así `composer install` resuelve dependencias que corren allá. No usar sintaxis de 8.4 o 8.5 en el código. MariaDB habla el mismo protocolo que MySQL y se configura con `DB_CONNECTION=mysql`. Las particularidades del servidor están en [`deploy/elserver/NOTAS-SERVIDOR.md`](../deploy/elserver/NOTAS-SERVIDOR.md).
+
 ## Monolito moderno, no API separada
 
 Laravel renderiza y React pinta; Inertia los une. No hay API REST intermedia porque no aporta nada aquí: no existe aplicación móvil ni integración externa. Cuando aparezcan, se añadirán endpoints puntuales bajo `/api`, no un reemplazo completo.
@@ -35,7 +37,11 @@ app/
   Actions/                  Operaciones de negocio con efectos
     RecalculateAssetStatus  Deriva la aptitud de una pieza
     FinalizeInspectionReport Cierra un FMR y propaga vencimientos
-    ChangeReceptionStage    Liberación y despacho
+    ChangeReceptionStage    Etapas del taller: dictamen, consulta de reparación, despacho
+    AuthorizeShipment       Convierte un envío del cliente en recepciones
+    RegisterDirectReception Ingreso al taller sin envío previo
+    CreateAsset             Alta de un equipo, sin series repetidas en la empresa
+    StoreDocument           Adjuntos en el disco privado
   Enums/                    Estados como tipos, no como cadenas sueltas
   Http/
     Controllers/            Delgados: autorizan, consultan y renderizan

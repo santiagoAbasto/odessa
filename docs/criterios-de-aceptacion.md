@@ -1,6 +1,8 @@
 # Criterios de aceptación
 
-Cada criterio indica la prueba que lo verifica. Estado a 3 de agosto de 2026: **82 pruebas, 212 aserciones, todas en verde**.
+Cada criterio indica la prueba que lo verifica. Estado a 28 de octubre de 2026: **331 pruebas, 1033 aserciones, todas en verde** (`php artisan test`).
+
+Las tablas detallan los criterios originales, ya alineados con el circuito del taller y los cuatro roles definidos por el negocio el 27/09/2026. Lo que se agregó después está agrupado por archivo de pruebas al final.
 
 ## Instalación y arranque
 
@@ -48,16 +50,21 @@ Cada criterio indica la prueba que lo verifica. Estado a 3 de agosto de 2026: **
 
 | # | Criterio | Prueba | Estado |
 |---|---|---|---|
-| P1 | Consulta no alcanza administración | `PermissionsTest::test_un_usuario_de_consulta_no_alcanza_la_administracion` | ✅ |
-| P2 | Consulta no alcanza taller | `..._un_usuario_de_consulta_no_alcanza_el_area_de_taller` | ✅ |
-| P3 | Consulta sí ve activos, informes y sets | `..._un_usuario_de_consulta_si_puede_ver_activos_e_informes` | ✅ |
-| P4 | Un técnico no finaliza informes | `..._un_tecnico_no_puede_finalizar_un_informe` | ✅ |
-| P5 | El responsable de taller sí finaliza | `..._el_responsable_de_taller_si_puede_finalizar_un_informe` | ✅ |
-| P6 | Recepción despacha pero no libera | `..._recepcion_no_puede_liberar_pero_si_despachar` | ✅ |
-| P7 | El superadministrador supera toda comprobación | `..._el_superadministrador_supera_cualquier_comprobacion` | ✅ |
+| P1 | Un cliente de consulta no alcanza administración | `PermissionsTest::test_un_cliente_de_consulta_no_alcanza_la_administracion` | ✅ |
+| P2 | Un cliente ve el taller pero no ejecuta sus acciones | `..._un_cliente_ve_el_taller_pero_no_ejecuta_sus_acciones` | ✅ |
+| P3 | Los dos roles de cliente consultan activos, informes y sets | `..._ambos_roles_de_cliente_consultan_activos_informes_y_sets` | ✅ |
+| P4 | Un cliente no finaliza informes | `..._un_cliente_no_puede_finalizar_un_informe` | ✅ |
+| P5 | El taller finaliza informes | `..._el_taller_puede_finalizar_un_informe` | ✅ |
+| P6 | El taller dictamina y despacha, sin separación de funciones | `..._el_taller_libera_y_despacha_sin_separacion_de_funciones` | ✅ |
+| P7 | El superadministrador hace todo | `..._el_superadministrador_hace_todo` | ✅ |
 | P8 | Un cliente no se otorga un rol interno | `..._un_cliente_no_puede_otorgarse_un_rol_interno` | ✅ |
 | P9 | Un cliente no crea usuarios en otra organización | `..._un_cliente_no_puede_crear_usuarios_en_otra_organizacion` | ✅ |
 | P10 | Nadie se desactiva a sí mismo | `..._nadie_puede_desactivarse_a_si_mismo` | ✅ |
+| P11 | Un cliente no registra recepciones | `..._un_cliente_no_registra_recepciones` | ✅ |
+| P12 | Sólo el operador crea envíos | `..._solo_el_operador_puede_crear_envios` | ✅ |
+| P13 | Ningún cliente edita el inventario | `..._ningun_cliente_puede_editar_el_inventario` | ✅ |
+| P14 | El taller ingresa y edita la base | `..._el_taller_ingresa_y_edita_la_base_de_datos` | ✅ |
+| P15 | El taller no administra usuarios ni roles | `..._el_taller_no_administra_usuarios_ni_roles` | ✅ |
 
 ## Regla de aptitud (la regla central del negocio)
 
@@ -90,13 +97,23 @@ Cada criterio indica la prueba que lo verifica. Estado a 3 de agosto de 2026: **
 
 | # | Criterio | Prueba | Estado |
 |---|---|---|---|
-| W1 | Liberar registra hito y usuario | `ReceptionWorkflowTest::test_liberar_registra_el_hito_y_el_usuario` | ✅ |
-| W2 | No se despacha sin liberar | `..._no_se_puede_despachar_una_pieza_sin_liberar` | ✅ |
-| W3 | Una pieza liberada se despacha | `..._una_pieza_liberada_se_puede_despachar` | ✅ |
-| W4 | No se libera dos veces | `..._no_se_puede_liberar_dos_veces` | ✅ |
+| W1 | Aprobar registra hito y usuario | `ReceptionWorkflowTest::test_aprobar_registra_el_hito_y_el_usuario` | ✅ |
+| W2 | No se despacha sin dictamen | `..._no_se_puede_despachar_una_pieza_sin_dictamen` | ✅ |
+| W3 | Una pieza aprobada se despacha | `..._una_pieza_aprobada_se_puede_despachar` | ✅ |
+| W4 | No se dictamina dos veces | `..._no_se_puede_dictaminar_dos_veces` | ✅ |
 | W5 | Fuera de plazo se detecta bien | `..._una_recepcion_fuera_de_plazo_se_detecta_correctamente` | ✅ |
 | W6 | Los filtros por etapa funcionan | `..._los_filtros_por_etapa_devuelven_lo_esperado` | ✅ |
 | W7 | La etapa se deriva de los hitos | `..._la_etapa_del_pipeline_se_calcula_a_partir_de_los_hitos` | ✅ |
+| W8 | Empezar saca la recepción de pendientes | `..._empezar_el_trabajo_saca_la_recepcion_de_pendientes` | ✅ |
+| W9 | No se empieza dos veces | `..._no_se_puede_empezar_dos_veces_el_mismo_trabajo` | ✅ |
+| W10 | Rechazar exige motivo | `..._rechazar_exige_motivo` | ✅ |
+| W11 | El circuito de rechazo y reparación funciona de punta a punta | `..._el_circuito_completo_de_rechazo_y_reparacion` | ✅ |
+| W12 | Un rechazado sin decisión no se despacha | `..._una_pieza_rechazada_no_se_puede_despachar_sin_reparar` | ✅ |
+| W13 | La reparación autorizada vuelve a Pendiente | `WorkshopFlowTest::test_la_reparacion_autorizada_vuelve_a_pendiente` | ✅ |
+| W14 | Sin solución exige motivo | `..._sin_solucion_directo_desde_el_primer_rechazo_exige_motivo` | ✅ |
+| W15 | Sin solución o sin reparar deja el equipo No apto | `..._sin_solucion_y_devolucion_dejan_el_activo_no_apto` | ✅ |
+| W16 | Un cliente no marca sin solución | `..._un_cliente_no_puede_marcar_sin_solucion` | ✅ |
+| W17 | La consulta y el sin solución llegan a toda la organización | `..._la_consulta_y_el_sin_solucion_llegan_a_toda_la_organizacion` | ✅ |
 
 ## Listados
 
@@ -135,6 +152,29 @@ Cada criterio indica la prueba que lo verifica. Estado a 3 de agosto de 2026: **
 | B6 | Se rechaza un teléfono con caracteres inválidos | `..._se_rechaza_un_telefono_con_caracteres_invalidos` | ✅ |
 | B7 | La solicitud queda auditada | `..._la_solicitud_queda_registrada_en_la_auditoria` | ✅ |
 | B8 | El formulario está limitado por IP | `..._el_formulario_de_solicitud_esta_limitado_por_ip` | ✅ |
+
+## Agregado después de agosto
+
+Cada archivo agrupa los criterios de un tema; el nombre de cada prueba dice qué verifica.
+
+| Tema | Archivo de pruebas | Pruebas |
+|---|---|---|
+| Envíos al taller y su llegada | `ShipmentWorkflowTest`, `ShipmentArrivalTest` | 30 |
+| Consulta de reparación al cliente | `RepairAuthorizationTest` | 19 |
+| Ingreso directo, sin envío | `DirectReceptionTest` | 10 |
+| Operaciones habilitadas por empresa | `OrganizationOperationsTest` | 11 |
+| Permisos sueltos por usuario | `UserExtraPermissionsTest` | 7 |
+| Informes: alta y reporte por organización | `ReportCreationTest`, `OrganizationReportTest` | 12 |
+| Ventana y avisos de recertificación | `RecertificationWindowTest`, `RecertificationAlertsTest` | 17 |
+| Correo de bienvenida con enlace | `WelcomeEmailTest` | 11 |
+| Contraseña temporal | `TemporaryPasswordTest` | 4 |
+| Cola de correos, campana y aviso de solicitudes | `NotificationQueueTest`, `NotificationBellTest`, `AccountRequestNotificationTest` | 14 |
+| Disparo del programador por URL (`/cron`) | `CronTriggerTest` | 7 |
+| Maestro de productos | `ProductCatalogTest` | 13 |
+| Equipos: alta, edición, conjuntos, filtros y exportación | `AssetCreationTest`, `AssetEditTest`, `CompositeAssetTest`, `AssetExpiryFiltersTest`, `AssetExportTest` | 32 |
+| Trazabilidad | `TraceabilityTest` | 11 |
+| Visibilidad del cliente dueño | `OwningClientVisibilityTest` | 8 |
+| Administración de organizaciones | `OrganizationAdminTest` | 7 |
 
 ## Criterios no cubiertos por pruebas automatizadas
 
