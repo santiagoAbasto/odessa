@@ -314,8 +314,87 @@ export default function AssetShow({
             </Panel>
           )}
 
+          {/* ================= Bitácora ================= */}
+          <Panel>
+            <PanelHeader
+              title="Bitácora de inspecciones"
+              description={`${history.length} ${history.length === 1 ? 'intervención registrada' : 'intervenciones registradas'}.`}
+            />
+
+            {history.length === 0 ? (
+              <EmptyState
+                icon={History}
+                title="Sin historial"
+                description="Esta pieza aún no registra inspecciones."
+              />
+            ) : (
+              <ol className="divide-y divide-[var(--border-subtle)]">
+                {history.map((entry) => (
+                  <li key={entry.id} className="px-4 py-3.5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={`/informes/${entry.report.id}`}
+                            className="font-mono text-[13px] font-semibold text-[var(--text-accent)] hover:underline"
+                          >
+                            Informe N° {entry.report.number}
+                          </Link>
+                          <Badge tone={entry.resultTone}>{entry.resultLabel}</Badge>
+                          {entry.determinesFitness && (
+                            <span
+                              className="inline-flex items-center gap-1 text-[10.5px] text-[var(--text-muted)]"
+                              title="Este resultado fija el estado de aptitud de la pieza"
+                            >
+                              <ShieldCheck className="size-3" aria-hidden />
+                              Determina aptitud
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-[var(--text-secondary)]">
+                          <span className="inline-flex items-center gap-1">
+                            <CalendarClock className="size-3" aria-hidden />
+                            {formatDate(entry.report.inspectedAt)}
+                          </span>
+                          {entry.service && <span>{entry.service}</span>}
+                          {entry.expiresAt && <span>Vigencia hasta {formatDate(entry.expiresAt)}</span>}
+                          {entry.seal && <span>Precinto {entry.seal}</span>}
+                        </p>
+
+                        {entry.findings && (
+                          <p className="mt-2 flex items-start gap-1.5 rounded-xs bg-[var(--surface-sunken)] px-2.5 py-2 text-[11.5px] text-[var(--text-secondary)]">
+                            <Info className="mt-0.5 size-3 shrink-0" aria-hidden />
+                            {entry.findings}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {entry.files.length > 0 && (
+                      <ul className="mt-2.5 flex flex-wrap gap-1.5">
+                        {entry.files.map((file) => (
+                          <li key={file.id}>
+                            <a
+                              href={`/documentos/${file.id}/descargar`}
+                              className="inline-flex max-w-full items-center gap-1.5 rounded-xs border border-[var(--border-subtle)] bg-[var(--surface-sunken)] px-2 py-1 text-[11px] hover:border-[var(--border-default)] hover:bg-[var(--surface-hover)]"
+                            >
+                              <Download className="size-3 shrink-0 text-[var(--text-accent)]" aria-hidden />
+                              <span className="truncate">{file.name}</span>
+                              <span className="shrink-0 text-[var(--text-muted)]">{file.size}</span>
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Panel>
+
           {/*
-            Documentos propios de la pieza, distintos de los del FMR: aquí van
+            Documentos propios de la pieza, distintos de los del Informe: aquí van
             el certificado del fabricante, la ficha técnica o las fotos que
             acompañan a la pieza durante toda su vida, no a una inspección.
           */}
@@ -426,85 +505,6 @@ export default function AssetShow({
             )}
           </Panel>
         )}
-
-        {/* ================= Bitácora ================= */}
-        <Panel className="mb-5">
-          <PanelHeader
-            title="Bitácora de inspecciones"
-            description={`${history.length} ${history.length === 1 ? 'intervención registrada' : 'intervenciones registradas'}.`}
-          />
-
-          {history.length === 0 ? (
-            <EmptyState
-              icon={History}
-              title="Sin historial"
-              description="Esta pieza aún no registra inspecciones."
-            />
-          ) : (
-            <ol className="divide-y divide-[var(--border-subtle)]">
-              {history.map((entry) => (
-                <li key={entry.id} className="px-4 py-3.5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Link
-                          href={`/informes/${entry.report.id}`}
-                          className="font-mono text-[13px] font-semibold text-[var(--text-accent)] hover:underline"
-                        >
-                          Informe N° {entry.report.number}
-                        </Link>
-                        <Badge tone={entry.resultTone}>{entry.resultLabel}</Badge>
-                        {entry.determinesFitness && (
-                          <span
-                            className="inline-flex items-center gap-1 text-[10.5px] text-[var(--text-muted)]"
-                            title="Este resultado fija el estado de aptitud de la pieza"
-                          >
-                            <ShieldCheck className="size-3" aria-hidden />
-                            Determina aptitud
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-[var(--text-secondary)]">
-                        <span className="inline-flex items-center gap-1">
-                          <CalendarClock className="size-3" aria-hidden />
-                          {formatDate(entry.report.inspectedAt)}
-                        </span>
-                        {entry.service && <span>{entry.service}</span>}
-                        {entry.expiresAt && <span>Vigencia hasta {formatDate(entry.expiresAt)}</span>}
-                        {entry.seal && <span>Precinto {entry.seal}</span>}
-                      </p>
-
-                      {entry.findings && (
-                        <p className="mt-2 flex items-start gap-1.5 rounded-xs bg-[var(--surface-sunken)] px-2.5 py-2 text-[11.5px] text-[var(--text-secondary)]">
-                          <Info className="mt-0.5 size-3 shrink-0" aria-hidden />
-                          {entry.findings}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {entry.files.length > 0 && (
-                    <ul className="mt-2.5 flex flex-wrap gap-1.5">
-                      {entry.files.map((file) => (
-                        <li key={file.id}>
-                          <a
-                            href={`/documentos/${file.id}/descargar`}
-                            className="inline-flex max-w-full items-center gap-1.5 rounded-xs border border-[var(--border-subtle)] bg-[var(--surface-sunken)] px-2 py-1 text-[11px] hover:border-[var(--border-default)] hover:bg-[var(--surface-hover)]"
-                          >
-                            <Download className="size-3 shrink-0 text-[var(--text-accent)]" aria-hidden />
-                            <span className="truncate">{file.name}</span>
-                            <span className="shrink-0 text-[var(--text-muted)]">{file.size}</span>
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ol>
-          )}
-        </Panel>
 
         {/* ================= Hilo de trazabilidad ================= */}
         <Panel>
