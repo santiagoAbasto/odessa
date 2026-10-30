@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * Reporte por organización: status, vencimientos y trabajos.
  *
  * Lo pidió el negocio en pantalla y en Excel, y con los trabajos como
- * recepciones más informes FMR emitidos. Las dos salidas usan las mismas
+ * recepciones más informes Informes emitidos. Las dos salidas usan las mismas
  * consultas para que la planilla nunca diga algo distinto de la pantalla.
  *
  * El aislamiento es el de siempre: el scope de organización hace que un
@@ -83,7 +83,7 @@ class OrganizationReportController extends Controller
             ['Período · recibidos', $report['work']['period']['received']],
             ['Período · despachados', $report['work']['period']['dispatched']],
             ['Período · devueltos sin reparar', $report['work']['period']['returnedUnrepaired']],
-            ['Período · FMR emitidos', $report['work']['period']['reportsIssued']],
+            ['Período · Informes emitidos', $report['work']['period']['reportsIssued']],
         ];
 
         return SpreadsheetExport::downloadSheets(
@@ -109,7 +109,7 @@ class OrganizationReportController extends Controller
                     ]),
                 ],
                 [
-                    'name' => 'FMR emitidos',
+                    'name' => 'Informes emitidos',
                     'headings' => ['Número', 'Fecha', 'Equipo', 'Piezas', 'Empresa'],
                     'rows' => fn () => $this->reportsQuery($orgId, $desde, $hasta)->lazy(500)->map(fn (InspectionReport $r) => [
                         $r->number, $r->inspected_at?->format('d/m/Y'), $r->equipmentName(), $r->assets_count, $r->organization?->name,
@@ -264,7 +264,7 @@ class OrganizationReportController extends Controller
             ->orderByDesc('received_at');
     }
 
-    /** FMR emitidos: finales, por fecha de inspección dentro del período. */
+    /** Informes emitidos: finales, por fecha de inspección dentro del período. */
     private function reportsQuery(?int $orgId, Carbon $desde, Carbon $hasta): Builder
     {
         return $this->forOrg(InspectionReport::query(), $orgId)

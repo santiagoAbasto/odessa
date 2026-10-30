@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Actions\CreateAsset;
 use App\Actions\RecalculateAssetStatus;
 use App\Enums\AssetStatus;
+use App\Enums\InspectionResult;
+use App\Enums\ReportStatus;
 use App\Models\Asset;
 use App\Models\CatalogItem;
 use App\Models\Connection;
@@ -21,6 +23,8 @@ use App\Support\TableQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -146,7 +150,7 @@ class AssetController extends Controller
             headings: [
                 'Código', 'Descripción', 'Número de serie', 'Referencia del cliente',
                 'Marca', 'Modelo', 'Estado', 'Vence', 'Días para vencer',
-                'Último FMR', 'Última inspección', 'Empresa',
+                'Último informe', 'Última inspección', 'Empresa',
             ],
             rows: fn () => $this->exportRows($query),
         );
@@ -184,7 +188,7 @@ class AssetController extends Controller
 
         $asset->load([
             'catalogItem.manufacturer', 'manufacturer', 'testPressure', 'workingPressure',
-            'service', 'connectionTop', 'connectionBottom', 'connectionSide1', 'connectionSide2',
+            'connectionTop', 'connectionBottom', 'connectionSide1', 'connectionSide2',
             'currentReport', 'organization:id,name', 'parent:id,public_id,description,serial_number',
             'components:id,public_id,parent_id,description,serial_number,code,status,composite_status,expires_at,composite_expires_at',
         ]);
@@ -239,7 +243,6 @@ class AssetController extends Controller
                 'manufacturer' => $asset->manufacturer?->name,
                 'testPressure' => $asset->testPressure?->label,
                 'workingPressure' => $asset->workingPressure?->label,
-                'service' => $asset->service?->label(),
                 'connections' => array_filter([
                     'Superior' => $asset->connectionTop?->label,
                     'Inferior' => $asset->connectionBottom?->label,
@@ -268,7 +271,6 @@ class AssetController extends Controller
                 'manufacturerId' => $asset->manufacturer_id,
                 'testPressureId' => $asset->test_pressure_id,
                 'workingPressureId' => $asset->working_pressure_id,
-                'serviceId' => $asset->service_id,
                 'connectionTopId' => $asset->connection_top_id,
                 'connectionBottomId' => $asset->connection_bottom_id,
                 'connectionSide1Id' => $asset->connection_side_1_id,
@@ -298,6 +300,9 @@ class AssetController extends Controller
                 ])->all(),
             ],
             'history' => $history,
+            // Próximo vencimiento por tipo de certificación (anual/COS, COC…),
+            // para verlos los dos en la cabecera en vez de uno solo.
+            'certifications' => $this->certifications($asset),
             /*
              * Hilo completo de trazabilidad: envíos, recepciones, hitos del
              * taller, inspecciones, documentos y auditoría, en una sola línea
@@ -319,6 +324,68 @@ class AssetController extends Controller
             // Catálogos del formulario. Diferidos: sólo hacen falta al editar.
             'catalogs' => Inertia::defer(fn () => $this->editCatalogs($asset)),
         ]);
+    }
+
+    /**
+     * Próximo vencimiento por cada tipo de certificación que da aptitud
+     * (COS anual, COC de conformidad…). Para cada operación determinante se
+     * toma su línea final más reciente, así la cabecera muestra los dos plazos
+     * a la vez en lugar del único que guarda el estado del equipo.
+     *
+     * Es de sólo lectura: se deriva del historial y no cambia cómo se calcula
+     * la aptitud. La operacional (que no da aptitud) no entra.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function certifications(Asset $asset): array
+    {
+        $determinantes = Service::query()
+            ->where('determines_fitness', true)
+            ->get(['id', 'code', 'name'])
+            ->keyBy('id');
+
+        if ($determinantes->isEmpty()) {
+            return [];
+        }
+
+        $lineas = DB::table('inspection_report_asset as l')
+            ->join('inspection_reports as r', 'r.id', '=', 'l.inspection_report_id')
+            ->where('l.asset_id', $asset->getKey())
+            ->where('r.status', ReportStatus::Final->value)
+            ->whereNull('r.deleted_at')
+            ->whereIn('l.result', [InspectionResult::Apto->value, InspectionResult::NoApto->value])
+            ->orderByDesc('r.inspected_at')
+            ->orderByDesc('l.id')
+            ->get(['l.service_id', 'r.service_id as report_service_id', 'l.result', 'l.expires_at', 'r.inspected_at']);
+
+        $ultima = [];
+
+        foreach ($lineas as $linea) {
+            // Vale la operación de la línea; si no tiene, la del informe.
+            $serviceId = $linea->service_id ?? $linea->report_service_id;
+
+            // Sólo las que dan aptitud, y una sola —la más reciente— por tipo.
+            if ($serviceId === null || ! $determinantes->has($serviceId) || isset($ultima[$serviceId])) {
+                continue;
+            }
+
+            $servicio = $determinantes->get($serviceId);
+
+            $ultima[$serviceId] = [
+                'code' => $servicio->code,
+                'name' => $servicio->name,
+                'result' => InspectionResult::from($linea->result)->label(),
+                'isApt' => $linea->result === InspectionResult::Apto->value,
+                'expiresAt' => $linea->expires_at ? Carbon::parse($linea->expires_at)->toDateString() : null,
+                'inspectedAt' => $linea->inspected_at ? Carbon::parse($linea->inspected_at)->toDateString() : null,
+            ];
+        }
+
+        // El más próximo a vencer primero; los sin fecha, al final.
+        return collect($ultima)
+            ->sortBy(fn (array $c) => $c['expiresAt'] ?? '9999-12-31')
+            ->values()
+            ->all();
     }
 
     /**
@@ -360,7 +427,6 @@ class AssetController extends Controller
             'brand' => ['nullable', 'string', 'max:120'],
             'model' => ['nullable', 'string', 'max:120'],
             'catalog_item_id' => ['nullable', 'integer', 'exists:catalog_items,id'],
-            'service_id' => ['nullable', 'integer', 'exists:services,id'],
         ], [
             'organization_public_id.required' => 'Indique a qué empresa pertenece el equipo.',
             'description.required' => 'Describa el equipo.',
@@ -396,7 +462,6 @@ class AssetController extends Controller
             'manufacturer_id' => ['nullable', 'integer', 'exists:manufacturers,id'],
             'test_pressure_id' => ['nullable', 'integer', 'exists:pressure_ratings,id'],
             'working_pressure_id' => ['nullable', 'integer', 'exists:pressure_ratings,id'],
-            'service_id' => ['nullable', 'integer', 'exists:services,id'],
             'connection_top_id' => ['nullable', 'integer', 'exists:connections,id'],
             'connection_bottom_id' => ['nullable', 'integer', 'exists:connections,id'],
             'connection_side_1_id' => ['nullable', 'integer', 'exists:connections,id'],

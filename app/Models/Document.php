@@ -22,7 +22,7 @@ class Document extends Model
 
     /** Categorías admitidas, con su etiqueta visible. */
     public const CATEGORIES = [
-        'fmr_report' => 'Informe FMR',
+        'fmr_report' => 'Informe',
         'certificate' => 'Certificado',
         'photo' => 'Fotografía',
         'datasheet' => 'Ficha técnica',

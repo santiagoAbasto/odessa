@@ -30,6 +30,7 @@ class CreateAsset
         $this->guardAgainstDuplicateSerial($organization, $data['serial_number'] ?? null);
 
         $asset = DB::transaction(fn () => Asset::create([
+            'code' => $data['code'] ?? $this->nextCode($organization),
             'organization_id' => $organization->getKey(),
             'kind' => $data['kind'] ?? Asset::KIND_PART,
             'description' => $data['description'],
@@ -49,9 +50,6 @@ class CreateAsset
             'connection_bottom_id' => $data['connection_bottom_id'] ?? null,
             'connection_side_1_id' => $data['connection_side_1_id'] ?? null,
             'connection_side_2_id' => $data['connection_side_2_id'] ?? null,
-            // Identificador interno. No se pide al usuario: se genera para que
-            // toda pieza tenga uno aunque venga sin número de serie.
-            'code' => $data['code'] ?? Str::upper(Str::random(8)),
         ]));
 
         ActivityLogger::log(
@@ -63,6 +61,34 @@ class CreateAsset
         );
 
         return $asset;
+    }
+
+    /**
+     * Código legible por empresa: PREFIJO-0001, 0002… El prefijo es el código
+     * corto de la empresa, así el taller lo lee de un vistazo (HASA-0002).
+     * Corre dentro de la transacción del alta y bloquea las filas de la empresa
+     * para que dos altas simultáneas no tomen el mismo número. Los equipos
+     * viejos con código aleatorio no llevan el prefijo, así que no estorban: el
+     * correlativo nuevo arranca en 0001.
+     *
+     * ponytail: ordena por longitud y texto en vez de parsear todos los códigos.
+     * Correcto con relleno de 4 dígitos; si una empresa pasa de 9999 equipos el
+     * relleno crece y el orden sigue devolviendo el mayor.
+     */
+    private function nextCode(Organization $organization): string
+    {
+        $prefix = Str::upper($organization->short_code ?: 'EQ');
+
+        $last = Asset::query()
+            ->forOrganization($organization->getKey())
+            ->where('code', 'like', $prefix.'-%')
+            ->lockForUpdate()
+            ->orderByRaw('LENGTH(code) DESC, code DESC')
+            ->value('code');
+
+        $next = $last ? ((int) Str::afterLast($last, '-')) + 1 : 1;
+
+        return sprintf('%s-%04d', $prefix, $next);
     }
 
     /**

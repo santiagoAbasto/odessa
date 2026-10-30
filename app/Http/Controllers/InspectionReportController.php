@@ -181,7 +181,7 @@ class InspectionReportController extends Controller
             'equipment_label' => ['nullable', 'string', 'max:180'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ], [
-            'number.required' => 'Indique el número de FMR.',
+            'number.required' => 'Indique el número de informe.',
             'inspected_at.required' => 'Indique la fecha de inspección.',
             'inspected_at.before_or_equal' => 'La fecha de inspección no puede ser futura.',
         ]);
@@ -205,7 +205,7 @@ class InspectionReportController extends Controller
             ->exists();
 
         if ($repetido) {
-            return back()->withErrors(['number' => 'Esa empresa ya tiene un FMR con ese número.']);
+            return back()->withErrors(['number' => 'Esa empresa ya tiene un informe con ese número.']);
         }
 
         $report = InspectionReport::create([
@@ -387,6 +387,6 @@ class InspectionReportController extends Controller
 
         $finalize($report);
 
-        return back()->with('success', "FMR {$report->number} finalizado. Se actualizaron los estados de las piezas.");
+        return back()->with('success', "Informe {$report->number} finalizado. Se actualizaron los estados de las piezas.");
     }
 }

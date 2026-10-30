@@ -21,7 +21,6 @@ export interface EditableAsset {
   manufacturerId: number | null;
   testPressureId: number | null;
   workingPressureId: number | null;
-  serviceId: number | null;
   connectionTopId: number | null;
   connectionBottomId: number | null;
   connectionSide1Id: number | null;
@@ -65,7 +64,6 @@ export function EditAssetDialog({
     manufacturer_id: asset.manufacturerId?.toString() ?? '',
     test_pressure_id: asset.testPressureId?.toString() ?? '',
     working_pressure_id: asset.workingPressureId?.toString() ?? '',
-    service_id: asset.serviceId?.toString() ?? '',
     connection_top_id: asset.connectionTopId?.toString() ?? '',
     connection_bottom_id: asset.connectionBottomId?.toString() ?? '',
     connection_side_1_id: asset.connectionSide1Id?.toString() ?? '',
@@ -197,7 +195,6 @@ export function EditAssetDialog({
               catalogs.catalogItems,
               'Determina el tiempo de taller y, con él, la fecha límite de envío.',
             )}
-            {optionField('Servicio', 'service_id', catalogs.services)}
             {optionField('Fabricante', 'manufacturer_id', catalogs.manufacturers)}
 
             <Field label="Referencia del fabricante" error={errors.manufacturer_reference}>

@@ -32,13 +32,13 @@ class FinalizeInspectionReport
     {
         if (! $report->status->canTransitionTo(ReportStatus::Final)) {
             throw ValidationException::withMessages([
-                'status' => "Un FMR en estado «{$report->status->label()}» no puede finalizarse.",
+                'status' => "Un informe en estado «{$report->status->label()}» no puede finalizarse.",
             ]);
         }
 
         if ($report->lines()->count() === 0) {
             throw ValidationException::withMessages([
-                'lines' => 'No se puede finalizar un FMR sin piezas asociadas.',
+                'lines' => 'No se puede finalizar un informe sin piezas asociadas.',
             ]);
         }
 
@@ -85,7 +85,7 @@ class FinalizeInspectionReport
         ActivityLogger::log(
             action: 'inspection_report.finalized',
             subject: $report,
-            description: "FMR {$report->number} finalizado",
+            description: "Informe {$report->number} finalizado",
             old: ['status' => $previous->value],
             new: ['status' => ReportStatus::Final->value],
         );

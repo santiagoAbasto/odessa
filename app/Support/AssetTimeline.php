@@ -213,7 +213,7 @@ class AssetTimeline
                     'detail' => trim(sprintf(
                         '%s%s%s',
                         $line->service?->label() ? $line->service->label().' · ' : '',
-                        "FMR {$report?->number}",
+                        "Informe {$report?->number}",
                         $line->expires_at ? ' · vence '.$line->expires_at->format('d/m/Y') : '',
                     )),
                     'note' => $line->findings,

@@ -20,11 +20,13 @@ use Illuminate\Support\Facades\DB;
  *     Las líneas "No aplica" y "Sin procesar" quedan en la bitácora pero no
  *     alteran el estado. El sistema legacy lo indica de forma explícita en el
  *     detalle de cada pieza.
- *  2. Manda la línea más reciente por fecha de inspección; ante empate, la de
- *     mayor id (última cargada).
- *  3. Si el dictamen es No Apto -> `unfit`, sin importar el vencimiento.
- *  4. Si es Apto: vencido -> `unfit`; dentro de la ventana preventiva ->
- *     `expiring`; en otro caso -> `fit`.
+ *  2. La aptitud mira TODAS las certificaciones que dan aptitud, no sólo la
+ *     última: por cada tipo de operación (COS anual, COC de conformidad…) vale
+ *     su línea más reciente. La pieza está apta sólo si está al día en todas.
+ *  3. Cualquier tipo No Apto -> `unfit`, sin importar los vencimientos.
+ *  4. Si todas son Apto: manda la que vence primero. Con ese vencimiento,
+ *     vencido -> `unfit`; dentro de la ventana preventiva -> `expiring`; en
+ *     otro caso -> `fit`.
  *  5. Sin dictamen alguno -> `unknown`.
  *  6. Con vencimiento, se deriva `send_by_at`: la última fecha en la que el
  *     cliente puede despachar el equipo sin que pierda la certificación
@@ -61,7 +63,8 @@ class RecalculateAssetStatus
     /** Estado que surge del propio historial de inspecciones de la pieza. */
     private function resolveOwnStatus(Asset $asset): void
     {
-        $line = DB::table('inspection_report_asset as l')
+        // Todas las líneas determinantes finales, de la más nueva a la más vieja.
+        $lineas = DB::table('inspection_report_asset as l')
             ->join('inspection_reports as r', 'r.id', '=', 'l.inspection_report_id')
             ->where('l.asset_id', $asset->getKey())
             ->whereIn('l.result', [InspectionResult::Apto->value, InspectionResult::NoApto->value])
@@ -69,12 +72,11 @@ class RecalculateAssetStatus
             ->whereNull('r.deleted_at')
             ->orderByDesc('r.inspected_at')
             ->orderByDesc('l.id')
-            ->select('l.id', 'l.result', 'l.expires_at', 'l.inspection_report_id', 'r.inspected_at')
-            ->first();
+            ->get(['l.service_id', 'r.service_id as report_service_id', 'l.result', 'l.expires_at', 'l.inspection_report_id', 'r.inspected_at']);
 
-        if ($line === null) {
-            // Sin ningún FMR, un rechazo devuelto sin reparar sigue siendo un
-            // hecho: la pieza no está sin dictaminar, está no apta.
+        if ($lineas->isEmpty()) {
+            // Sin ningún informe, un rechazo devuelto sin reparar sigue siendo
+            // un hecho: la pieza no está sin dictaminar, está no apta.
             $sinReparar = $this->wasReturnedUnrepairedAfter($asset, null);
 
             $asset->forceFill([
@@ -87,23 +89,50 @@ class RecalculateAssetStatus
             return;
         }
 
-        $expiresAt = $line->expires_at ? Carbon::parse($line->expires_at) : null;
+        // La inspección determinante más reciente: fija qué informe mostrar y
+        // el corte para la regla de "devuelto sin reparar".
+        $masReciente = $lineas->first();
 
-        $status = $this->resolveStatus(InspectionResult::from($line->result), $expiresAt);
+        // Una línea por tipo de operación: la más reciente de cada una (vienen
+        // ordenadas de nueva a vieja, así que la primera de cada tipo manda).
+        // Las que no tienen operación identificable caen todas en un mismo
+        // grupo para que igual cuenten.
+        $porTipo = [];
+        foreach ($lineas as $linea) {
+            $tipo = $linea->service_id ?? $linea->report_service_id ?? 0;
+            $porTipo[$tipo] ??= $linea;
+        }
+        $vigentes = collect($porTipo);
+
+        // Cualquier certificación No Apta deja la pieza no apta, aunque las
+        // demás estén al día.
+        $hayNoApto = $vigentes->contains(fn ($l) => $l->result === InspectionResult::NoApto->value);
+
+        if ($hayNoApto) {
+            $status = AssetStatus::Unfit;
+            $vence = null;
+        } else {
+            // Todas aptas: manda la que vence primero. Una sin fecha no acota.
+            $determinante = $vigentes
+                ->sortBy(fn ($l) => $l->expires_at ?? '9999-12-31')
+                ->first();
+            $vence = $determinante->expires_at ? Carbon::parse($determinante->expires_at) : null;
+            $status = $this->resolveStatus(InspectionResult::Apto, $vence);
+        }
 
         /*
          * Un rechazo que el cliente no quiso reparar pesa más que la
          * inspección anterior, si es posterior a ella. El equipo volvió al
          * cliente sin arreglar: no puede seguir figurando certificado.
          */
-        if ($this->wasReturnedUnrepairedAfter($asset, $line->inspected_at)) {
+        if ($this->wasReturnedUnrepairedAfter($asset, $masReciente->inspected_at)) {
             $asset->forceFill([
                 'status' => AssetStatus::Unfit,
                 'expires_at' => null,
                 'send_by_at' => null,
-                // El FMR sigue siendo el último dictamen formal: se conserva
+                // El informe sigue siendo el último dictamen formal: se conserva
                 // para que la ficha no pierda el rastro de dónde viene.
-                'current_inspection_report_id' => $line->inspection_report_id,
+                'current_inspection_report_id' => $masReciente->inspection_report_id,
             ])->save();
 
             return;
@@ -111,13 +140,14 @@ class RecalculateAssetStatus
 
         $asset->forceFill([
             'status' => $status,
-            'expires_at' => $expiresAt,
+            'expires_at' => $vence,
             // Derivada del vencimiento: última fecha en la que el cliente puede
-            // despachar el equipo y todavía recibirlo certificado. Se calcula
-            // sobre `$expiresAt` y no sobre el modelo, que en este punto
-            // todavía tiene el vencimiento anterior.
-            'send_by_at' => $this->sendBy($asset, $expiresAt),
-            'current_inspection_report_id' => $line->inspection_report_id,
+            // despachar el equipo y todavía recibirlo certificado. Sin fecha o
+            // ya no apta, no hay plazo que derivar.
+            'send_by_at' => $status === AssetStatus::Unfit ? null : $this->sendBy($asset, $vence),
+            // El informe determinante es el último dictamen formal, que es lo
+            // que la ficha rotula "último informe con dictamen".
+            'current_inspection_report_id' => $masReciente->inspection_report_id,
         ])->save();
     }
 

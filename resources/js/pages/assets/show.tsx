@@ -44,6 +44,15 @@ interface HistoryEntry {
   files: { id: string; name: string; size: string; category: string }[];
 }
 
+interface Certification {
+  code: string;
+  name: string;
+  result: string;
+  isApt: boolean;
+  expiresAt: string | null;
+  inspectedAt: string | null;
+}
+
 interface ComponentRow {
   id: string;
   name: string | null;
@@ -66,7 +75,6 @@ interface AssetDetail {
   manufacturerId: number | null;
   testPressureId: number | null;
   workingPressureId: number | null;
-  serviceId: number | null;
   connectionTopId: number | null;
   connectionBottomId: number | null;
   connectionSide1Id: number | null;
@@ -93,7 +101,6 @@ interface AssetDetail {
   manufacturer: string | null;
   testPressure: string | null;
   workingPressure: string | null;
-  service: string | null;
   connections: Record<string, string>;
   status: string;
   statusLabel: string;
@@ -106,6 +113,7 @@ interface AssetDetail {
 export default function AssetShow({
   asset,
   history,
+  certifications,
   documents,
   categories,
   can,
@@ -114,6 +122,7 @@ export default function AssetShow({
 }: {
   asset: AssetDetail;
   history: HistoryEntry[];
+  certifications: Certification[];
   documents: DocumentPayload[];
   categories: { value: string; label: string }[];
   can: { upload: boolean; deleteDocuments: boolean; edit: boolean };
@@ -144,7 +153,6 @@ export default function AssetShow({
     ['Fabricante', asset.manufacturer],
     ['Presión de test', asset.testPressure],
     ['Presión de trabajo', asset.workingPressure],
-    ['Servicio habitual', asset.service],
     ...Object.entries(asset.connections).map(([label, value]) => [`Conexión ${label.toLowerCase()}`, value] as [string, string]),
   ];
 
@@ -249,6 +257,46 @@ export default function AssetShow({
             )}
           </div>
         </div>
+
+        {/*
+          Vencimiento por tipo de certificación: la pieza puede estar al día en
+          la anual (COS) y en la de conformidad (COC) a la vez, cada una con su
+          fecha. El "Vencimiento" de arriba es el de la inspección más reciente;
+          acá se ven los dos.
+        */}
+        {certifications.length > 0 && (
+          <div className="border-t border-[var(--border-subtle)] px-4 py-3">
+            <p className="mb-2 text-[11px] font-medium text-[var(--text-secondary)]">
+              Vencimientos por certificación
+            </p>
+            <ul className="flex flex-wrap gap-2">
+              {certifications.map((cert) => (
+                <li
+                  key={cert.code}
+                  className="inline-flex items-center gap-2 rounded-xs border border-[var(--border-subtle)] bg-[var(--surface-sunken)] px-2.5 py-1.5"
+                  title={cert.name}
+                >
+                  <span className="font-mono text-[11px] font-semibold text-[var(--text-primary)]">
+                    {cert.code}
+                  </span>
+                  {cert.isApt ? (
+                    <span className="text-[11.5px] text-[var(--text-secondary)]">
+                      vence{' '}
+                      <span className="tabular font-medium text-[var(--text-primary)]">
+                        {formatDate(cert.expiresAt)}
+                      </span>
+                      {cert.expiresAt && (
+                        <span className="ml-1 text-[var(--text-muted)]">· {expiryLabel(cert.expiresAt)}</span>
+                      )}
+                    </span>
+                  ) : (
+                    <Badge tone="danger">{cert.result}</Badge>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </Panel>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
@@ -379,28 +427,8 @@ export default function AssetShow({
           </Panel>
         )}
 
-        {/* ================= Hilo de trazabilidad ================= */}
-        <Panel className="mb-5">
-          <PanelHeader
-            title="Trazabilidad del equipo"
-            description="Todo lo que le pasó a esta pieza: quién, qué y cuándo. Envíos, taller, inspecciones, documentos y accesos."
-          />
-          <Deferred
-            data="timeline"
-            fallback={
-              <div className="space-y-3 p-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-2/3" />
-              </div>
-            }
-          >
-            <TraceabilityThread events={timeline ?? []} />
-          </Deferred>
-        </Panel>
-
         {/* ================= Bitácora ================= */}
-        <Panel>
+        <Panel className="mb-5">
           <PanelHeader
             title="Bitácora de inspecciones"
             description={`${history.length} ${history.length === 1 ? 'intervención registrada' : 'intervenciones registradas'}.`}
@@ -476,6 +504,26 @@ export default function AssetShow({
               ))}
             </ol>
           )}
+        </Panel>
+
+        {/* ================= Hilo de trazabilidad ================= */}
+        <Panel>
+          <PanelHeader
+            title="Trazabilidad del equipo"
+            description="Todo lo que le pasó a esta pieza: quién, qué y cuándo. Envíos, taller, inspecciones, documentos y accesos."
+          />
+          <Deferred
+            data="timeline"
+            fallback={
+              <div className="space-y-3 p-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-2/3" />
+              </div>
+            }
+          >
+            <TraceabilityThread events={timeline ?? []} />
+          </Deferred>
         </Panel>
       </div>
     </AppLayout>
