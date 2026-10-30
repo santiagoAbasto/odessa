@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Manual de usuario · Odessa Oil</title>
+<meta name="description" content="Manual de usuario del sistema de inspección, certificación y trazabilidad de Odessa Oil. Recorrido completo paso a paso, por rol." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #15181e;
+    --ink-soft: #3d4350;
+    --muted: #6b7280;
+    --line: #e6e3dc;
+    --line-soft: #efece5;
+    --paper: #fbfaf7;
+    --paper-raised: #ffffff;
+    --sunken: #f4f2ec;
+    --accent: #0e7490;      /* petróleo */
+    --accent-deep: #0b5566;
+    --amber: #b45309;
+    --green-fg: #15803d; --green-bg: #e9f5ec;
+    --amber-fg: #b45309; --amber-bg: #fbf1e3;
+    --red-fg: #b42318; --red-bg: #fbeceb;
+    --blue-fg: #1d4ed8; --blue-bg: #e9eefb;
+    --slate-fg: #475569; --slate-bg: #eef1f4;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(20,24,30,.04), 0 12px 32px -14px rgba(20,24,30,.18);
+    --shadow-soft: 0 1px 2px rgba(20,24,30,.05), 0 8px 24px -16px rgba(20,24,30,.2);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3, .display { font-family: Fraunces, Georgia, serif; font-weight: 600; letter-spacing: -.01em; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+
+  /* ---------- Layout ---------- */
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 72px 0; border-top: 1px solid var(--line); }
+  section:first-of-type { border-top: 0; }
+
+  /* ---------- Top progress / nav ---------- */
+  .topbar {
+    position: fixed; inset: 0 0 auto 0; z-index: 50;
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 22px;
+    background: rgba(251,250,247,.82);
+    backdrop-filter: saturate(180%) blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 14px; letter-spacing: -.01em; }
+  .topbar nav { margin-left: auto; display: flex; gap: 4px; flex-wrap: wrap; }
+  .topbar nav a {
+    font-size: 12.5px; color: var(--ink-soft); text-decoration: none;
+    padding: 6px 11px; border-radius: 999px; transition: .15s;
+  }
+  .topbar nav a:hover { background: var(--sunken); color: var(--ink); }
+  .progress { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--accent), var(--amber)); z-index: 60; width: 0; }
+
+  .logo-mark {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: radial-gradient(120% 120% at 30% 25%, #2a3340, #0d1117 70%);
+    display: grid; place-items: center; color: #fff;
+    font-family: Fraunces, serif; font-size: 13px; font-style: italic; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+  }
+
+  /* ---------- Cover ---------- */
+  .cover { padding: 150px 0 96px; text-align: left; position: relative; overflow: hidden; }
+  .cover .kicker {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent-deep); background: #e7f1f4; border: 1px solid #cfe4ea;
+    padding: 6px 13px; border-radius: 999px; margin-bottom: 26px;
+  }
+  .cover h1 { font-size: clamp(42px, 7vw, 76px); line-height: 1.02; margin: 0 0 20px; }
+  .cover h1 em { font-style: italic; color: var(--accent); }
+  .cover p.lead { font-size: 19px; color: var(--ink-soft); max-width: 60ch; margin: 0 0 36px; }
+  .cover .meta { display: flex; gap: 28px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+  .cover .meta b { color: var(--ink); font-weight: 600; }
+  .cover-logo { width: 68px; height: 68px; border-radius: 50%; margin-bottom: 30px;
+    background: radial-gradient(120% 120% at 30% 25%, #2a3340, #0d1117 70%);
+    display: grid; place-items: center; color: #fff; font-family: Fraunces, serif; font-size: 30px; font-style: italic; box-shadow: var(--shadow); }
+  .cover::after { content:""; position:absolute; right:-160px; top:40px; width:520px; height:520px; border-radius:50%;
+    background: radial-gradient(circle at 50% 50%, rgba(14,116,144,.10), transparent 62%); pointer-events:none; }
+
+  /* ---------- Typography blocks ---------- */
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-deep); margin: 0 0 12px; display:flex; align-items:center; gap:10px; }
+  .eyebrow .n { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:8px; background:var(--accent); color:#fff; font-family:Inter; font-size:13px; }
+  h2.title { font-size: clamp(28px, 4.5vw, 40px); margin: 0 0 14px; line-height: 1.08; }
+  .section-intro { font-size: 17px; color: var(--ink-soft); max-width: 66ch; margin: 0 0 40px; }
+  p { margin: 0 0 14px; }
+  .lead-sm { color: var(--ink-soft); }
+
+  /* ---------- Role cards ---------- */
+  .roles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .role {
+    background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 22px; box-shadow: var(--shadow-soft); position: relative; overflow: hidden;
+  }
+  .role::before { content:""; position:absolute; inset:0 auto 0 0; width:4px; background:var(--accent); opacity:.9; }
+  .role .ico { width: 40px; height: 40px; border-radius: 11px; display:grid; place-items:center; margin-bottom: 14px; }
+  .role h3 { font-size: 18px; margin: 0 0 4px; font-family: Inter; font-weight: 700; letter-spacing: -.01em; }
+  .role .who { font-size: 12.5px; color: var(--muted); margin: 0 0 12px; }
+  .role p { font-size: 13.5px; color: var(--ink-soft); margin: 0; }
+  .role.super::before { background:#7c3aed; } .role.super .ico { background:#efe7fd; color:#6d28d9; }
+  .role.taller::before { background: var(--accent); } .role.taller .ico { background:#e3f0f3; color: var(--accent-deep); }
+  .role.oper::before { background:#0f766e; } .role.oper .ico { background:#e4f1ef; color:#0f766e; }
+  .role.view::before { background:#64748b; } .role.view .ico { background:#eef1f4; color:#475569; }
+
+  /* ---------- Steps ---------- */
+  .step { display: grid; grid-template-columns: 1fr; gap: 26px; margin-bottom: 18px; }
+  .step-head { display: flex; align-items: baseline; gap: 16px; }
+  .step-num {
+    flex: none; width: 52px; height: 52px; border-radius: 15px;
+    background: linear-gradient(160deg, var(--accent), var(--accent-deep));
+    color: #fff; font-family: Fraunces, serif; font-size: 26px; font-weight: 600;
+    display: grid; place-items: center; box-shadow: var(--shadow); margin-top: 2px;
+  }
+  .step-head h3 { font-size: 23px; margin: 0 0 4px; }
+  .step-head .by { font-size: 12.5px; font-weight: 600; color: var(--accent-deep); text-transform: uppercase; letter-spacing: .08em; }
+  .step-body { color: var(--ink-soft); font-size: 15.5px; }
+  .step-body ol { margin: 10px 0 0; padding-left: 20px; }
+  .step-body ol li { margin-bottom: 7px; }
+  .step-body ol li b { color: var(--ink); }
+
+  /* annotations legend */
+  .legend { margin-top: 16px; display: grid; gap: 8px; }
+  .legend .row { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: var(--ink-soft); }
+  .pin { flex:none; width: 22px; height: 22px; border-radius: 50%; background: var(--amber); color:#fff; font-size: 12px; font-weight:700; display:grid; place-items:center; box-shadow: 0 2px 6px rgba(180,83,9,.35); font-family:Inter; }
+
+  /* ---------- Mock screen ("captura") ---------- */
+  .shot { position: relative; }
+  .caption { font-size: 12px; color: var(--muted); margin-top: 10px; text-align:center; }
+  .browser { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); background: var(--paper-raised); }
+  .browser .bar { display:flex; align-items:center; gap:7px; padding:9px 12px; background:#f0eee8; border-bottom:1px solid var(--line); }
+  .browser .bar .dot { width:10px; height:10px; border-radius:50%; background:#d6d2c8; }
+  .browser .bar .url { margin-left:10px; font-size:11px; color:var(--muted); background:#fff; border:1px solid var(--line); border-radius:6px; padding:3px 10px; font-family:"JetBrains Mono",monospace; }
+
+  .app { display: grid; grid-template-columns: 150px 1fr; min-height: 300px; }
+  .side { background:#0f1217; color:#aeb4bf; padding:14px 10px; font-size:11.5px; }
+  .side .brandrow { display:flex; align-items:center; gap:7px; color:#fff; font-weight:600; margin-bottom:4px; }
+  .side .mini-mark { width:18px;height:18px;border-radius:50%; background:#1b2029; display:grid;place-items:center;color:#fff;font-family:Fraunces,serif;font-style:italic;font-size:9px;}
+  .side .tag { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:#5a616d; margin:14px 0 6px; }
+  .side .it { padding:5px 8px; border-radius:7px; display:flex; align-items:center; gap:7px; }
+  .side .it.on { background:#1b212b; color:#fff; }
+  .side .it .d { width:13px; height:13px; border-radius:4px; background:#2a313c; }
+  .side .it.on .d { background: var(--accent); }
+  .main { background: var(--paper); padding: 16px; }
+  .crumb { font-size:10.5px; color:var(--muted); margin-bottom:8px; }
+  .h { font-family:Fraunces,serif; font-size:18px; font-weight:600; margin:0 0 2px; }
+  .sub { font-size:11px; color:var(--muted); margin:0 0 12px; }
+
+  .panel { background:var(--paper-raised); border:1px solid var(--line); border-radius:10px; margin-bottom:10px; overflow:hidden; }
+  .panel .ph { padding:9px 13px; border-bottom:1px solid var(--line-soft); font-weight:600; font-size:12.5px; display:flex; justify-content:space-between; align-items:center;}
+  .panel .ph small { font-weight:400; color:var(--muted); font-size:10.5px; }
+  .pc { padding:12px 13px; }
+
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); }
+  .cell { padding:12px 13px; border-right:1px solid var(--line-soft); }
+  .cell:last-child { border-right:0; }
+  .cell .k { font-size:10px; color:var(--muted); margin-bottom:6px; }
+  .cell .v { font-size:17px; font-weight:600; font-family:Fraunces,serif; }
+
+  .badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:3px 9px; border-radius:7px; }
+  .b-green{background:var(--green-bg);color:var(--green-fg);} .b-amber{background:var(--amber-bg);color:var(--amber-fg);}
+  .b-red{background:var(--red-bg);color:var(--red-fg);} .b-blue{background:var(--blue-bg);color:var(--blue-fg);}
+  .b-slate{background:var(--slate-bg);color:var(--slate-fg);}
+
+  .btn { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; padding:6px 12px; border-radius:8px; border:1px solid transparent; }
+  .btn-primary{ background:var(--accent); color:#fff; } .btn-ghost{ background:#fff; color:var(--ink); border-color:var(--line); }
+  .btn-danger{ background:var(--red-bg); color:var(--red-fg); } .btn-amber{ background:var(--amber-bg); color:var(--amber-fg); }
+
+  table.t { width:100%; border-collapse:collapse; font-size:11.5px; }
+  table.t th { text-align:left; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); padding:7px 9px; background:var(--sunken); border-bottom:1px solid var(--line); }
+  table.t td { padding:9px; border-bottom:1px solid var(--line-soft); }
+  table.t tr:last-child td { border-bottom:0; }
+
+  .chips { display:flex; flex-wrap:wrap; gap:7px; }
+  .chip { border:1px solid var(--line); background:var(--sunken); border-radius:8px; padding:6px 10px; font-size:11px; }
+  .chip .c { font-family:"JetBrains Mono",monospace; font-weight:600; margin-right:6px; }
+
+  .check { display:flex; align-items:center; gap:9px; padding:8px 11px; border:1px solid var(--line); border-radius:9px; margin-bottom:7px; font-size:12px; }
+  .check.ok { border-color:#bfe0c9; background:var(--green-bg); }
+  .check.no { border-color:#f1c7c3; background:var(--red-bg); }
+  .box { width:15px;height:15px;border-radius:4px;border:1.5px solid #bbb; display:grid;place-items:center; flex:none; }
+  .check.ok .box { background:var(--green-fg); border-color:var(--green-fg); color:#fff; }
+  .check.no .box { background:#fff; border-color:var(--red-fg); }
+  .pill-right { margin-left:auto; font-size:10.5px; font-weight:600; }
+
+  .field { border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:11.5px; color:var(--ink-soft); background:#fff; margin-bottom:8px; }
+  .field .lab { font-size:9.5px; color:var(--muted); display:block; margin-bottom:3px; }
+
+  .annot { position:absolute; width:26px; height:26px; border-radius:50%; background:var(--amber); color:#fff; font-weight:700; font-size:13px; display:grid; place-items:center; box-shadow:0 3px 10px rgba(180,83,9,.45); border:2px solid #fff; z-index:3; font-family:Inter; }
+
+  /* ---------- Callout / note ---------- */
+  .note { border-left: 3px solid var(--accent); background: #eef6f8; border-radius: 0 10px 10px 0; padding: 14px 18px; margin: 18px 0; font-size: 14px; color: var(--ink-soft); }
+  .note.warn { border-color: var(--amber); background: #fbf3e6; }
+  .note b { color: var(--ink); }
+
+  /* ---------- Feature list ---------- */
+  .features { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+  .feat { border:1px solid var(--line); border-radius:12px; padding:18px; background:var(--paper-raised); box-shadow:var(--shadow-soft); }
+  .feat h4 { margin:0 0 6px; font-size:15px; font-family:Inter; font-weight:700; display:flex; align-items:center; gap:9px;}
+  .feat h4 .t { width:28px;height:28px;border-radius:8px; background:#e3f0f3; color:var(--accent-deep); display:grid;place-items:center; flex:none;}
+  .feat p { margin:0; font-size:13px; color:var(--ink-soft); }
+
+  /* ---------- Glossary ---------- */
+  .gloss { display:grid; gap:0; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .gloss .g { display:grid; grid-template-columns:150px 1fr; gap:16px; padding:14px 18px; border-bottom:1px solid var(--line-soft); font-size:14px; }
+  .gloss .g:last-child { border-bottom:0; }
+  .gloss .g .term { font-weight:700; color:var(--ink); }
+  .gloss .g .term .mono { display:block; font-size:11px; color:var(--accent-deep); font-weight:500; }
+  .gloss .g .def { color:var(--ink-soft); }
+
+  footer { background:#0f1217; color:#aeb4bf; padding:56px 0; }
+  footer .wrap { display:flex; justify-content:space-between; gap:24px; flex-wrap:wrap; align-items:center; }
+  footer .brand { display:flex; align-items:center; gap:12px; color:#fff; font-family:Fraunces,serif; font-size:20px; }
+  footer small { font-size:12px; color:#6b7280; }
+
+  /* ---------- Reveal animation ---------- */
+  .reveal { opacity:0; transform: translateY(22px); transition: opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
+  .reveal.in { opacity:1; transform:none; }
+  .reveal.d1{transition-delay:.08s}.reveal.d2{transition-delay:.16s}.reveal.d3{transition-delay:.24s}.reveal.d4{transition-delay:.32s}
+
+  @media (max-width: 760px) {
+    .roles, .features { grid-template-columns:1fr; }
+    .gloss .g { grid-template-columns:1fr; gap:4px; }
+    .app { grid-template-columns: 110px 1fr; }
+    .topbar nav { display:none; }
+  }
+
+  /* ---------- Print / PDF ---------- */
+  @media print {
+    @page { size: A4; margin: 15mm 14mm; }
+    html { scroll-behavior:auto; }
+    .topbar, .progress { display:none !important; }
+    body { background:#fff; }
+    section { padding: 20px 0; border-top:1px solid var(--line); break-inside: avoid-page; }
+    .cover { padding: 20px 0 30px; }
+    .reveal { opacity:1 !important; transform:none !important; }
+    /* El ancho de página (~688px) cae bajo el breakpoint móvil; se fuerzan
+       las grillas a dos columnas para que las tarjetas no se apilen ni dejen
+       una huérfana al final de la página. */
+    .roles, .features { grid-template-columns: repeat(2, 1fr) !important; }
+    .step, .role, .feat, .browser, .note { break-inside: avoid; }
+    .shot { break-inside: avoid; }
+    a { color: inherit; text-decoration:none; }
+    .browser { box-shadow:none; }
+    h2.title { break-after: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="topbar">
+  <span class="brand"><span class="logo-mark">O</span> Odessa Oil</span>
+  <nav>
+    <a href="#roles">Roles</a>
+    <a href="#recorrido">Recorrido</a>
+    <a href="#porrol">Por rol</a>
+    <a href="#funciones">Funciones</a>
+    <a href="#glosario">Glosario</a>
+  </nav>
+</div>
+
+<!-- ============ PORTADA ============ -->
+<header class="cover">
+  <div class="wrap">
+    <div class="cover-logo reveal in">O</div>
+    <span class="kicker reveal in">Manual de usuario · v1.0</span>
+    <h1 class="reveal in">El sistema de <em>Odessa Oil</em>,<br>explicado de principio a fin.</h1>
+    <p class="lead reveal in d1">Inspección, certificación y trazabilidad de equipamiento de presión para la industria energética. Esta guía recorre, paso a paso y con ilustraciones, todo lo que ve y hace cada usuario — del envío del equipo al despacho certificado.</p>
+    <div class="meta reveal in d2">
+      <span><b>Para:</b> clientes y taller</span>
+      <span><b>Alcance:</b> recorrido completo del equipo</span>
+      <span><b>Actualizado:</b> 30/10/2026</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============ QUÉ ES ============ -->
+<section id="intro">
+  <div class="wrap">
+    <p class="eyebrow reveal"><span class="n">0</span> Antes de empezar</p>
+    <h2 class="title reveal">Qué resuelve el sistema</h2>
+    <p class="section-intro reveal">Cada equipo de presión que entra al taller tiene que poder decir, en todo momento, <b>quién lo inspeccionó, cuándo, con qué resultado y hasta cuándo está certificado</b>. El sistema sigue ese recorrido entero y mantiene vivo el estado de cada pieza, para que el cliente sepa qué puede usar y qué tiene que mandar a recertificar.</p>
+    <div class="note reveal">
+      Hay <b>una sola verdad</b> para cada pieza: su <b>estado de aptitud</b> (apto / por vencer / no apto) y su <b>vencimiento</b>. Todo lo que hace el taller — recibir, inspeccionar, aprobar — termina reflejándose ahí automáticamente. Nadie escribe el estado a mano.
+    </div>
+  </div>
+</section>
+
+<!-- ============ ROLES ============ -->
+<section id="roles">
+  <div class="wrap">
+    <p class="eyebrow reveal"><span class="n">1</span> Quién es quién</p>
+    <h2 class="title reveal">Los cuatro roles</h2>
+    <p class="section-intro reveal">Cada persona ve solo lo que le corresponde. Un cliente nunca ve equipos de otra empresa, y el taller nunca administra usuarios. Así de simple.</p>
+    <div class="roles">
+      <div class="role super reveal d1">
+        <div class="ico">★</div>
+        <h3>Superadministrador</h3>
+        <p class="who">Odessa — dueño del sistema</p>
+        <p>Puede todo: catálogos, operaciones, empresas, usuarios. Es el único que puede <b>deshacer</b> una aprobación cargada por error.</p>
+      </div>
+      <div class="role taller reveal d2">
+        <div class="ico">⚙</div>
+        <h3>Taller</h3>
+        <p class="who">Operarios de Odessa</p>
+        <p>Recibe los equipos, los inspecciona, dictamina, repara y despacha. Carga los informes de inspección.</p>
+      </div>
+      <div class="role oper reveal d3">
+        <div class="ico">↑</div>
+        <h3>Cliente · Operador</h3>
+        <p class="who">Empleado de la empresa cliente</p>
+        <p>Pre-carga los envíos de equipos al taller y autoriza las reparaciones (porque se le cobran). No toca inventario.</p>
+      </div>
+      <div class="role view reveal d4">
+        <div class="ico">◎</div>
+        <h3>Cliente · Consulta</h3>
+        <p class="who">Empresa cliente — solo mirar</p>
+        <p>Ve sus equipos, vencimientos e informes. Ideal para seguir el estado sin riesgo de cambiar nada.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RECORRIDO ============ -->
+<section id="recorrido">
+  <div class="wrap">
+    <p class="eyebrow reveal"><span class="n">2</span> El recorrido de un equipo</p>
+    <h2 class="title reveal">De principio a fin, en cinco pasos</h2>
+    <p class="section-intro reveal">Seguimos un puente de presión desde que el cliente lo declara hasta que vuelve certificado. Cada paso muestra la pantalla real y lo que hay que hacer en ella.</p>
+
+    <!-- PASO 1 -->
+    <div class="step reveal">
+      <div class="step-head">
+        <div class="step-num">1</div>
+        <div><div class="by">Cliente · Operador</div><h3>Declarar el envío</h3></div>
+      </div>
+      <div class="step-body">
+        <p>El operador arma un <b>envío</b> con los equipos que va a mandar. El sistema le da un número automático (<span class="mono">ENV-2026-0002</span>). Por cada equipo indica qué pide.</p>
+        <div class="shot">
+          <div class="annot" style="top:38%;left:10%">1</div>
+          <div class="annot" style="top:62%;left:52%">2</div>
+          <div class="browser">
+            <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/envios</span></div>
+            <div class="app">
+              <div class="side">
+                <div class="brandrow"><span class="mini-mark">O</span> Odessa Oil</div>
+                <div class="tag">Operación</div>
+                <div class="it"><span class="d"></span> Panel</div>
+                <div class="it"><span class="d"></span> Activos</div>
+                <div class="it on"><span class="d"></span> Envíos al taller</div>
+                <div class="tag">Taller</div>
+                <div class="it"><span class="d"></span> Gestión</div>
+              </div>
+              <div class="main">
+                <div class="crumb">Envíos · ENV-2026-0002</div>
+                <div class="h">Agregar equipo al envío</div>
+                <div class="sub">Elija una pieza registrada o describa una nueva.</div>
+                <div class="panel"><div class="pc">
+                  <div class="field"><span class="lab">Descripción del equipo</span>Puente 2-1/16 · Shell</div>
+                  <div class="field"><span class="lab">Número de serie</span>S2222</div>
+                  <div class="field"><span class="lab">Qué pide (operaciones habilitadas)</span>
+                    <div class="chips" style="margin-top:4px"><span class="chip">Certificación de Servicio</span><span class="chip">Certificación de Conformidad</span></div>
+                  </div>
+                  <div style="text-align:right;margin-top:6px"><span class="btn btn-primary">Agregar</span></div>
+                </div></div>
+              </div>
+            </div>
+          </div>
+          <p class="caption">Envío en borrador — todavía no entró nada al taller.</p>
+        </div>
+        <div class="legend">
+          <div class="row"><span class="pin">1</span> La <b>descripción y la serie</b> identifican la pieza. Si ya está registrada, se elige del listado.</div>
+          <div class="row"><span class="pin">2</span> <b>“Qué pide”</b> son las operaciones que Odessa le habilitó a esa empresa. Lo que no esté en la lista va como <i>operación especial</i>.</div>
+        </div>
+        <div class="note">Al tocar <b>Enviar</b>, el envío pasa a <b>“Pendiente de recepción”</b> y ya no se puede editar. Hasta acá es solo una declaración: nada entró al inventario.</div>
+      </div>
+    </div>
+
+    <!-- PASO 2 -->
+    <div class="step reveal">
+      <div class="step-head">
+        <div class="step-num">2</div>
+        <div><div class="by">Taller</div><h3>Dar recepción — y marcar lo que no llegó</h3></div>
+      </div>
+      <div class="step-body">
+        <p>Cuando el camión llega, el taller da recepción. <b>Se asume que llegó todo lo declarado</b>; el taller solo <b>destilda lo que no llegó</b> y escribe por qué.</p>
+        <div class="shot">
+          <div class="annot" style="top:30%;left:8%">1</div>
+          <div class="annot" style="top:58%;left:8%">2</div>
+          <div class="annot" style="top:86%;left:62%">3</div>
+          <div class="browser">
+            <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/taller/recepciones</span></div>
+            <div class="main" style="background:var(--paper-raised)">
+              <div class="h">Dar recepción · ENV-2026-0002</div>
+              <div class="sub">Se asume que llegó lo declarado. Destilde lo que no llegó e indique el motivo.</div>
+              <div class="check ok"><span class="box">✓</span> Puente 2-1/16 · Shell <span class="mono" style="color:var(--muted)">S2222</span> <span class="pill-right" style="color:var(--green-fg)">Llegó</span></div>
+              <div class="check no"><span class="box"></span> Brida 3-1/8 · API <span class="mono" style="color:var(--muted)">B-118</span> <span class="pill-right" style="color:var(--red-fg)">No llegó</span></div>
+              <div class="field" style="margin-left:26px;border-color:#f1c7c3"><span class="lab">Por qué no llegó</span>No estaba en el cajón; el transportista lo confirma.</div>
+              <div style="text-align:right;margin-top:8px"><span class="btn btn-primary">Recibir 1 · 1 no llegó</span></div>
+            </div>
+          </div>
+          <p class="caption">Recepción parcial: entra lo que llegó, se registra lo que no.</p>
+        </div>
+        <div class="legend">
+          <div class="row"><span class="pin">1</span> Lo que <b>llegó</b> entra al taller: se crea su ficha (si era nueva) y su recepción.</div>
+          <div class="row"><span class="pin">2</span> Lo que <b>no llegó</b> se destilda. No entra nada al taller por esa pieza.</div>
+          <div class="row"><span class="pin">3</span> Cada pieza que falta <b>exige un motivo</b>: es lo que se le informa al cliente.</div>
+        </div>
+        <div class="note warn"><b>Correo automático al operador.</b> Apenas se confirma, sale un correo profesional de Odessa al operador que mandó los equipos, con la lista de lo que no llegó y por qué. Si no llegó <b>ningún</b> equipo, el envío queda rechazado.</div>
+      </div>
+    </div>
+
+    <!-- PASO 3 -->
+    <div class="step reveal">
+      <div class="step-head">
+        <div class="step-num">3</div>
+        <div><div class="by">Taller</div><h3>Trabajar y dictaminar</h3></div>
+      </div>
+      <div class="step-body">
+        <p>Cada equipo recibido recorre el taller: <b>Pendiente → En proceso → Aprobada o Rechazada</b>. El taller elige la acción que corresponde en cada etapa; no hay botones que lleven a error.</p>
+        <div class="shot">
+          <div class="annot" style="top:52%;left:70%">1</div>
+          <div class="annot" style="top:52%;left:88%">2</div>
+          <div class="browser">
+            <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/taller/recepciones?stage=in_progress</span></div>
+            <div class="main" style="background:var(--paper-raised)">
+              <div class="h">Gestión de equipos</div>
+              <div class="sub">Recorrido del equipo en el taller: ingreso, dictamen, reparación y despacho.</div>
+              <table class="t">
+                <tr><th>Pieza</th><th>Cliente</th><th>Etapa</th><th>Acciones</th></tr>
+                <tr>
+                  <td><b>Puente 2-1/16</b><br><span class="mono" style="color:var(--muted)">S2222</span></td>
+                  <td>Stream Flo</td>
+                  <td><span class="badge b-amber">En proceso</span></td>
+                  <td><span class="btn btn-ghost" style="margin-right:5px">Aprobar</span><span class="btn btn-danger">Rechazar</span></td>
+                </tr>
+              </table>
+            </div>
+          </div>
+          <p class="caption">La pieza en proceso, lista para dictamen.</p>
+        </div>
+        <div class="legend">
+          <div class="row"><span class="pin">1</span> <b>Aprobar</b> da el trabajo por bueno. Al aprobar se registra la inspección (ver paso 4).</div>
+          <div class="row"><span class="pin">2</span> <b>Rechazar</b> exige motivo y abre el circuito de reparación: se le consulta al cliente si autoriza repararla.</div>
+        </div>
+        <div class="note"><b>¿Aprobaron por error?</b> El superadministrador tiene un botón <b>Deshacer</b> en las piezas aprobadas o rechazadas que todavía no se despacharon. Pide un motivo y queda en la auditoría; la pieza vuelve a “En proceso”.</div>
+      </div>
+    </div>
+
+    <!-- PASO 4 -->
+    <div class="step reveal">
+      <div class="step-head">
+        <div class="step-num">4</div>
+        <div><div class="by">Taller</div><h3>Registrar la inspección y el vencimiento</h3></div>
+      </div>
+      <div class="step-body">
+        <p>Cada inspección es un <b>informe</b>: un trabajo que hace la empresa sobre una o varias piezas. Se elige la operación, el resultado y la fecha; el <b>vencimiento se calcula solo</b> con la vigencia de esa operación.</p>
+        <div class="shot">
+          <div class="annot" style="top:40%;left:8%">1</div>
+          <div class="annot" style="top:66%;left:8%">2</div>
+          <div class="browser">
+            <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/informes</span></div>
+            <div class="main" style="background:var(--paper-raised)">
+              <div class="h">Informe de inspección</div>
+              <div class="sub">Empresa · número de informe · fecha. Puede incluir varias piezas.</div>
+              <div class="panel"><div class="pc">
+                <table class="t">
+                  <tr><th>Pieza</th><th>Operación</th><th>Resultado</th><th>Vence</th></tr>
+                  <tr><td>Puente 2-1/16 · S2222</td><td><span class="mono">COS</span> anual</td><td><span class="badge b-green">Apto</span></td><td class="mono">10/09/2027</td></tr>
+                  <tr><td>Puente 2-1/16 · S2222</td><td><span class="mono">COC</span> conformidad</td><td><span class="badge b-green">Apto</span></td><td class="mono">10/09/2031</td></tr>
+                </table>
+              </div></div>
+              <div style="text-align:right"><span class="btn btn-primary">Finalizar informe</span></div>
+            </div>
+          </div>
+          <p class="caption">Un informe con dos certificaciones sobre la misma pieza.</p>
+        </div>
+        <div class="legend">
+          <div class="row"><span class="pin">1</span> La <b>operación</b> define la vigencia: <span class="mono">COS</span> dura 1 año (anual), <span class="mono">COC</span> dura 5 años (conformidad).</div>
+          <div class="row"><span class="pin">2</span> Al <b>finalizar</b>, el informe es definitivo y actualiza el estado y el vencimiento de cada pieza.</div>
+        </div>
+        <div class="note">Solo el informe <b>finalizado</b> cambia el estado de las piezas. Un borrador es trabajo en curso: no certifica nada todavía.</div>
+      </div>
+    </div>
+
+    <!-- PASO 5 -->
+    <div class="step reveal">
+      <div class="step-head">
+        <div class="step-num">5</div>
+        <div><div class="by">Todos</div><h3>Vencimientos por tipo y despacho</h3></div>
+      </div>
+      <div class="step-body">
+        <p>La ficha del equipo muestra su <b>estado de aptitud</b> y <b>cada vencimiento por tipo</b>. Una pieza está apta solo si está al día en <b>todas</b> sus certificaciones; manda la que vence primero.</p>
+        <div class="shot">
+          <div class="annot" style="top:24%;left:8%">1</div>
+          <div class="annot" style="top:70%;left:30%">2</div>
+          <div class="browser">
+            <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/activos/…</span></div>
+            <div class="main" style="background:var(--paper-raised)">
+              <div class="crumb">Activos · Puente 2-1/16 · Shell</div>
+              <div class="panel">
+                <div class="grid3">
+                  <div class="cell"><div class="k">Estado de aptitud</div><div><span class="badge b-green">Apto</span></div></div>
+                  <div class="cell"><div class="k">Vencimiento</div><div class="v">10/09/2027</div></div>
+                  <div class="cell"><div class="k">Código</div><div class="v mono" style="font-size:14px">HASA-0002</div></div>
+                </div>
+                <div style="border-top:1px solid var(--line-soft);padding:11px 13px">
+                  <div class="k" style="font-size:10px;color:var(--muted);margin-bottom:7px">Vencimientos por certificación</div>
+                  <div class="chips">
+                    <span class="chip"><span class="c">COS</span> vence 10/09/2027 · en 10 meses</span>
+                    <span class="chip"><span class="c">COC</span> vence 10/09/2031 · en 5 años</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="caption">La ficha muestra los dos vencimientos a la vez.</p>
+        </div>
+        <div class="legend">
+          <div class="row"><span class="pin">1</span> El <b>estado</b> y el <b>vencimiento principal</b> salen del certificado que vence primero.</div>
+          <div class="row"><span class="pin">2</span> Abajo, <b>cada tipo</b> con su propia fecha. Así se ve el anual (COS) y el quinquenal (COC) por separado.</div>
+        </div>
+        <div class="note">Cuando el equipo sale del taller, el taller lo <b>despacha</b> y el hito queda registrado. El cliente lo ve volver <b>certificado</b>, con su nueva fecha.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ POR ROL ============ -->
+<section id="porrol">
+  <div class="wrap">
+    <p class="eyebrow reveal"><span class="n">3</span> Guía rápida por rol</p>
+    <h2 class="title reveal">Qué hace cada uno, de un vistazo</h2>
+    <div class="features">
+      <div class="feat reveal d1"><h4><span class="t">↑</span> Cliente · Operador</h4><p>Arma y envía los envíos al taller. Sigue sus equipos. Cuando el taller consulta una reparación, la <b>autoriza o la rechaza</b> desde su panel.</p></div>
+      <div class="feat reveal d2"><h4><span class="t">◎</span> Cliente · Consulta</h4><p>Ve el inventario, los vencimientos y los informes de su empresa. No puede cargar ni modificar nada: es la vista segura para seguimiento.</p></div>
+      <div class="feat reveal d3"><h4><span class="t">⚙</span> Taller</h4><p>Da recepción (parcial si hace falta), trabaja las piezas, carga los informes, dictamina y despacha. Ve los equipos de todas las empresas.</p></div>
+      <div class="feat reveal d4"><h4><span class="t">★</span> Superadministrador</h4><p>Administra empresas, usuarios, operaciones y catálogos. Define las vigencias (COS, COC). Es el único que puede <b>deshacer</b> un dictamen.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FUNCIONES CLAVE ============ -->
+<section id="funciones">
+  <div class="wrap">
+    <p class="eyebrow reveal"><span class="n">4</span> Funciones clave</p>
+    <h2 class="title reveal">Lo que conviene conocer</h2>
+    <div class="features">
+      <div class="feat reveal d1"><h4><span class="t mono" style="font-size:11px">#</span> Código por empresa</h4><p>Cada equipo nuevo recibe un código legible con el prefijo de su empresa: <span class="mono">HASA-0001</span>, <span class="mono">HASA-0002</span>… Fácil de leer y de buscar.</p></div>
+      <div class="feat reveal d2"><h4><span class="t">≋</span> Vencimientos por tipo</h4><p>El encabezado muestra el anual (COS) y el de conformidad (COC) por separado. La aptitud exige estar al día en <b>todas</b> las certificaciones.</p></div>
+      <div class="feat reveal d3"><h4><span class="t">↺</span> Deshacer aprobación</h4><p>Si se aprobó por error, el superadministrador lo revierte (antes de despachar), con motivo y registro en auditoría. La pieza vuelve a “En proceso”.</p></div>
+      <div class="feat reveal d4"><h4><span class="t">◧</span> Recepción parcial</h4><p>El taller recibe lo que llegó y marca lo que no, con su motivo. Lo faltante no entra al taller y se le avisa al operador por correo.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GLOSARIO ============ -->
+<section id="glosario">
+  <div class="wrap">
+    <p class="eyebrow reveal"><span class="n">5</span> Glosario</p>
+    <h2 class="title reveal">Los términos, en una línea</h2>
+    <div class="gloss reveal">
+      <div class="g"><div class="term">COS <span class="mono">Certificación de Servicio</span></div><div class="def">Certificación <b>anual</b> (vigencia 1 año). Da aptitud al equipo.</div></div>
+      <div class="g"><div class="term">COC <span class="mono">Certificación de Conformidad</span></div><div class="def">Certificación <b>quinquenal</b> (vigencia 5 años). Da aptitud al equipo.</div></div>
+      <div class="g"><div class="term">Aptitud</div><div class="def">El estado del equipo: <b>Apto</b>, <b>Por vencer</b> o <b>No apto</b>. Se deriva de las inspecciones; nunca se escribe a mano.</div></div>
+      <div class="g"><div class="term">Informe</div><div class="def">El registro de una inspección: un trabajo sobre una o varias piezas, con su resultado y vencimiento.</div></div>
+      <div class="g"><div class="term">Bitácora</div><div class="def">El historial de inspecciones de una pieza: cada vez que pasó por el taller y qué resultado tuvo.</div></div>
+      <div class="g"><div class="term">Recepción parcial</div><div class="def">Recibir solo los equipos que llegaron y registrar, con su motivo, los que no.</div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="brand"><span style="width:34px;height:34px;border-radius:50%;background:radial-gradient(120% 120% at 30% 25%,#2a3340,#0d1117 70%);display:grid;place-items:center;color:#fff;font-style:italic;font-size:16px">O</span> Odessa Oil</div>
+    <small>Manual de usuario · v1.0 · 30/10/2026 — Inspección, certificación y trazabilidad.</small>
+  </div>
+</footer>
+
+<script>
+  // Barra de progreso de lectura
+  var prog = document.getElementById('progress');
+  function onScroll(){
+    var h = document.documentElement;
+    var sc = (h.scrollTop) / (h.scrollHeight - h.clientHeight);
+    prog.style.width = Math.max(0, Math.min(1, sc)) * 100 + '%';
+  }
+  document.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+  // Reveal al entrar en viewport
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, {threshold: .14});
+  document.querySelectorAll('.reveal:not(.in)').forEach(function(el){ io.observe(el); });
+</script>
+</body>
+</html>
