@@ -4,259 +4,117 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Manual de usuario · Odessa Oil</title>
-<meta name="description" content="Manual de usuario del sistema de inspección, certificación y trazabilidad de Odessa Oil. Recorrido completo paso a paso, por rol." />
+<meta name="description" content="Manual de usuario del sistema de inspección, certificación y trazabilidad de Odessa Oil. Cada pantalla y cada botón, con capturas reales, por rol." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --ink: #15181e;
-    --ink-soft: #3d4350;
-    --muted: #6b7280;
-    --line: #e6e3dc;
-    --line-soft: #efece5;
-    --paper: #fbfaf7;
-    --paper-raised: #ffffff;
-    --sunken: #f4f2ec;
-    --accent: #0e7490;      /* petróleo */
-    --accent-deep: #0b5566;
-    --amber: #b45309;
-    --green-fg: #15803d; --green-bg: #e9f5ec;
-    --amber-fg: #b45309; --amber-bg: #fbf1e3;
-    --red-fg: #b42318; --red-bg: #fbeceb;
-    --blue-fg: #1d4ed8; --blue-bg: #e9eefb;
-    --slate-fg: #475569; --slate-bg: #eef1f4;
-    --radius: 14px;
-    --shadow: 0 1px 2px rgba(20,24,30,.04), 0 12px 32px -14px rgba(20,24,30,.18);
-    --shadow-soft: 0 1px 2px rgba(20,24,30,.05), 0 8px 24px -16px rgba(20,24,30,.2);
+    --ink:#15181e; --ink-soft:#3d4350; --muted:#6b7280; --line:#e6e3dc; --line-soft:#efece5;
+    --paper:#fbfaf7; --paper-raised:#fff; --sunken:#f4f2ec;
+    --accent:#0e7490; --accent-deep:#0b5566; --amber:#b45309;
+    --green-fg:#15803d; --green-bg:#e9f5ec; --red-fg:#b42318; --red-bg:#fbeceb; --blue-bg:#e9eefb; --blue-fg:#1d4ed8;
+    --radius:14px; --shadow:0 1px 2px rgba(20,24,30,.04),0 12px 32px -14px rgba(20,24,30,.18);
+    --shadow-soft:0 1px 2px rgba(20,24,30,.05),0 8px 24px -16px rgba(20,24,30,.2);
   }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body {
-    margin: 0;
-    font-family: Inter, system-ui, -apple-system, sans-serif;
-    color: var(--ink);
-    background: var(--paper);
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
-  }
-  h1, h2, h3, .display { font-family: Fraunces, Georgia, serif; font-weight: 600; letter-spacing: -.01em; }
-  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--paper);line-height:1.62;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:600;letter-spacing:-.01em}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  section{padding:66px 0;border-top:1px solid var(--line)}
+  section:first-of-type{border-top:0}
 
-  /* ---------- Layout ---------- */
-  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px; }
-  section { padding: 72px 0; border-top: 1px solid var(--line); }
-  section:first-of-type { border-top: 0; }
+  .progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--amber));z-index:60;width:0}
+  .topbar{position:fixed;inset:0 0 auto 0;z-index:50;display:flex;align-items:center;gap:14px;padding:11px 22px;background:rgba(251,250,247,.85);backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid var(--line)}
+  .topbar .brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:14px}
+  .logo-mark{width:26px;height:26px;border-radius:50%;background:radial-gradient(120% 120% at 30% 25%,#2a3340,#0d1117 70%);display:grid;place-items:center;color:#fff;font-family:Fraunces,serif;font-size:13px;font-style:italic}
+  .topbar nav{margin-left:auto;display:flex;gap:3px;flex-wrap:wrap}
+  .topbar nav a{font-size:12px;color:var(--ink-soft);text-decoration:none;padding:6px 10px;border-radius:999px}
+  .topbar nav a:hover{background:var(--sunken);color:var(--ink)}
 
-  /* ---------- Top progress / nav ---------- */
-  .topbar {
-    position: fixed; inset: 0 0 auto 0; z-index: 50;
-    display: flex; align-items: center; gap: 14px;
-    padding: 12px 22px;
-    background: rgba(251,250,247,.82);
-    backdrop-filter: saturate(180%) blur(10px);
-    border-bottom: 1px solid var(--line);
-  }
-  .topbar .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 14px; letter-spacing: -.01em; }
-  .topbar nav { margin-left: auto; display: flex; gap: 4px; flex-wrap: wrap; }
-  .topbar nav a {
-    font-size: 12.5px; color: var(--ink-soft); text-decoration: none;
-    padding: 6px 11px; border-radius: 999px; transition: .15s;
-  }
-  .topbar nav a:hover { background: var(--sunken); color: var(--ink); }
-  .progress { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--accent), var(--amber)); z-index: 60; width: 0; }
+  .cover{padding:150px 0 70px;position:relative;overflow:hidden}
+  .cover-logo{width:66px;height:66px;border-radius:50%;margin-bottom:28px;background:radial-gradient(120% 120% at 30% 25%,#2a3340,#0d1117 70%);display:grid;place-items:center;color:#fff;font-family:Fraunces,serif;font-size:29px;font-style:italic;box-shadow:var(--shadow)}
+  .kicker{display:inline-flex;gap:8px;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-deep);background:#e7f1f4;border:1px solid #cfe4ea;padding:6px 13px;border-radius:999px;margin-bottom:24px}
+  .cover h1{font-size:clamp(40px,7vw,70px);line-height:1.03;margin:0 0 20px}
+  .cover h1 em{font-style:italic;color:var(--accent)}
+  .cover p.lead{font-size:19px;color:var(--ink-soft);max-width:60ch;margin:0 0 34px}
+  .cover .meta{display:flex;gap:26px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+  .cover .meta b{color:var(--ink);font-weight:600}
+  .cover::after{content:"";position:absolute;right:-160px;top:40px;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle at 50% 50%,rgba(14,116,144,.1),transparent 62%);pointer-events:none}
 
-  .logo-mark {
-    width: 26px; height: 26px; border-radius: 50%;
-    background: radial-gradient(120% 120% at 30% 25%, #2a3340, #0d1117 70%);
-    display: grid; place-items: center; color: #fff;
-    font-family: Fraunces, serif; font-size: 13px; font-style: italic; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
-  }
+  .eyebrow{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-deep);margin:0 0 12px;display:flex;align-items:center;gap:10px}
+  .eyebrow .n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;font-family:Inter;font-size:13px}
+  h2.title{font-size:clamp(27px,4.5vw,38px);margin:0 0 14px;line-height:1.1}
+  .intro{font-size:16.5px;color:var(--ink-soft);max-width:66ch;margin:0 0 34px}
+  p{margin:0 0 13px}
 
-  /* ---------- Cover ---------- */
-  .cover { padding: 150px 0 96px; text-align: left; position: relative; overflow: hidden; }
-  .cover .kicker {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
-    color: var(--accent-deep); background: #e7f1f4; border: 1px solid #cfe4ea;
-    padding: 6px 13px; border-radius: 999px; margin-bottom: 26px;
-  }
-  .cover h1 { font-size: clamp(42px, 7vw, 76px); line-height: 1.02; margin: 0 0 20px; }
-  .cover h1 em { font-style: italic; color: var(--accent); }
-  .cover p.lead { font-size: 19px; color: var(--ink-soft); max-width: 60ch; margin: 0 0 36px; }
-  .cover .meta { display: flex; gap: 28px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
-  .cover .meta b { color: var(--ink); font-weight: 600; }
-  .cover-logo { width: 68px; height: 68px; border-radius: 50%; margin-bottom: 30px;
-    background: radial-gradient(120% 120% at 30% 25%, #2a3340, #0d1117 70%);
-    display: grid; place-items: center; color: #fff; font-family: Fraunces, serif; font-size: 30px; font-style: italic; box-shadow: var(--shadow); }
-  .cover::after { content:""; position:absolute; right:-160px; top:40px; width:520px; height:520px; border-radius:50%;
-    background: radial-gradient(circle at 50% 50%, rgba(14,116,144,.10), transparent 62%); pointer-events:none; }
+  /* Figure (captura real) */
+  .figure{margin:22px 0;break-inside:avoid}
+  .figure .frame{border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);background:#fff}
+  .figure .frame .bar{display:flex;align-items:center;gap:7px;padding:8px 12px;background:#f0eee8;border-bottom:1px solid var(--line)}
+  .figure .frame .bar .dot{width:10px;height:10px;border-radius:50%;background:#d6d2c8}
+  .figure .frame .bar .url{margin-left:8px;font-size:10.5px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 9px;font-family:"JetBrains Mono",monospace}
+  .figure img{display:block;width:100%;height:auto}
+  .figure figcaption{font-size:12px;color:var(--muted);margin-top:9px;text-align:center}
 
-  /* ---------- Typography blocks ---------- */
-  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-deep); margin: 0 0 12px; display:flex; align-items:center; gap:10px; }
-  .eyebrow .n { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:8px; background:var(--accent); color:#fff; font-family:Inter; font-size:13px; }
-  h2.title { font-size: clamp(28px, 4.5vw, 40px); margin: 0 0 14px; line-height: 1.08; }
-  .section-intro { font-size: 17px; color: var(--ink-soft); max-width: 66ch; margin: 0 0 40px; }
-  p { margin: 0 0 14px; }
-  .lead-sm { color: var(--ink-soft); }
+  /* "En esta pantalla" explanations */
+  .whats{margin:20px 0 0;border:1px solid var(--line);border-radius:12px;background:var(--paper-raised);overflow:hidden;box-shadow:var(--shadow-soft)}
+  .whats h4{margin:0;padding:12px 18px;font-family:Inter;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-deep);background:var(--sunken);border-bottom:1px solid var(--line)}
+  .whats dl{margin:0;padding:6px 18px 14px}
+  .whats dt{font-weight:600;font-size:14px;margin-top:12px;color:var(--ink)}
+  .whats dt .mono,.whats dt .tagb{font-weight:500}
+  .whats dd{margin:3px 0 0;font-size:13.5px;color:var(--ink-soft)}
+  .tagb{display:inline-block;font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--blue-bg);color:var(--blue-fg);vertical-align:middle}
+  .tagb.g{background:var(--green-bg);color:var(--green-fg)} .tagb.r{background:var(--red-bg);color:var(--red-fg)} .tagb.a{background:#fbf1e3;color:var(--amber)}
 
-  /* ---------- Role cards ---------- */
-  .roles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-  .role {
-    background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 22px; box-shadow: var(--shadow-soft); position: relative; overflow: hidden;
-  }
-  .role::before { content:""; position:absolute; inset:0 auto 0 0; width:4px; background:var(--accent); opacity:.9; }
-  .role .ico { width: 40px; height: 40px; border-radius: 11px; display:grid; place-items:center; margin-bottom: 14px; }
-  .role h3 { font-size: 18px; margin: 0 0 4px; font-family: Inter; font-weight: 700; letter-spacing: -.01em; }
-  .role .who { font-size: 12.5px; color: var(--muted); margin: 0 0 12px; }
-  .role p { font-size: 13.5px; color: var(--ink-soft); margin: 0; }
-  .role.super::before { background:#7c3aed; } .role.super .ico { background:#efe7fd; color:#6d28d9; }
-  .role.taller::before { background: var(--accent); } .role.taller .ico { background:#e3f0f3; color: var(--accent-deep); }
-  .role.oper::before { background:#0f766e; } .role.oper .ico { background:#e4f1ef; color:#0f766e; }
-  .role.view::before { background:#64748b; } .role.view .ico { background:#eef1f4; color:#475569; }
+  .note{border-left:3px solid var(--accent);background:#eef6f8;border-radius:0 10px 10px 0;padding:13px 18px;margin:18px 0;font-size:14px;color:var(--ink-soft)}
+  .note.warn{border-color:var(--amber);background:#fbf3e6}
+  .note b{color:var(--ink)}
 
-  /* ---------- Steps ---------- */
-  .step { display: grid; grid-template-columns: 1fr; gap: 26px; margin-bottom: 18px; }
-  .step-head { display: flex; align-items: baseline; gap: 16px; }
-  .step-num {
-    flex: none; width: 52px; height: 52px; border-radius: 15px;
-    background: linear-gradient(160deg, var(--accent), var(--accent-deep));
-    color: #fff; font-family: Fraunces, serif; font-size: 26px; font-weight: 600;
-    display: grid; place-items: center; box-shadow: var(--shadow); margin-top: 2px;
-  }
-  .step-head h3 { font-size: 23px; margin: 0 0 4px; }
-  .step-head .by { font-size: 12.5px; font-weight: 600; color: var(--accent-deep); text-transform: uppercase; letter-spacing: .08em; }
-  .step-body { color: var(--ink-soft); font-size: 15.5px; }
-  .step-body ol { margin: 10px 0 0; padding-left: 20px; }
-  .step-body ol li { margin-bottom: 7px; }
-  .step-body ol li b { color: var(--ink); }
+  .roles{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:8px}
+  .role{background:var(--paper-raised);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-soft);position:relative;overflow:hidden}
+  .role::before{content:"";position:absolute;inset:0 auto 0 0;width:4px}
+  .role h3{font-size:17px;margin:0 0 3px;font-family:Inter;font-weight:700}
+  .role .who{font-size:12px;color:var(--muted);margin:0 0 10px}
+  .role p{font-size:13px;color:var(--ink-soft);margin:0}
+  .role.super::before{background:#7c3aed} .role.taller::before{background:var(--accent)} .role.oper::before{background:#0f766e} .role.view::before{background:#64748b}
 
-  /* annotations legend */
-  .legend { margin-top: 16px; display: grid; gap: 8px; }
-  .legend .row { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: var(--ink-soft); }
-  .pin { flex:none; width: 22px; height: 22px; border-radius: 50%; background: var(--amber); color:#fff; font-size: 12px; font-weight:700; display:grid; place-items:center; box-shadow: 0 2px 6px rgba(180,83,9,.35); font-family:Inter; }
+  .steps-mini{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 0}
+  .smini{flex:1 1 150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--paper-raised)}
+  .smini .n{width:24px;height:24px;border-radius:7px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:600;margin-bottom:8px}
+  .smini b{font-size:13px;display:block;margin-bottom:2px}
+  .smini span{font-size:12px;color:var(--ink-soft)}
 
-  /* ---------- Mock screen ("captura") ---------- */
-  .shot { position: relative; }
-  .caption { font-size: 12px; color: var(--muted); margin-top: 10px; text-align:center; }
-  .browser { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); background: var(--paper-raised); }
-  .browser .bar { display:flex; align-items:center; gap:7px; padding:9px 12px; background:#f0eee8; border-bottom:1px solid var(--line); }
-  .browser .bar .dot { width:10px; height:10px; border-radius:50%; background:#d6d2c8; }
-  .browser .bar .url { margin-left:10px; font-size:11px; color:var(--muted); background:#fff; border:1px solid var(--line); border-radius:6px; padding:3px 10px; font-family:"JetBrains Mono",monospace; }
+  .gloss{display:grid;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .gloss .g{display:grid;grid-template-columns:160px 1fr;gap:16px;padding:13px 18px;border-bottom:1px solid var(--line-soft);font-size:14px}
+  .gloss .g:last-child{border-bottom:0}
+  .gloss .term{font-weight:700}
+  .gloss .term .mono{display:block;font-size:11px;color:var(--accent-deep);font-weight:500}
+  .gloss .def{color:var(--ink-soft)}
 
-  .app { display: grid; grid-template-columns: 150px 1fr; min-height: 300px; }
-  .side { background:#0f1217; color:#aeb4bf; padding:14px 10px; font-size:11.5px; }
-  .side .brandrow { display:flex; align-items:center; gap:7px; color:#fff; font-weight:600; margin-bottom:4px; }
-  .side .mini-mark { width:18px;height:18px;border-radius:50%; background:#1b2029; display:grid;place-items:center;color:#fff;font-family:Fraunces,serif;font-style:italic;font-size:9px;}
-  .side .tag { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:#5a616d; margin:14px 0 6px; }
-  .side .it { padding:5px 8px; border-radius:7px; display:flex; align-items:center; gap:7px; }
-  .side .it.on { background:#1b212b; color:#fff; }
-  .side .it .d { width:13px; height:13px; border-radius:4px; background:#2a313c; }
-  .side .it.on .d { background: var(--accent); }
-  .main { background: var(--paper); padding: 16px; }
-  .crumb { font-size:10.5px; color:var(--muted); margin-bottom:8px; }
-  .h { font-family:Fraunces,serif; font-size:18px; font-weight:600; margin:0 0 2px; }
-  .sub { font-size:11px; color:var(--muted); margin:0 0 12px; }
+  footer{background:#0f1217;color:#aeb4bf;padding:50px 0;margin-top:20px}
+  footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
+  footer .brand{display:flex;align-items:center;gap:12px;color:#fff;font-family:Fraunces,serif;font-size:19px}
+  footer small{font-size:12px;color:#6b7280}
 
-  .panel { background:var(--paper-raised); border:1px solid var(--line); border-radius:10px; margin-bottom:10px; overflow:hidden; }
-  .panel .ph { padding:9px 13px; border-bottom:1px solid var(--line-soft); font-weight:600; font-size:12.5px; display:flex; justify-content:space-between; align-items:center;}
-  .panel .ph small { font-weight:400; color:var(--muted); font-size:10.5px; }
-  .pc { padding:12px 13px; }
+  .reveal{opacity:0;transform:translateY(20px);transition:opacity .6s cubic-bezier(.2,.7,.2,1),transform .6s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
 
-  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); }
-  .cell { padding:12px 13px; border-right:1px solid var(--line-soft); }
-  .cell:last-child { border-right:0; }
-  .cell .k { font-size:10px; color:var(--muted); margin-bottom:6px; }
-  .cell .v { font-size:17px; font-weight:600; font-family:Fraunces,serif; }
-
-  .badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:3px 9px; border-radius:7px; }
-  .b-green{background:var(--green-bg);color:var(--green-fg);} .b-amber{background:var(--amber-bg);color:var(--amber-fg);}
-  .b-red{background:var(--red-bg);color:var(--red-fg);} .b-blue{background:var(--blue-bg);color:var(--blue-fg);}
-  .b-slate{background:var(--slate-bg);color:var(--slate-fg);}
-
-  .btn { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; padding:6px 12px; border-radius:8px; border:1px solid transparent; }
-  .btn-primary{ background:var(--accent); color:#fff; } .btn-ghost{ background:#fff; color:var(--ink); border-color:var(--line); }
-  .btn-danger{ background:var(--red-bg); color:var(--red-fg); } .btn-amber{ background:var(--amber-bg); color:var(--amber-fg); }
-
-  table.t { width:100%; border-collapse:collapse; font-size:11.5px; }
-  table.t th { text-align:left; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); padding:7px 9px; background:var(--sunken); border-bottom:1px solid var(--line); }
-  table.t td { padding:9px; border-bottom:1px solid var(--line-soft); }
-  table.t tr:last-child td { border-bottom:0; }
-
-  .chips { display:flex; flex-wrap:wrap; gap:7px; }
-  .chip { border:1px solid var(--line); background:var(--sunken); border-radius:8px; padding:6px 10px; font-size:11px; }
-  .chip .c { font-family:"JetBrains Mono",monospace; font-weight:600; margin-right:6px; }
-
-  .check { display:flex; align-items:center; gap:9px; padding:8px 11px; border:1px solid var(--line); border-radius:9px; margin-bottom:7px; font-size:12px; }
-  .check.ok { border-color:#bfe0c9; background:var(--green-bg); }
-  .check.no { border-color:#f1c7c3; background:var(--red-bg); }
-  .box { width:15px;height:15px;border-radius:4px;border:1.5px solid #bbb; display:grid;place-items:center; flex:none; }
-  .check.ok .box { background:var(--green-fg); border-color:var(--green-fg); color:#fff; }
-  .check.no .box { background:#fff; border-color:var(--red-fg); }
-  .pill-right { margin-left:auto; font-size:10.5px; font-weight:600; }
-
-  .field { border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:11.5px; color:var(--ink-soft); background:#fff; margin-bottom:8px; }
-  .field .lab { font-size:9.5px; color:var(--muted); display:block; margin-bottom:3px; }
-
-  .annot { position:absolute; width:26px; height:26px; border-radius:50%; background:var(--amber); color:#fff; font-weight:700; font-size:13px; display:grid; place-items:center; box-shadow:0 3px 10px rgba(180,83,9,.45); border:2px solid #fff; z-index:3; font-family:Inter; }
-
-  /* ---------- Callout / note ---------- */
-  .note { border-left: 3px solid var(--accent); background: #eef6f8; border-radius: 0 10px 10px 0; padding: 14px 18px; margin: 18px 0; font-size: 14px; color: var(--ink-soft); }
-  .note.warn { border-color: var(--amber); background: #fbf3e6; }
-  .note b { color: var(--ink); }
-
-  /* ---------- Feature list ---------- */
-  .features { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
-  .feat { border:1px solid var(--line); border-radius:12px; padding:18px; background:var(--paper-raised); box-shadow:var(--shadow-soft); }
-  .feat h4 { margin:0 0 6px; font-size:15px; font-family:Inter; font-weight:700; display:flex; align-items:center; gap:9px;}
-  .feat h4 .t { width:28px;height:28px;border-radius:8px; background:#e3f0f3; color:var(--accent-deep); display:grid;place-items:center; flex:none;}
-  .feat p { margin:0; font-size:13px; color:var(--ink-soft); }
-
-  /* ---------- Glossary ---------- */
-  .gloss { display:grid; gap:0; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
-  .gloss .g { display:grid; grid-template-columns:150px 1fr; gap:16px; padding:14px 18px; border-bottom:1px solid var(--line-soft); font-size:14px; }
-  .gloss .g:last-child { border-bottom:0; }
-  .gloss .g .term { font-weight:700; color:var(--ink); }
-  .gloss .g .term .mono { display:block; font-size:11px; color:var(--accent-deep); font-weight:500; }
-  .gloss .g .def { color:var(--ink-soft); }
-
-  footer { background:#0f1217; color:#aeb4bf; padding:56px 0; }
-  footer .wrap { display:flex; justify-content:space-between; gap:24px; flex-wrap:wrap; align-items:center; }
-  footer .brand { display:flex; align-items:center; gap:12px; color:#fff; font-family:Fraunces,serif; font-size:20px; }
-  footer small { font-size:12px; color:#6b7280; }
-
-  /* ---------- Reveal animation ---------- */
-  .reveal { opacity:0; transform: translateY(22px); transition: opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
-  .reveal.in { opacity:1; transform:none; }
-  .reveal.d1{transition-delay:.08s}.reveal.d2{transition-delay:.16s}.reveal.d3{transition-delay:.24s}.reveal.d4{transition-delay:.32s}
-
-  @media (max-width: 760px) {
-    .roles, .features { grid-template-columns:1fr; }
-    .gloss .g { grid-template-columns:1fr; gap:4px; }
-    .app { grid-template-columns: 110px 1fr; }
-    .topbar nav { display:none; }
-  }
-
-  /* ---------- Print / PDF ---------- */
-  @media print {
-    @page { size: A4; margin: 15mm 14mm; }
-    html { scroll-behavior:auto; }
-    .topbar, .progress { display:none !important; }
-    body { background:#fff; }
-    section { padding: 20px 0; border-top:1px solid var(--line); break-inside: avoid-page; }
-    .cover { padding: 20px 0 30px; }
-    .reveal { opacity:1 !important; transform:none !important; }
-    /* El ancho de página (~688px) cae bajo el breakpoint móvil; se fuerzan
-       las grillas a dos columnas para que las tarjetas no se apilen ni dejen
-       una huérfana al final de la página. */
-    .roles, .features { grid-template-columns: repeat(2, 1fr) !important; }
-    .step, .role, .feat, .browser, .note { break-inside: avoid; }
-    .shot { break-inside: avoid; }
-    a { color: inherit; text-decoration:none; }
-    .browser { box-shadow:none; }
-    h2.title { break-after: avoid; }
+  @media (max-width:760px){.roles{grid-template-columns:1fr}.gloss .g{grid-template-columns:1fr;gap:3px}.topbar nav{display:none}}
+  @media print{
+    @page{size:A4;margin:14mm 13mm}
+    html{scroll-behavior:auto}
+    .topbar,.progress{display:none!important}
+    body{background:#fff}
+    section{padding:16px 0}
+    .cover{padding:10px 0 24px}
+    .reveal{opacity:1!important;transform:none!important}
+    .figure,.whats,.note,.role,.smini{break-inside:avoid}
+    .figure img{box-shadow:none}
+    h2.title{break-after:avoid}
+    a{color:inherit;text-decoration:none}
   }
 </style>
 </head>
@@ -265,322 +123,432 @@
 <div class="topbar">
   <span class="brand"><span class="logo-mark">O</span> Odessa Oil</span>
   <nav>
-    <a href="#roles">Roles</a>
-    <a href="#recorrido">Recorrido</a>
-    <a href="#porrol">Por rol</a>
-    <a href="#funciones">Funciones</a>
-    <a href="#glosario">Glosario</a>
+    <a href="#ingreso">Ingreso</a><a href="#panel">Panel</a><a href="#activos">Activos</a>
+    <a href="#ficha">Ficha</a><a href="#informes">Informes</a><a href="#envios">Envíos</a>
+    <a href="#taller">Taller</a><a href="#reportes">Reportes</a><a href="#admin">Administración</a>
+    <a href="#roles">Roles</a><a href="#glosario">Glosario</a>
   </nav>
 </div>
 
-<!-- ============ PORTADA ============ -->
+<!-- PORTADA -->
 <header class="cover">
   <div class="wrap">
     <div class="cover-logo reveal in">O</div>
-    <span class="kicker reveal in">Manual de usuario · v1.0</span>
-    <h1 class="reveal in">El sistema de <em>Odessa Oil</em>,<br>explicado de principio a fin.</h1>
-    <p class="lead reveal in d1">Inspección, certificación y trazabilidad de equipamiento de presión para la industria energética. Esta guía recorre, paso a paso y con ilustraciones, todo lo que ve y hace cada usuario — del envío del equipo al despacho certificado.</p>
-    <div class="meta reveal in d2">
+    <span class="kicker reveal in">Manual de usuario · v2.0 · con capturas reales</span>
+    <h1 class="reveal in">El sistema de <em>Odessa Oil</em>,<br>pantalla por pantalla.</h1>
+    <p class="lead reveal in">Esta guía recorre <b>cada pantalla y cada botón</b> del sistema, con capturas reales y la vista de cada rol. Del ingreso al despacho certificado, para que cualquier usuario entienda qué ve y qué hacer.</p>
+    <div class="meta reveal in">
       <span><b>Para:</b> clientes y taller</span>
-      <span><b>Alcance:</b> recorrido completo del equipo</span>
+      <span><b>Cubre:</b> todas las pantallas · los 4 roles</span>
       <span><b>Actualizado:</b> 30/10/2026</span>
     </div>
   </div>
 </header>
 
-<!-- ============ QUÉ ES ============ -->
-<section id="intro">
+<!-- INGRESO + ROLES -->
+<section id="ingreso">
   <div class="wrap">
-    <p class="eyebrow reveal"><span class="n">0</span> Antes de empezar</p>
-    <h2 class="title reveal">Qué resuelve el sistema</h2>
-    <p class="section-intro reveal">Cada equipo de presión que entra al taller tiene que poder decir, en todo momento, <b>quién lo inspeccionó, cuándo, con qué resultado y hasta cuándo está certificado</b>. El sistema sigue ese recorrido entero y mantiene vivo el estado de cada pieza, para que el cliente sepa qué puede usar y qué tiene que mandar a recertificar.</p>
-    <div class="note reveal">
-      Hay <b>una sola verdad</b> para cada pieza: su <b>estado de aptitud</b> (apto / por vencer / no apto) y su <b>vencimiento</b>. Todo lo que hace el taller — recibir, inspeccionar, aprobar — termina reflejándose ahí automáticamente. Nadie escribe el estado a mano.
+    <p class="eyebrow reveal"><span class="n">1</span> Cómo se entra</p>
+    <h2 class="title reveal">Ingreso y roles</h2>
+    <p class="intro reveal">Cada persona entra con el correo y la contraseña que le asignó su administrador, y ve únicamente lo que su rol permite. Un cliente nunca ve equipos de otra empresa.</p>
+
+    <figure class="figure reveal">
+      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/ingresar</span></div>
+      <img src="manual-img/00-ingreso.jpg" alt="Pantalla de ingreso" /></div>
+      <figcaption>Pantalla de ingreso.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>En esta pantalla</h4>
+      <dl>
+        <dt>Correo electrónico y Contraseña</dt><dd>Las credenciales que asignó el administrador. En el primer ingreso el sistema pide cambiar la contraseña temporal.</dd>
+        <dt><span class="tagb">Mantener sesión iniciada</span></dt><dd>Deja la sesión abierta en ese dispositivo. No marcarla en computadoras compartidas.</dd>
+        <dt>¿Olvidó su contraseña? / Solicite acceso</dt><dd>Recuperar el acceso, o pedir una cuenta nueva si todavía no la tiene.</dd>
+      </dl>
+    </div>
+
+    <h3 style="margin:34px 0 4px;font-size:20px">Los cuatro roles</h3>
+    <div class="roles">
+      <div class="role super reveal"><h3>Superadministrador</h3><p class="who">Odessa — dueño del sistema</p><p>Ve y hace todo: catálogos, operaciones, empresas, usuarios. Único que puede <b>deshacer</b> una aprobación.</p></div>
+      <div class="role taller reveal"><h3>Taller</h3><p class="who">Operarios de Odessa</p><p>Recibe, inspecciona, dictamina, repara y despacha. Carga los informes. Ve equipos de todas las empresas.</p></div>
+      <div class="role oper reveal"><h3>Cliente · Operador</h3><p class="who">Empleado de la empresa cliente</p><p>Pre-carga los envíos al taller y autoriza reparaciones. Solo su empresa. No toca inventario.</p></div>
+      <div class="role view reveal"><h3>Cliente · Consulta</h3><p class="who">Empresa cliente — solo mirar</p><p>Ve sus equipos, vencimientos e informes. No puede cargar ni modificar nada.</p></div>
     </div>
   </div>
 </section>
 
-<!-- ============ ROLES ============ -->
+<!-- PANEL -->
+<section id="panel">
+  <div class="wrap">
+    <p class="eyebrow reveal"><span class="n">2</span> La pantalla de inicio</p>
+    <h2 class="title reveal">El Panel de control</h2>
+    <p class="intro reveal">Lo primero que se ve al entrar. Resume el estado del equipamiento y la carga del taller. El cliente ve solo los números de su empresa.</p>
+    <figure class="figure reveal">
+      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/panel</span></div>
+      <img src="manual-img/01-panel-superadmin.jpg" alt="Panel de control" /></div>
+      <figcaption>Panel de control (vista del superadministrador).</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>En esta pantalla</h4>
+      <dl>
+        <dt>Total de activos · Apto · Próximo a vencer · No apto</dt><dd>El estado del parque de un vistazo. <span class="tagb a">Próximo a vencer</span> son las piezas aptas que perderán vigencia pronto; <span class="tagb r">No apto</span> las que no pueden volver a servicio sin recertificar.</dd>
+        <dt>Vencimientos en los próximos 60 días</dt><dd>Gráfico de cuántas piezas vencen cada semana: sirve para anticipar el trabajo.</dd>
+        <dt>Taller — pipeline</dt><dd>Cuántas piezas hay en cada etapa (pendientes en fecha, vencidas, liberadas sin despachar, urgentes, despachadas).</dd>
+        <dt>Próximos a vencer / Informes recientes</dt><dd>Accesos directos a lo más urgente y a los últimos informes cargados. <b>Ver todos</b> abre la lista completa.</dd>
+        <dt>Barra superior</dt><dd>El buscador (activo, serie o código) encuentra cualquier pieza al instante. La campana son los avisos; el avatar abre <b>Mi perfil</b> y <b>Cerrar sesión</b>.</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ACTIVOS -->
+<section id="activos">
+  <div class="wrap">
+    <p class="eyebrow reveal"><span class="n">3</span> El inventario</p>
+    <h2 class="title reveal">Activos</h2>
+    <p class="intro reveal">El inventario de piezas y equipamiento genérico, cada uno con su estado de aptitud vigente.</p>
+    <figure class="figure reveal">
+      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/activos</span></div>
+      <img src="manual-img/02-activos-listado.jpg" alt="Listado de activos" /></div>
+      <figcaption>Listado de activos.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>En esta pantalla</h4>
+      <dl>
+        <dt><span class="tagb">Partes</span> / <span class="tagb">Genéricos</span></dt><dd>Dos solapas: las piezas de presión (partes) y el equipamiento genérico (manómetros, sensores, kits).</dd>
+        <dt>Buscador y Filtros</dt><dd>Buscar por descripción, serie, código o referencia. <b>Filtros</b> acota por estado, vencimiento, cliente, etc.</dd>
+        <dt>Normal / Columnas</dt><dd>Cambia la densidad de la tabla y permite elegir qué columnas se ven.</dd>
+        <dt>Columnas de la tabla</dt><dd>Parte, Cliente, N° de serie, <b>Código</b>, Ref. cliente, Informe (link al informe determinante), <b>Vencimiento</b> y <b>Estado</b> de aptitud.</dd>
+        <dt><span class="tagb">Exportar a Excel</span></dt><dd>Descarga el listado filtrado. Disponible también para el rol Consulta.</dd>
+        <dt><span class="tagb g">+ Nuevo equipo</span></dt><dd>Alta manual de una pieza. Solo taller y superadministrador. El equipo nuevo recibe un <b>código con el prefijo de la empresa</b> (p. ej. <span class="mono">PDG-0001</span>).</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- FICHA -->
+<section id="ficha">
+  <div class="wrap">
+    <p class="eyebrow reveal"><span class="n">4</span> El corazón del sistema</p>
+    <h2 class="title reveal">La ficha del equipo</h2>
+    <p class="intro reveal">Todo lo que se sabe de una pieza: su estado, sus vencimientos, su historial y sus documentos. Se llega tocando cualquier pieza del listado.</p>
+    <figure class="figure reveal">
+      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/activos/…</span></div>
+      <img src="manual-img/03-ficha-encabezado.jpg" alt="Encabezado de la ficha" /></div>
+      <figcaption>Encabezado de la ficha, con los vencimientos por tipo de certificación.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>En el encabezado</h4>
+      <dl>
+        <dt><span class="tagb g">Estado de aptitud</span></dt><dd>Apto, Por vencer o No apto. Se deriva de las inspecciones; nunca se escribe a mano.</dd>
+        <dt>Vencimiento</dt><dd>La fecha que manda — la del certificado que vence primero — con los días que faltan.</dd>
+        <dt>Inspección determinante</dt><dd>El último informe con dictamen apto o no apto. El número es un link al informe.</dd>
+        <dt><b>Vencimientos por certificación</b></dt><dd>Clave: una pieza puede tener varias certificaciones a la vez (anual y de conformidad), <b>cada una con su fecha</b>. Acá se ven todas. La pieza está apta solo si está al día en todas.</dd>
+        <dt><span class="tagb">Informe N°</span> / <span class="tagb">Editar ficha</span></dt><dd>Abrir el informe determinante, o editar los datos técnicos del equipo.</dd>
+      </dl>
+    </div>
+
+    <figure class="figure reveal">
+      <div class="frame"><img src="manual-img/05-editar-ficha.jpg" alt="Editar ficha técnica" /></div>
+      <figcaption>Diálogo «Editar ficha técnica».</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>Editar la ficha técnica</h4>
+      <dl>
+        <dt>Descripción / Descripción del taller / Serie / Ref. del cliente</dt><dd>Identificación de la pieza, incluido cómo la llama el taller si difiere.</dd>
+        <dt>Clasificación</dt><dd><b>Tipo de equipo</b> (define el tiempo de taller y la fecha límite de envío) y <b>Fabricante</b>. <i>Nota: el campo «Servicio» se quitó de la ficha — el servicio/vencimiento lo define el informe, no una característica fija del equipo.</i></dd>
+        <dt>Presiones y conexiones</dt><dd>Presión de prueba y de trabajo; conexión superior, inferior y laterales.</dd>
+        <dt>Guardar cambios</dt><dd>Cada cambio queda registrado en la auditoría con el antes y el después.</dd>
+      </dl>
+    </div>
+
+    <figure class="figure reveal">
+      <div class="frame"><img src="manual-img/04-ficha-bitacora.jpg" alt="Bitácora de inspecciones" /></div>
+      <figcaption>Bitácora de inspecciones y documentos de la pieza.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>Bitácora, trazabilidad y documentos</h4>
+      <dl>
+        <dt>Bitácora de inspecciones</dt><dd>Cada vez que la pieza pasó por el taller: el informe, el resultado (<span class="tagb g">Apto</span>, <span class="tagb r">No apto</span>, No aplica), si <b>determina aptitud</b>, la fecha y la vigencia. Es el historial que respalda la certificación.</dd>
+        <dt>Trazabilidad del equipo</dt><dd>Todo lo que le pasó a la pieza: envíos, taller, inspecciones, documentos y accesos, en una línea de tiempo con quién, qué y cuándo.</dd>
+        <dt>Documentos de la pieza</dt><dd>Documentación propia del activo (certificado del fabricante, fotos), independiente de cada inspección. <b>Adjuntar</b> sube un archivo.</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- INFORMES -->
+<section id="informes">
+  <div class="wrap">
+    <p class="eyebrow reveal"><span class="n">5</span> Las inspecciones</p>
+    <h2 class="title reveal">Informes</h2>
+    <p class="intro reveal">Cada inspección es un informe: un trabajo que hace la empresa sobre una o varias piezas, con su resultado y vencimiento. Es lo que actualiza el estado de los equipos.</p>
+    <figure class="figure reveal">
+      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/informes</span></div>
+      <img src="manual-img/12-informes-listado.jpg" alt="Listado de informes" /></div>
+      <figcaption>Listado de informes.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>En esta pantalla</h4>
+      <dl>
+        <dt>Columnas</dt><dd>N° informe, Cliente, Equipo/set, Fecha, Piezas (cuántas dictamina), Documentos y Estado (<span class="tagb g">Final</span> o borrador).</dd>
+        <dt><span class="tagb g">+ Nuevo informe</span></dt><dd>Arma un informe: empresa, número de informe y fecha. Después se le suman las piezas y se las dictamina.</dd>
+      </dl>
+    </div>
+
+    <figure class="figure reveal">
+      <div class="frame"><img src="manual-img/13-informe-detalle.jpg" alt="Detalle de un informe" /></div>
+      <figcaption>Detalle de un informe con varias piezas.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>Dentro de un informe</h4>
+      <dl>
+        <dt>Encabezado</dt><dd>Estado, fecha de inspección, piezas incluidas, equipo/set, <b>servicio</b> (la operación, que define la vigencia) y cuándo se finalizó.</dd>
+        <dt>Piezas inspeccionadas</dt><dd>Un mismo informe resuelve varias piezas, y <b>cada una lleva su propio dictamen y vigencia</b>: pueden convivir aptas y rechazadas.</dd>
+        <dt>Documentos del informe</dt><dd>Certificados e informes firmados que cubren las piezas. <b>Adjuntar</b> sube el PDF.</dd>
+        <dt><span class="tagb">Finalizar</span></dt><dd>Hace el informe definitivo. Recién ahí actualiza el estado y el vencimiento de cada pieza. Un borrador no certifica nada.</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ENVIOS -->
+<section id="envios">
+  <div class="wrap">
+    <p class="eyebrow reveal"><span class="n">6</span> Lo que manda el cliente</p>
+    <h2 class="title reveal">Envíos al taller</h2>
+    <p class="intro reveal">El operador del cliente declara acá los equipos que manda. Hasta que el taller no les da recepción, un envío es solo una declaración.</p>
+    <figure class="figure reveal">
+      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/envios</span></div>
+      <img src="manual-img/20-envios-operador.jpg" alt="Envíos al taller" /></div>
+      <figcaption>Envíos al taller (vista del operador).</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>En esta pantalla</h4>
+      <dl>
+        <dt>Estados de un envío</dt><dd><span class="tagb a">Borrador</span> se está armando · <span class="tagb">Pendiente de recepción</span> ya se mandó, espera al taller · <span class="tagb g">Recibido</span> el taller lo recibió.</dd>
+        <dt><span class="tagb g">+ Nuevo envío</span></dt><dd>Crea un envío. El sistema le da un número automático (<span class="mono">ENV-2026-0001</span>).</dd>
+      </dl>
+    </div>
+
+    <figure class="figure reveal">
+      <div class="frame"><img src="manual-img/21-envio-detalle.jpg" alt="Detalle de un envío" /></div>
+      <figcaption>Detalle de un envío en borrador.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>Dentro de un envío</h4>
+      <dl>
+        <dt>Equipos declarados</dt><dd>Cada línea: equipo, serie, qué pide (operaciones) y su estado (<span class="tagb g">Registrado</span> si ya existe, <span class="tagb a">Alta pendiente</span> si el taller lo dará de alta al recibir).</dd>
+        <dt><span class="tagb">Agregar equipo</span></dt><dd>Suma una pieza: registrada del inventario, o nueva descrita a mano, con las operaciones que pide.</dd>
+        <dt><span class="tagb">Remitir al taller</span></dt><dd>Envía el borrador. Pasa a «Pendiente de recepción» y ya no se edita.</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- TALLER -->
+<section id="taller">
+  <div class="wrap">
+    <p class="eyebrow reveal"><span class="n">7</span> El trabajo del taller</p>
+    <h2 class="title reveal">Gestión de equipos</h2>
+    <p class="intro reveal">El recorrido del equipo en el taller: ingreso, dictamen, reparación si hace falta y despacho. Cada pieza avanza por etapas y en cada una se ofrece solo la acción que corresponde.</p>
+    <figure class="figure reveal">
+      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/taller/recepciones</span></div>
+      <img src="manual-img/06-gestion-pipeline.jpg" alt="Gestión de equipos" /></div>
+      <figcaption>Gestión de equipos: tarjetas por etapa y la tabla de piezas.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>En esta pantalla</h4>
+      <dl>
+        <dt>Tarjetas por etapa</dt><dd>El conteo en vivo: Pendiente de recepción, Pendientes, En proceso, Fuera de plazo, Urgentes, Rechazadas, Esperando al cliente, Listas para despachar, Despachadas.</dd>
+        <dt>Solapas</dt><dd>Filtran la tabla por esa etapa. Cada pieza muestra su cliente, informe, fechas de ingreso y compromiso, aptitud y etapa.</dd>
+        <dt><span class="tagb g">Ingresar equipo</span></dt><dd>Ingreso directo: cuando un equipo llega sin que el cliente haya cargado un envío.</dd>
+      </dl>
+    </div>
+
+    <h3 style="margin:38px 0 10px;font-size:21px">Dar recepción — y la recepción parcial</h3>
+    <p class="intro reveal" style="margin-bottom:18px">Cuando llega un envío, el taller le da recepción. <b>Se asume que llegó todo lo declarado</b>; el taller solo marca lo que no llegó.</p>
+    <div class="steps-mini reveal">
+      <div class="smini"><div class="n">1</div><b>Pendiente de recepción</b><span>El envío espera en la solapa correspondiente, con sus equipos declarados.</span></div>
+      <div class="smini"><div class="n">2</div><b>Se destilda lo que falta</b><span>Cada equipo que no llegó pide un motivo. El resto entra al taller.</span></div>
+      <div class="smini"><div class="n">3</div><b>Aviso al operador</b><span>Sale un correo con lo que no llegó. Si no llega nada, el envío se rechaza.</span></div>
+    </div>
+
+    <figure class="figure reveal">
+      <div class="frame"><img src="manual-img/09-pendiente-recepcion.jpg" alt="Pendiente de recepción" /></div>
+      <figcaption>Envíos pendientes de recepción, con sus equipos declarados y el botón «Dar recepción».</figcaption>
+    </figure>
+    <figure class="figure reveal">
+      <div class="frame"><img src="manual-img/10-recepcion-parcial.jpg" alt="Dar recepción - todo llegó" /></div>
+      <figcaption>Diálogo de recepción: por defecto todos los equipos figuran como «Llegó».</figcaption>
+    </figure>
+    <figure class="figure reveal">
+      <div class="frame"><img src="manual-img/11-recepcion-parcial-falta.jpg" alt="Dar recepción - uno no llegó" /></div>
+      <figcaption>Al destildar un equipo aparece su motivo y el botón pasa a «Recibir 3 · 1 no llegó».</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>En el diálogo de recepción</h4>
+      <dl>
+        <dt>Equipos declarados</dt><dd>Cada uno con una tilde <b>«Llegó»</b> marcada por defecto. Se destilda el que no llegó.</dd>
+        <dt>Por qué no llegó</dt><dd>Obligatorio por cada equipo destildado: es lo que se le informa al operador por correo.</dd>
+        <dt>Fecha comprometida / Observaciones</dt><dd>Opcionales. La fecha se aplica a los equipos que ingresan.</dd>
+        <dt><span class="tagb">Dar recepción</span></dt><dd>El botón dice cuántos entran y cuántos no. Lo que llega entra al taller; lo que no, queda registrado y se avisa.</dd>
+      </dl>
+    </div>
+
+    <h3 style="margin:38px 0 10px;font-size:21px">Dictaminar, despachar y deshacer</h3>
+    <figure class="figure reveal">
+      <div class="frame"><img src="manual-img/07-gestion-acciones-deshacer.jpg" alt="Acciones del taller" /></div>
+      <figcaption>Acciones por pieza: Despachar y, solo para el superadmin, Deshacer.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>Las acciones, etapa por etapa</h4>
+      <dl>
+        <dt>Iniciar</dt><dd>Marca que el taller tomó el equipo: pasa de Pendiente a En proceso.</dd>
+        <dt>Aprobar / Rechazar</dt><dd>El dictamen. Rechazar exige motivo y abre el circuito de reparación.</dd>
+        <dt>Consultar al cliente / Sin solución</dt><dd>Desde Rechazadas: pedirle al cliente que autorice la reparación, o marcarla sin solución (se le avisa por correo).</dd>
+        <dt><span class="tagb">Despachar</span></dt><dd>La pieza sale del taller y vuelve al cliente. El hito queda registrado con su usuario.</dd>
+        <dt><span class="tagb r">Deshacer</span></dt><dd>Solo el superadministrador, y solo en piezas aprobadas o rechazadas que no se despacharon. Sirve para corregir un dictamen cargado por error.</dd>
+      </dl>
+    </div>
+    <figure class="figure reveal">
+      <div class="frame"><img src="manual-img/08-deshacer-dialogo.jpg" alt="Diálogo Deshacer" /></div>
+      <figcaption>Al deshacer, se pide el motivo y queda en la auditoría; la pieza vuelve a «En proceso».</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- REPORTES -->
+<section id="reportes">
+  <div class="wrap">
+    <p class="eyebrow reveal"><span class="n">8</span> La foto del parque</p>
+    <h2 class="title reveal">Reportes</h2>
+    <p class="intro reveal">Status de los equipos, vencimientos y trabajos del taller, por organización y por período.</p>
+    <figure class="figure reveal">
+      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/reportes</span></div>
+      <img src="manual-img/18-reportes.jpg" alt="Reportes" /></div>
+      <figcaption>Reportes.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>En esta pantalla</h4>
+      <dl>
+        <dt>Filtros</dt><dd>Por organización y por rango de fechas de trabajos.</dd>
+        <dt>Status de los equipos</dt><dd>Apto, Próximo a vencer, No apto y Sin inspección, sobre el total.</dd>
+        <dt>Vencimientos</dt><dd>Cuántos vencen en 30, 60, 90 días y cuántos ya están fuera de tiempo para mandarlos. La tabla ordena por la fecha límite de envío.</dd>
+        <dt><span class="tagb">Descargar Excel</span></dt><dd>Exporta todo el reporte para compartir o archivar.</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ADMINISTRACION -->
+<section id="admin">
+  <div class="wrap">
+    <p class="eyebrow reveal"><span class="n">9</span> Solo el superadministrador</p>
+    <h2 class="title reveal">Administración</h2>
+    <p class="intro reveal">Donde se configura el sistema: empresas, usuarios, operaciones (con sus vigencias) y la auditoría. Solo lo ve el superadministrador.</p>
+
+    <figure class="figure reveal">
+      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">…/administracion/operaciones</span></div>
+      <img src="manual-img/14-operaciones.jpg" alt="Operaciones" /></div>
+      <figcaption>Operaciones: qué hace el taller, cuánto tarda y cuánto vale la certificación que emite.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>Operaciones</h4>
+      <dl>
+        <dt>Valores por defecto</dt><dd>Demora estimada, margen de seguridad y vigencia por defecto. La fecha límite de envío sale del vencimiento menos el tiempo de taller menos el margen.</dd>
+        <dt>Tabla de operaciones</dt><dd>Cada operación: si <b>certifica</b> o solo registra, su demora y la <b>vigencia que emite</b>. <i>Acá se definen las vigencias de COS (anual) y COC (conformidad).</i></dd>
+        <dt><span class="tagb g">+ Nueva operación</span> / Editar</dt><dd>Alta y edición de operaciones y sus plazos.</dd>
+      </dl>
+    </div>
+
+    <figure class="figure reveal">
+      <div class="frame"><img src="manual-img/15-organizaciones.jpg" alt="Organizaciones" /></div>
+      <figcaption>Organizaciones (empresas cliente).</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>Organizaciones</h4>
+      <dl>
+        <dt>Tabla</dt><dd>Cada empresa con su contacto, cantidad de usuarios, equipos, equipos en taller y estado. El vínculo con la empresa es lo que <b>aísla la información</b> entre clientes.</dd>
+        <dt>Operaciones / Editar</dt><dd><b>Operaciones</b> define qué operaciones tiene habilitadas ese cliente y cómo se llaman para él. <b>Editar</b> cambia sus datos.</dd>
+        <dt><span class="tagb g">+ Nueva organización</span></dt><dd>Da de alta una empresa cliente.</dd>
+      </dl>
+    </div>
+
+    <figure class="figure reveal">
+      <div class="frame"><img src="manual-img/16-usuarios.jpg" alt="Usuarios" /></div>
+      <figcaption>Usuarios y sus roles.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>Usuarios</h4>
+      <dl>
+        <dt>Tabla</dt><dd>Cada usuario con su organización, rol, último acceso y estado.</dd>
+        <dt><span class="tagb g">+ Nuevo usuario</span></dt><dd>Al crear un usuario o restablecer su acceso se genera una contraseña temporal que el usuario cambia al entrar.</dd>
+        <dt>Editar / Restablecer acceso / Desactivar</dt><dd>Cambiar datos y rol, generar una clave nueva, o dar de baja el acceso sin borrar el historial.</dd>
+      </dl>
+    </div>
+
+    <figure class="figure reveal">
+      <div class="frame"><img src="manual-img/17-auditoria.jpg" alt="Auditoría" /></div>
+      <figcaption>Auditoría: registro inmutable de accesos y acciones.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>Auditoría</h4>
+      <dl>
+        <dt>Registro inmutable</dt><dd>Cada acceso y cada acción sensible: fecha, acción, equipo, detalle, usuario, cliente e IP. <b>No se puede editar ni eliminar</b> desde la aplicación.</dd>
+        <dt>Filtros</dt><dd>Por descripción o correo, tipo de acción, cliente y rango de fechas.</dd>
+      </dl>
+    </div>
+    <div class="note reveal">El menú de Administración incluye también <b>Productos</b> (el maestro que el taller usa para clasificar) y <b>Solicitudes de acceso</b> (las altas de cuenta pedidas desde la web, para aprobar o rechazar).</div>
+  </div>
+</section>
+
+<!-- ROLES EN LA PRACTICA -->
 <section id="roles">
   <div class="wrap">
-    <p class="eyebrow reveal"><span class="n">1</span> Quién es quién</p>
-    <h2 class="title reveal">Los cuatro roles</h2>
-    <p class="section-intro reveal">Cada persona ve solo lo que le corresponde. Un cliente nunca ve equipos de otra empresa, y el taller nunca administra usuarios. Así de simple.</p>
-    <div class="roles">
-      <div class="role super reveal d1">
-        <div class="ico">★</div>
-        <h3>Superadministrador</h3>
-        <p class="who">Odessa — dueño del sistema</p>
-        <p>Puede todo: catálogos, operaciones, empresas, usuarios. Es el único que puede <b>deshacer</b> una aprobación cargada por error.</p>
-      </div>
-      <div class="role taller reveal d2">
-        <div class="ico">⚙</div>
-        <h3>Taller</h3>
-        <p class="who">Operarios de Odessa</p>
-        <p>Recibe los equipos, los inspecciona, dictamina, repara y despacha. Carga los informes de inspección.</p>
-      </div>
-      <div class="role oper reveal d3">
-        <div class="ico">↑</div>
-        <h3>Cliente · Operador</h3>
-        <p class="who">Empleado de la empresa cliente</p>
-        <p>Pre-carga los envíos de equipos al taller y autoriza las reparaciones (porque se le cobran). No toca inventario.</p>
-      </div>
-      <div class="role view reveal d4">
-        <div class="ico">◎</div>
-        <h3>Cliente · Consulta</h3>
-        <p class="who">Empresa cliente — solo mirar</p>
-        <p>Ve sus equipos, vencimientos e informes. Ideal para seguir el estado sin riesgo de cambiar nada.</p>
-      </div>
+    <p class="eyebrow reveal"><span class="n">10</span> La misma app, distinta según quién entra</p>
+    <h2 class="title reveal">Los roles en la práctica</h2>
+    <p class="intro reveal">El menú y los botones cambian según el rol. Dos ejemplos del lado del cliente.</p>
+
+    <figure class="figure reveal">
+      <div class="frame"><img src="manual-img/19-operador-panel.jpg" alt="Panel del operador" /></div>
+      <figcaption>Cliente · Operador: su empresa, su menú, solo sus equipos.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>Cliente · Operador</h4>
+      <dl>
+        <dt>Menú reducido</dt><dd>Operación (Panel, Activos, Sets, Informes, Envíos al taller, Reportes) y Gestión de equipos. <b>No ve Administración.</b></dd>
+        <dt>Datos aislados</dt><dd>El panel y los listados muestran solo los equipos de su empresa.</dd>
+        <dt>Lo que puede hacer de más</dt><dd>Crear envíos y, cuando el taller lo consulta, autorizar o rechazar una reparación.</dd>
+      </dl>
+    </div>
+
+    <figure class="figure reveal">
+      <div class="frame"><img src="manual-img/22-consulta-activos.jpg" alt="Activos del rol consulta" /></div>
+      <figcaption>Cliente · Consulta: la misma información, pero solo para mirar.</figcaption>
+    </figure>
+    <div class="whats reveal">
+      <h4>Cliente · Consulta</h4>
+      <dl>
+        <dt>Solo lectura</dt><dd>Ve activos, vencimientos, informes y el estado en el taller de su empresa. Puede <b>Exportar a Excel</b>, pero <b>no aparece «Nuevo equipo»</b> ni ningún botón de carga.</dd>
+        <dt>Para qué sirve</dt><dd>Seguir el estado del parque sin riesgo de cambiar nada. Ideal para supervisión.</dd>
+      </dl>
     </div>
   </div>
 </section>
 
-<!-- ============ RECORRIDO ============ -->
-<section id="recorrido">
-  <div class="wrap">
-    <p class="eyebrow reveal"><span class="n">2</span> El recorrido de un equipo</p>
-    <h2 class="title reveal">De principio a fin, en cinco pasos</h2>
-    <p class="section-intro reveal">Seguimos un puente de presión desde que el cliente lo declara hasta que vuelve certificado. Cada paso muestra la pantalla real y lo que hay que hacer en ella.</p>
-
-    <!-- PASO 1 -->
-    <div class="step reveal">
-      <div class="step-head">
-        <div class="step-num">1</div>
-        <div><div class="by">Cliente · Operador</div><h3>Declarar el envío</h3></div>
-      </div>
-      <div class="step-body">
-        <p>El operador arma un <b>envío</b> con los equipos que va a mandar. El sistema le da un número automático (<span class="mono">ENV-2026-0002</span>). Por cada equipo indica qué pide.</p>
-        <div class="shot">
-          <div class="annot" style="top:38%;left:10%">1</div>
-          <div class="annot" style="top:62%;left:52%">2</div>
-          <div class="browser">
-            <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/envios</span></div>
-            <div class="app">
-              <div class="side">
-                <div class="brandrow"><span class="mini-mark">O</span> Odessa Oil</div>
-                <div class="tag">Operación</div>
-                <div class="it"><span class="d"></span> Panel</div>
-                <div class="it"><span class="d"></span> Activos</div>
-                <div class="it on"><span class="d"></span> Envíos al taller</div>
-                <div class="tag">Taller</div>
-                <div class="it"><span class="d"></span> Gestión</div>
-              </div>
-              <div class="main">
-                <div class="crumb">Envíos · ENV-2026-0002</div>
-                <div class="h">Agregar equipo al envío</div>
-                <div class="sub">Elija una pieza registrada o describa una nueva.</div>
-                <div class="panel"><div class="pc">
-                  <div class="field"><span class="lab">Descripción del equipo</span>Puente 2-1/16 · Shell</div>
-                  <div class="field"><span class="lab">Número de serie</span>S2222</div>
-                  <div class="field"><span class="lab">Qué pide (operaciones habilitadas)</span>
-                    <div class="chips" style="margin-top:4px"><span class="chip">Certificación de Servicio</span><span class="chip">Certificación de Conformidad</span></div>
-                  </div>
-                  <div style="text-align:right;margin-top:6px"><span class="btn btn-primary">Agregar</span></div>
-                </div></div>
-              </div>
-            </div>
-          </div>
-          <p class="caption">Envío en borrador — todavía no entró nada al taller.</p>
-        </div>
-        <div class="legend">
-          <div class="row"><span class="pin">1</span> La <b>descripción y la serie</b> identifican la pieza. Si ya está registrada, se elige del listado.</div>
-          <div class="row"><span class="pin">2</span> <b>“Qué pide”</b> son las operaciones que Odessa le habilitó a esa empresa. Lo que no esté en la lista va como <i>operación especial</i>.</div>
-        </div>
-        <div class="note">Al tocar <b>Enviar</b>, el envío pasa a <b>“Pendiente de recepción”</b> y ya no se puede editar. Hasta acá es solo una declaración: nada entró al inventario.</div>
-      </div>
-    </div>
-
-    <!-- PASO 2 -->
-    <div class="step reveal">
-      <div class="step-head">
-        <div class="step-num">2</div>
-        <div><div class="by">Taller</div><h3>Dar recepción — y marcar lo que no llegó</h3></div>
-      </div>
-      <div class="step-body">
-        <p>Cuando el camión llega, el taller da recepción. <b>Se asume que llegó todo lo declarado</b>; el taller solo <b>destilda lo que no llegó</b> y escribe por qué.</p>
-        <div class="shot">
-          <div class="annot" style="top:30%;left:8%">1</div>
-          <div class="annot" style="top:58%;left:8%">2</div>
-          <div class="annot" style="top:86%;left:62%">3</div>
-          <div class="browser">
-            <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/taller/recepciones</span></div>
-            <div class="main" style="background:var(--paper-raised)">
-              <div class="h">Dar recepción · ENV-2026-0002</div>
-              <div class="sub">Se asume que llegó lo declarado. Destilde lo que no llegó e indique el motivo.</div>
-              <div class="check ok"><span class="box">✓</span> Puente 2-1/16 · Shell <span class="mono" style="color:var(--muted)">S2222</span> <span class="pill-right" style="color:var(--green-fg)">Llegó</span></div>
-              <div class="check no"><span class="box"></span> Brida 3-1/8 · API <span class="mono" style="color:var(--muted)">B-118</span> <span class="pill-right" style="color:var(--red-fg)">No llegó</span></div>
-              <div class="field" style="margin-left:26px;border-color:#f1c7c3"><span class="lab">Por qué no llegó</span>No estaba en el cajón; el transportista lo confirma.</div>
-              <div style="text-align:right;margin-top:8px"><span class="btn btn-primary">Recibir 1 · 1 no llegó</span></div>
-            </div>
-          </div>
-          <p class="caption">Recepción parcial: entra lo que llegó, se registra lo que no.</p>
-        </div>
-        <div class="legend">
-          <div class="row"><span class="pin">1</span> Lo que <b>llegó</b> entra al taller: se crea su ficha (si era nueva) y su recepción.</div>
-          <div class="row"><span class="pin">2</span> Lo que <b>no llegó</b> se destilda. No entra nada al taller por esa pieza.</div>
-          <div class="row"><span class="pin">3</span> Cada pieza que falta <b>exige un motivo</b>: es lo que se le informa al cliente.</div>
-        </div>
-        <div class="note warn"><b>Correo automático al operador.</b> Apenas se confirma, sale un correo profesional de Odessa al operador que mandó los equipos, con la lista de lo que no llegó y por qué. Si no llegó <b>ningún</b> equipo, el envío queda rechazado.</div>
-      </div>
-    </div>
-
-    <!-- PASO 3 -->
-    <div class="step reveal">
-      <div class="step-head">
-        <div class="step-num">3</div>
-        <div><div class="by">Taller</div><h3>Trabajar y dictaminar</h3></div>
-      </div>
-      <div class="step-body">
-        <p>Cada equipo recibido recorre el taller: <b>Pendiente → En proceso → Aprobada o Rechazada</b>. El taller elige la acción que corresponde en cada etapa; no hay botones que lleven a error.</p>
-        <div class="shot">
-          <div class="annot" style="top:52%;left:70%">1</div>
-          <div class="annot" style="top:52%;left:88%">2</div>
-          <div class="browser">
-            <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/taller/recepciones?stage=in_progress</span></div>
-            <div class="main" style="background:var(--paper-raised)">
-              <div class="h">Gestión de equipos</div>
-              <div class="sub">Recorrido del equipo en el taller: ingreso, dictamen, reparación y despacho.</div>
-              <table class="t">
-                <tr><th>Pieza</th><th>Cliente</th><th>Etapa</th><th>Acciones</th></tr>
-                <tr>
-                  <td><b>Puente 2-1/16</b><br><span class="mono" style="color:var(--muted)">S2222</span></td>
-                  <td>Stream Flo</td>
-                  <td><span class="badge b-amber">En proceso</span></td>
-                  <td><span class="btn btn-ghost" style="margin-right:5px">Aprobar</span><span class="btn btn-danger">Rechazar</span></td>
-                </tr>
-              </table>
-            </div>
-          </div>
-          <p class="caption">La pieza en proceso, lista para dictamen.</p>
-        </div>
-        <div class="legend">
-          <div class="row"><span class="pin">1</span> <b>Aprobar</b> da el trabajo por bueno. Al aprobar se registra la inspección (ver paso 4).</div>
-          <div class="row"><span class="pin">2</span> <b>Rechazar</b> exige motivo y abre el circuito de reparación: se le consulta al cliente si autoriza repararla.</div>
-        </div>
-        <div class="note"><b>¿Aprobaron por error?</b> El superadministrador tiene un botón <b>Deshacer</b> en las piezas aprobadas o rechazadas que todavía no se despacharon. Pide un motivo y queda en la auditoría; la pieza vuelve a “En proceso”.</div>
-      </div>
-    </div>
-
-    <!-- PASO 4 -->
-    <div class="step reveal">
-      <div class="step-head">
-        <div class="step-num">4</div>
-        <div><div class="by">Taller</div><h3>Registrar la inspección y el vencimiento</h3></div>
-      </div>
-      <div class="step-body">
-        <p>Cada inspección es un <b>informe</b>: un trabajo que hace la empresa sobre una o varias piezas. Se elige la operación, el resultado y la fecha; el <b>vencimiento se calcula solo</b> con la vigencia de esa operación.</p>
-        <div class="shot">
-          <div class="annot" style="top:40%;left:8%">1</div>
-          <div class="annot" style="top:66%;left:8%">2</div>
-          <div class="browser">
-            <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/informes</span></div>
-            <div class="main" style="background:var(--paper-raised)">
-              <div class="h">Informe de inspección</div>
-              <div class="sub">Empresa · número de informe · fecha. Puede incluir varias piezas.</div>
-              <div class="panel"><div class="pc">
-                <table class="t">
-                  <tr><th>Pieza</th><th>Operación</th><th>Resultado</th><th>Vence</th></tr>
-                  <tr><td>Puente 2-1/16 · S2222</td><td><span class="mono">COS</span> anual</td><td><span class="badge b-green">Apto</span></td><td class="mono">10/09/2027</td></tr>
-                  <tr><td>Puente 2-1/16 · S2222</td><td><span class="mono">COC</span> conformidad</td><td><span class="badge b-green">Apto</span></td><td class="mono">10/09/2031</td></tr>
-                </table>
-              </div></div>
-              <div style="text-align:right"><span class="btn btn-primary">Finalizar informe</span></div>
-            </div>
-          </div>
-          <p class="caption">Un informe con dos certificaciones sobre la misma pieza.</p>
-        </div>
-        <div class="legend">
-          <div class="row"><span class="pin">1</span> La <b>operación</b> define la vigencia: <span class="mono">COS</span> dura 1 año (anual), <span class="mono">COC</span> dura 5 años (conformidad).</div>
-          <div class="row"><span class="pin">2</span> Al <b>finalizar</b>, el informe es definitivo y actualiza el estado y el vencimiento de cada pieza.</div>
-        </div>
-        <div class="note">Solo el informe <b>finalizado</b> cambia el estado de las piezas. Un borrador es trabajo en curso: no certifica nada todavía.</div>
-      </div>
-    </div>
-
-    <!-- PASO 5 -->
-    <div class="step reveal">
-      <div class="step-head">
-        <div class="step-num">5</div>
-        <div><div class="by">Todos</div><h3>Vencimientos por tipo y despacho</h3></div>
-      </div>
-      <div class="step-body">
-        <p>La ficha del equipo muestra su <b>estado de aptitud</b> y <b>cada vencimiento por tipo</b>. Una pieza está apta solo si está al día en <b>todas</b> sus certificaciones; manda la que vence primero.</p>
-        <div class="shot">
-          <div class="annot" style="top:24%;left:8%">1</div>
-          <div class="annot" style="top:70%;left:30%">2</div>
-          <div class="browser">
-            <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/activos/…</span></div>
-            <div class="main" style="background:var(--paper-raised)">
-              <div class="crumb">Activos · Puente 2-1/16 · Shell</div>
-              <div class="panel">
-                <div class="grid3">
-                  <div class="cell"><div class="k">Estado de aptitud</div><div><span class="badge b-green">Apto</span></div></div>
-                  <div class="cell"><div class="k">Vencimiento</div><div class="v">10/09/2027</div></div>
-                  <div class="cell"><div class="k">Código</div><div class="v mono" style="font-size:14px">HASA-0002</div></div>
-                </div>
-                <div style="border-top:1px solid var(--line-soft);padding:11px 13px">
-                  <div class="k" style="font-size:10px;color:var(--muted);margin-bottom:7px">Vencimientos por certificación</div>
-                  <div class="chips">
-                    <span class="chip"><span class="c">COS</span> vence 10/09/2027 · en 10 meses</span>
-                    <span class="chip"><span class="c">COC</span> vence 10/09/2031 · en 5 años</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <p class="caption">La ficha muestra los dos vencimientos a la vez.</p>
-        </div>
-        <div class="legend">
-          <div class="row"><span class="pin">1</span> El <b>estado</b> y el <b>vencimiento principal</b> salen del certificado que vence primero.</div>
-          <div class="row"><span class="pin">2</span> Abajo, <b>cada tipo</b> con su propia fecha. Así se ve el anual (COS) y el quinquenal (COC) por separado.</div>
-        </div>
-        <div class="note">Cuando el equipo sale del taller, el taller lo <b>despacha</b> y el hito queda registrado. El cliente lo ve volver <b>certificado</b>, con su nueva fecha.</div>
-      </div>
-    </div>
-
-  </div>
-</section>
-
-<!-- ============ POR ROL ============ -->
-<section id="porrol">
-  <div class="wrap">
-    <p class="eyebrow reveal"><span class="n">3</span> Guía rápida por rol</p>
-    <h2 class="title reveal">Qué hace cada uno, de un vistazo</h2>
-    <div class="features">
-      <div class="feat reveal d1"><h4><span class="t">↑</span> Cliente · Operador</h4><p>Arma y envía los envíos al taller. Sigue sus equipos. Cuando el taller consulta una reparación, la <b>autoriza o la rechaza</b> desde su panel.</p></div>
-      <div class="feat reveal d2"><h4><span class="t">◎</span> Cliente · Consulta</h4><p>Ve el inventario, los vencimientos y los informes de su empresa. No puede cargar ni modificar nada: es la vista segura para seguimiento.</p></div>
-      <div class="feat reveal d3"><h4><span class="t">⚙</span> Taller</h4><p>Da recepción (parcial si hace falta), trabaja las piezas, carga los informes, dictamina y despacha. Ve los equipos de todas las empresas.</p></div>
-      <div class="feat reveal d4"><h4><span class="t">★</span> Superadministrador</h4><p>Administra empresas, usuarios, operaciones y catálogos. Define las vigencias (COS, COC). Es el único que puede <b>deshacer</b> un dictamen.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ FUNCIONES CLAVE ============ -->
-<section id="funciones">
-  <div class="wrap">
-    <p class="eyebrow reveal"><span class="n">4</span> Funciones clave</p>
-    <h2 class="title reveal">Lo que conviene conocer</h2>
-    <div class="features">
-      <div class="feat reveal d1"><h4><span class="t mono" style="font-size:11px">#</span> Código por empresa</h4><p>Cada equipo nuevo recibe un código legible con el prefijo de su empresa: <span class="mono">HASA-0001</span>, <span class="mono">HASA-0002</span>… Fácil de leer y de buscar.</p></div>
-      <div class="feat reveal d2"><h4><span class="t">≋</span> Vencimientos por tipo</h4><p>El encabezado muestra el anual (COS) y el de conformidad (COC) por separado. La aptitud exige estar al día en <b>todas</b> las certificaciones.</p></div>
-      <div class="feat reveal d3"><h4><span class="t">↺</span> Deshacer aprobación</h4><p>Si se aprobó por error, el superadministrador lo revierte (antes de despachar), con motivo y registro en auditoría. La pieza vuelve a “En proceso”.</p></div>
-      <div class="feat reveal d4"><h4><span class="t">◧</span> Recepción parcial</h4><p>El taller recibe lo que llegó y marca lo que no, con su motivo. Lo faltante no entra al taller y se le avisa al operador por correo.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ GLOSARIO ============ -->
+<!-- GLOSARIO -->
 <section id="glosario">
   <div class="wrap">
-    <p class="eyebrow reveal"><span class="n">5</span> Glosario</p>
+    <p class="eyebrow reveal"><span class="n">11</span> Glosario</p>
     <h2 class="title reveal">Los términos, en una línea</h2>
     <div class="gloss reveal">
       <div class="g"><div class="term">COS <span class="mono">Certificación de Servicio</span></div><div class="def">Certificación <b>anual</b> (vigencia 1 año). Da aptitud al equipo.</div></div>
       <div class="g"><div class="term">COC <span class="mono">Certificación de Conformidad</span></div><div class="def">Certificación <b>quinquenal</b> (vigencia 5 años). Da aptitud al equipo.</div></div>
-      <div class="g"><div class="term">Aptitud</div><div class="def">El estado del equipo: <b>Apto</b>, <b>Por vencer</b> o <b>No apto</b>. Se deriva de las inspecciones; nunca se escribe a mano.</div></div>
+      <div class="g"><div class="term">Aptitud</div><div class="def"><b>Apto</b>, <b>Por vencer</b> o <b>No apto</b>. Se deriva de las inspecciones; nunca se escribe a mano.</div></div>
       <div class="g"><div class="term">Informe</div><div class="def">El registro de una inspección: un trabajo sobre una o varias piezas, con su resultado y vencimiento.</div></div>
       <div class="g"><div class="term">Bitácora</div><div class="def">El historial de inspecciones de una pieza: cada vez que pasó por el taller y qué resultado tuvo.</div></div>
       <div class="g"><div class="term">Recepción parcial</div><div class="def">Recibir solo los equipos que llegaron y registrar, con su motivo, los que no.</div></div>
+      <div class="g"><div class="term">Despachar</div><div class="def">Sacar la pieza del taller y devolverla al cliente; el hito queda registrado.</div></div>
     </div>
   </div>
 </section>
@@ -588,25 +556,16 @@
 <footer>
   <div class="wrap">
     <div class="brand"><span style="width:34px;height:34px;border-radius:50%;background:radial-gradient(120% 120% at 30% 25%,#2a3340,#0d1117 70%);display:grid;place-items:center;color:#fff;font-style:italic;font-size:16px">O</span> Odessa Oil</div>
-    <small>Manual de usuario · v1.0 · 30/10/2026 — Inspección, certificación y trazabilidad.</small>
+    <small>Manual de usuario · v2.0 · 30/10/2026 — Capturas reales del sistema. Inspección, certificación y trazabilidad.</small>
   </div>
 </footer>
 
 <script>
-  // Barra de progreso de lectura
-  var prog = document.getElementById('progress');
-  function onScroll(){
-    var h = document.documentElement;
-    var sc = (h.scrollTop) / (h.scrollHeight - h.clientHeight);
-    prog.style.width = Math.max(0, Math.min(1, sc)) * 100 + '%';
-  }
-  document.addEventListener('scroll', onScroll, {passive:true}); onScroll();
-
-  // Reveal al entrar en viewport
-  var io = new IntersectionObserver(function(entries){
-    entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
-  }, {threshold: .14});
-  document.querySelectorAll('.reveal:not(.in)').forEach(function(el){ io.observe(el); });
+  var prog=document.getElementById('progress');
+  function onScroll(){var h=document.documentElement;prog.style.width=Math.max(0,Math.min(1,h.scrollTop/(h.scrollHeight-h.clientHeight)))*100+'%';}
+  document.addEventListener('scroll',onScroll,{passive:true});onScroll();
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.12});
+  document.querySelectorAll('.reveal:not(.in)').forEach(function(el){io.observe(el);});
 </script>
 </body>
 </html>
