@@ -4,17 +4,17 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Manual de usuario · Odessa Oil</title>
-<meta name="description" content="Manual de usuario del sistema de inspección, certificación y trazabilidad de Odessa Oil. Cada pantalla y cada botón, con capturas reales, por rol." />
+<meta name="description" content="Manual de usuario del sistema de Odessa Oil. Cada pantalla con capturas reales y guías numeradas paso a paso, por rol." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
 <style>
-  :root {
-    --ink:#15181e; --ink-soft:#3d4350; --muted:#6b7280; --line:#e6e3dc; --line-soft:#efece5;
-    --paper:#fbfaf7; --paper-raised:#fff; --sunken:#f4f2ec;
-    --accent:#0e7490; --accent-deep:#0b5566; --amber:#b45309;
-    --green-fg:#15803d; --green-bg:#e9f5ec; --red-fg:#b42318; --red-bg:#fbeceb; --blue-bg:#e9eefb; --blue-fg:#1d4ed8;
-    --radius:14px; --shadow:0 1px 2px rgba(20,24,30,.04),0 12px 32px -14px rgba(20,24,30,.18);
+  :root{
+    --ink:#15181e;--ink-soft:#3d4350;--muted:#6b7280;--line:#e6e3dc;--line-soft:#efece5;
+    --paper:#fbfaf7;--paper-raised:#fff;--sunken:#f4f2ec;
+    --accent:#0e7490;--accent-deep:#0b5566;--amber:#c2410c;
+    --green-fg:#15803d;--green-bg:#e9f5ec;--red-fg:#b42318;--red-bg:#fbeceb;--blue-bg:#e9eefb;--blue-fg:#1d4ed8;
+    --radius:14px;--shadow:0 1px 2px rgba(20,24,30,.04),0 14px 36px -16px rgba(20,24,30,.22);
     --shadow-soft:0 1px 2px rgba(20,24,30,.05),0 8px 24px -16px rgba(20,24,30,.2);
   }
   *{box-sizing:border-box}
@@ -22,19 +22,19 @@
   body{margin:0;font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--paper);line-height:1.62;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
   h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:600;letter-spacing:-.01em}
   .mono{font-family:"JetBrains Mono",ui-monospace,monospace}
-  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
-  section{padding:66px 0;border-top:1px solid var(--line)}
+  .wrap{max-width:940px;margin:0 auto;padding:0 24px}
+  section{padding:62px 0;border-top:1px solid var(--line)}
   section:first-of-type{border-top:0}
 
   .progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--amber));z-index:60;width:0}
   .topbar{position:fixed;inset:0 0 auto 0;z-index:50;display:flex;align-items:center;gap:14px;padding:11px 22px;background:rgba(251,250,247,.85);backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid var(--line)}
   .topbar .brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:14px}
   .logo-mark{width:26px;height:26px;border-radius:50%;background:radial-gradient(120% 120% at 30% 25%,#2a3340,#0d1117 70%);display:grid;place-items:center;color:#fff;font-family:Fraunces,serif;font-size:13px;font-style:italic}
-  .topbar nav{margin-left:auto;display:flex;gap:3px;flex-wrap:wrap}
-  .topbar nav a{font-size:12px;color:var(--ink-soft);text-decoration:none;padding:6px 10px;border-radius:999px}
+  .topbar nav{margin-left:auto;display:flex;gap:2px;flex-wrap:wrap}
+  .topbar nav a{font-size:12px;color:var(--ink-soft);text-decoration:none;padding:6px 9px;border-radius:999px}
   .topbar nav a:hover{background:var(--sunken);color:var(--ink)}
 
-  .cover{padding:150px 0 70px;position:relative;overflow:hidden}
+  .cover{padding:148px 0 66px;position:relative;overflow:hidden}
   .cover-logo{width:66px;height:66px;border-radius:50%;margin-bottom:28px;background:radial-gradient(120% 120% at 30% 25%,#2a3340,#0d1117 70%);display:grid;place-items:center;color:#fff;font-family:Fraunces,serif;font-size:29px;font-style:italic;box-shadow:var(--shadow)}
   .kicker{display:inline-flex;gap:8px;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-deep);background:#e7f1f4;border:1px solid #cfe4ea;padding:6px 13px;border-radius:999px;margin-bottom:24px}
   .cover h1{font-size:clamp(40px,7vw,70px);line-height:1.03;margin:0 0 20px}
@@ -47,30 +47,25 @@
   .eyebrow{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-deep);margin:0 0 12px;display:flex;align-items:center;gap:10px}
   .eyebrow .n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;font-family:Inter;font-size:13px}
   h2.title{font-size:clamp(27px,4.5vw,38px);margin:0 0 14px;line-height:1.1}
-  .intro{font-size:16.5px;color:var(--ink-soft);max-width:66ch;margin:0 0 34px}
+  .intro{font-size:16.5px;color:var(--ink-soft);max-width:66ch;margin:0 0 26px}
+  h3.sub{font-size:21px;margin:38px 0 8px}
   p{margin:0 0 13px}
 
-  /* Figure (captura real) */
-  .figure{margin:22px 0;break-inside:avoid}
-  .figure .frame{border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);background:#fff}
-  .figure .frame .bar{display:flex;align-items:center;gap:7px;padding:8px 12px;background:#f0eee8;border-bottom:1px solid var(--line)}
-  .figure .frame .bar .dot{width:10px;height:10px;border-radius:50%;background:#d6d2c8}
-  .figure .frame .bar .url{margin-left:8px;font-size:10.5px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 9px;font-family:"JetBrains Mono",monospace}
-  .figure img{display:block;width:100%;height:auto}
-  .figure figcaption{font-size:12px;color:var(--muted);margin-top:9px;text-align:center}
+  /* Figure with annotated screenshot */
+  .figure{margin:22px 0 10px;break-inside:avoid}
+  .shoturl{font-size:11px;color:var(--muted);font-family:"JetBrains Mono",monospace;margin:0 0 6px;padding-left:2px}
+  .shot{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);line-height:0;background:#fff}
+  .shot img{display:block;width:100%;height:auto}
+  .pin{position:absolute;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;background:var(--amber);color:#fff;font-weight:700;font-size:15px;display:grid;place-items:center;border:3px solid #fff;box-shadow:0 3px 11px rgba(194,65,12,.55);font-family:Inter;line-height:1}
+  .legend{list-style:none;margin:16px 0 0;padding:0;counter-reset:leg;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper-raised);box-shadow:var(--shadow-soft)}
+  .legend li{position:relative;padding:11px 16px 11px 50px;font-size:14px;color:var(--ink-soft);border-bottom:1px solid var(--line-soft)}
+  .legend li:last-child{border-bottom:0}
+  .legend li::before{counter-increment:leg;content:counter(leg);position:absolute;left:14px;top:10px;width:25px;height:25px;border-radius:50%;background:var(--amber);color:#fff;font-weight:700;font-size:13px;display:grid;place-items:center;font-family:Inter}
+  .legend li b{color:var(--ink)}
+  .cap{font-size:12px;color:var(--muted);margin:16px 0 0;text-align:center}
 
-  /* "En esta pantalla" explanations */
-  .whats{margin:20px 0 0;border:1px solid var(--line);border-radius:12px;background:var(--paper-raised);overflow:hidden;box-shadow:var(--shadow-soft)}
-  .whats h4{margin:0;padding:12px 18px;font-family:Inter;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-deep);background:var(--sunken);border-bottom:1px solid var(--line)}
-  .whats dl{margin:0;padding:6px 18px 14px}
-  .whats dt{font-weight:600;font-size:14px;margin-top:12px;color:var(--ink)}
-  .whats dt .mono,.whats dt .tagb{font-weight:500}
-  .whats dd{margin:3px 0 0;font-size:13.5px;color:var(--ink-soft)}
-  .tagb{display:inline-block;font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--blue-bg);color:var(--blue-fg);vertical-align:middle}
-  .tagb.g{background:var(--green-bg);color:var(--green-fg)} .tagb.r{background:var(--red-bg);color:var(--red-fg)} .tagb.a{background:#fbf1e3;color:var(--amber)}
-
-  .note{border-left:3px solid var(--accent);background:#eef6f8;border-radius:0 10px 10px 0;padding:13px 18px;margin:18px 0;font-size:14px;color:var(--ink-soft)}
-  .note.warn{border-color:var(--amber);background:#fbf3e6}
+  .note{border-left:3px solid var(--accent);background:#eef6f8;border-radius:0 10px 10px 0;padding:13px 18px;margin:20px 0;font-size:14px;color:var(--ink-soft)}
+  .note.warn{border-color:var(--amber);background:#fbf1e8}
   .note b{color:var(--ink)}
 
   .roles{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:8px}
@@ -79,13 +74,7 @@
   .role h3{font-size:17px;margin:0 0 3px;font-family:Inter;font-weight:700}
   .role .who{font-size:12px;color:var(--muted);margin:0 0 10px}
   .role p{font-size:13px;color:var(--ink-soft);margin:0}
-  .role.super::before{background:#7c3aed} .role.taller::before{background:var(--accent)} .role.oper::before{background:#0f766e} .role.view::before{background:#64748b}
-
-  .steps-mini{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 0}
-  .smini{flex:1 1 150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--paper-raised)}
-  .smini .n{width:24px;height:24px;border-radius:7px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:600;margin-bottom:8px}
-  .smini b{font-size:13px;display:block;margin-bottom:2px}
-  .smini span{font-size:12px;color:var(--ink-soft)}
+  .role.super::before{background:#7c3aed}.role.taller::before{background:var(--accent)}.role.oper::before{background:#0f766e}.role.view::before{background:#64748b}
 
   .gloss{display:grid;border:1px solid var(--line);border-radius:12px;overflow:hidden}
   .gloss .g{display:grid;grid-template-columns:160px 1fr;gap:16px;padding:13px 18px;border-bottom:1px solid var(--line-soft);font-size:14px}
@@ -94,26 +83,24 @@
   .gloss .term .mono{display:block;font-size:11px;color:var(--accent-deep);font-weight:500}
   .gloss .def{color:var(--ink-soft)}
 
-  footer{background:#0f1217;color:#aeb4bf;padding:50px 0;margin-top:20px}
+  footer{background:#0f1217;color:#aeb4bf;padding:48px 0;margin-top:16px}
   footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
   footer .brand{display:flex;align-items:center;gap:12px;color:#fff;font-family:Fraunces,serif;font-size:19px}
   footer small{font-size:12px;color:#6b7280}
 
-  .reveal{opacity:0;transform:translateY(20px);transition:opacity .6s cubic-bezier(.2,.7,.2,1),transform .6s cubic-bezier(.2,.7,.2,1)}
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .6s cubic-bezier(.2,.7,.2,1),transform .6s cubic-bezier(.2,.7,.2,1)}
   .reveal.in{opacity:1;transform:none}
 
-  @media (max-width:760px){.roles{grid-template-columns:1fr}.gloss .g{grid-template-columns:1fr;gap:3px}.topbar nav{display:none}}
+  @media (max-width:760px){.roles{grid-template-columns:1fr}.gloss .g{grid-template-columns:1fr;gap:3px}.topbar nav{display:none}.pin{width:24px;height:24px;font-size:12px}}
   @media print{
-    @page{size:A4;margin:14mm 13mm}
-    html{scroll-behavior:auto}
-    .topbar,.progress{display:none!important}
+    @page{size:A4;margin:13mm 12mm}
+    html{scroll-behavior:auto}.topbar,.progress{display:none!important}
     body{background:#fff}
-    section{padding:16px 0}
-    .cover{padding:10px 0 24px}
+    section{padding:14px 0}.cover{padding:8px 0 22px}
     .reveal{opacity:1!important;transform:none!important}
-    .figure,.whats,.note,.role,.smini{break-inside:avoid}
-    .figure img{box-shadow:none}
-    h2.title{break-after:avoid}
+    .figure,.legend,.note,.role,.shot{break-inside:avoid}
+    .shot{box-shadow:none}
+    h2.title,h3.sub{break-after:avoid}
     a{color:inherit;text-decoration:none}
   }
 </style>
@@ -125,18 +112,17 @@
   <nav>
     <a href="#ingreso">Ingreso</a><a href="#panel">Panel</a><a href="#activos">Activos</a>
     <a href="#ficha">Ficha</a><a href="#informes">Informes</a><a href="#envios">Envíos</a>
-    <a href="#taller">Taller</a><a href="#reportes">Reportes</a><a href="#admin">Administración</a>
+    <a href="#taller">Taller</a><a href="#reportes">Reportes</a><a href="#admin">Admin</a>
     <a href="#roles">Roles</a><a href="#glosario">Glosario</a>
   </nav>
 </div>
 
-<!-- PORTADA -->
 <header class="cover">
   <div class="wrap">
     <div class="cover-logo reveal in">O</div>
-    <span class="kicker reveal in">Manual de usuario · v2.0 · con capturas reales</span>
-    <h1 class="reveal in">El sistema de <em>Odessa Oil</em>,<br>pantalla por pantalla.</h1>
-    <p class="lead reveal in">Esta guía recorre <b>cada pantalla y cada botón</b> del sistema, con capturas reales y la vista de cada rol. Del ingreso al despacho certificado, para que cualquier usuario entienda qué ve y qué hacer.</p>
+    <span class="kicker reveal in">Manual de usuario · v3.0 · guía paso a paso</span>
+    <h1 class="reveal in">El sistema de <em>Odessa Oil</em>,<br>con el dedo en cada botón.</h1>
+    <p class="lead reveal in">Cada pantalla, con su captura real y <b>guías numeradas</b> que señalan qué hace cada botón. Del ingreso al despacho certificado, y la vista de cada rol.</p>
     <div class="meta reveal in">
       <span><b>Para:</b> clientes y taller</span>
       <span><b>Cubre:</b> todas las pantallas · los 4 roles</span>
@@ -145,32 +131,34 @@
   </div>
 </header>
 
-<!-- INGRESO + ROLES -->
+<!-- INGRESO -->
 <section id="ingreso">
   <div class="wrap">
     <p class="eyebrow reveal"><span class="n">1</span> Cómo se entra</p>
     <h2 class="title reveal">Ingreso y roles</h2>
-    <p class="intro reveal">Cada persona entra con el correo y la contraseña que le asignó su administrador, y ve únicamente lo que su rol permite. Un cliente nunca ve equipos de otra empresa.</p>
-
-    <figure class="figure reveal">
-      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/ingresar</span></div>
-      <img src="manual-img/00-ingreso.jpg" alt="Pantalla de ingreso" /></div>
-      <figcaption>Pantalla de ingreso.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>En esta pantalla</h4>
-      <dl>
-        <dt>Correo electrónico y Contraseña</dt><dd>Las credenciales que asignó el administrador. En el primer ingreso el sistema pide cambiar la contraseña temporal.</dd>
-        <dt><span class="tagb">Mantener sesión iniciada</span></dt><dd>Deja la sesión abierta en ese dispositivo. No marcarla en computadoras compartidas.</dd>
-        <dt>¿Olvidó su contraseña? / Solicite acceso</dt><dd>Recuperar el acceso, o pedir una cuenta nueva si todavía no la tiene.</dd>
-      </dl>
+    <p class="intro reveal">Cada persona entra con el correo y la contraseña que le asignó su administrador, y ve únicamente lo que su rol permite.</p>
+    <div class="figure reveal">
+      <p class="shoturl">sistema.odessaoil.com/ingresar</p>
+      <div class="shot">
+        <img src="manual-img-hd/00-ingreso.png" alt="Pantalla de ingreso" />
+        <span class="pin" style="left:75%;top:43%">1</span>
+        <span class="pin" style="left:75%;top:54%">2</span>
+        <span class="pin" style="left:75%;top:66%">3</span>
+        <span class="pin" style="left:75%;top:72%">4</span>
+      </div>
+      <ol class="legend">
+        <li><b>Correo electrónico.</b> El que asignó el administrador.</li>
+        <li><b>Contraseña.</b> En el primer ingreso se pide cambiar la temporal.</li>
+        <li><b>Ingresar.</b> Entra al sistema. <i>«Mantener sesión iniciada»</i> deja la sesión abierta (no usar en equipos compartidos).</li>
+        <li><b>¿Olvidó su contraseña? / Solicite acceso.</b> Recuperar el acceso o pedir una cuenta nueva.</li>
+      </ol>
     </div>
 
-    <h3 style="margin:34px 0 4px;font-size:20px">Los cuatro roles</h3>
+    <h3 class="sub reveal">Los cuatro roles</h3>
     <div class="roles">
       <div class="role super reveal"><h3>Superadministrador</h3><p class="who">Odessa — dueño del sistema</p><p>Ve y hace todo: catálogos, operaciones, empresas, usuarios. Único que puede <b>deshacer</b> una aprobación.</p></div>
       <div class="role taller reveal"><h3>Taller</h3><p class="who">Operarios de Odessa</p><p>Recibe, inspecciona, dictamina, repara y despacha. Carga los informes. Ve equipos de todas las empresas.</p></div>
-      <div class="role oper reveal"><h3>Cliente · Operador</h3><p class="who">Empleado de la empresa cliente</p><p>Pre-carga los envíos al taller y autoriza reparaciones. Solo su empresa. No toca inventario.</p></div>
+      <div class="role oper reveal"><h3>Cliente · Operador</h3><p class="who">Empleado de la empresa cliente</p><p>Pre-carga los envíos y autoriza reparaciones. Solo su empresa. No toca inventario.</p></div>
       <div class="role view reveal"><h3>Cliente · Consulta</h3><p class="who">Empresa cliente — solo mirar</p><p>Ve sus equipos, vencimientos e informes. No puede cargar ni modificar nada.</p></div>
     </div>
   </div>
@@ -181,21 +169,22 @@
   <div class="wrap">
     <p class="eyebrow reveal"><span class="n">2</span> La pantalla de inicio</p>
     <h2 class="title reveal">El Panel de control</h2>
-    <p class="intro reveal">Lo primero que se ve al entrar. Resume el estado del equipamiento y la carga del taller. El cliente ve solo los números de su empresa.</p>
-    <figure class="figure reveal">
-      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/panel</span></div>
-      <img src="manual-img/01-panel-superadmin.jpg" alt="Panel de control" /></div>
-      <figcaption>Panel de control (vista del superadministrador).</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>En esta pantalla</h4>
-      <dl>
-        <dt>Total de activos · Apto · Próximo a vencer · No apto</dt><dd>El estado del parque de un vistazo. <span class="tagb a">Próximo a vencer</span> son las piezas aptas que perderán vigencia pronto; <span class="tagb r">No apto</span> las que no pueden volver a servicio sin recertificar.</dd>
-        <dt>Vencimientos en los próximos 60 días</dt><dd>Gráfico de cuántas piezas vencen cada semana: sirve para anticipar el trabajo.</dd>
-        <dt>Taller — pipeline</dt><dd>Cuántas piezas hay en cada etapa (pendientes en fecha, vencidas, liberadas sin despachar, urgentes, despachadas).</dd>
-        <dt>Próximos a vencer / Informes recientes</dt><dd>Accesos directos a lo más urgente y a los últimos informes cargados. <b>Ver todos</b> abre la lista completa.</dd>
-        <dt>Barra superior</dt><dd>El buscador (activo, serie o código) encuentra cualquier pieza al instante. La campana son los avisos; el avatar abre <b>Mi perfil</b> y <b>Cerrar sesión</b>.</dd>
-      </dl>
+    <p class="intro reveal">Lo primero al entrar. Resume el estado del equipamiento y la carga del taller. El cliente ve solo los números de su empresa.</p>
+    <div class="figure reveal">
+      <p class="shoturl">sistema.odessaoil.com/panel</p>
+      <div class="shot">
+        <img src="manual-img-hd/01-panel.png" alt="Panel de control" />
+        <span class="pin" style="left:34%;top:21%">1</span>
+        <span class="pin" style="left:33%;top:49%">2</span>
+        <span class="pin" style="left:86%;top:42%">3</span>
+        <span class="pin" style="left:36%;top:4.5%">4</span>
+      </div>
+      <ol class="legend">
+        <li><b>Estado del parque.</b> Total de activos, Apto, Próximo a vencer y No apto, de un vistazo.</li>
+        <li><b>Vencimientos en los próximos 60 días.</b> Cuántas piezas vencen cada semana: para anticipar el trabajo.</li>
+        <li><b>Pipeline del taller.</b> Cuántas piezas hay en cada etapa (pendientes, vencidas, urgentes, despachadas).</li>
+        <li><b>Buscador global.</b> Encuentra cualquier pieza por descripción, serie o código. La campana son los avisos; el avatar abre «Cerrar sesión».</li>
+      </ol>
     </div>
   </div>
 </section>
@@ -206,21 +195,23 @@
     <p class="eyebrow reveal"><span class="n">3</span> El inventario</p>
     <h2 class="title reveal">Activos</h2>
     <p class="intro reveal">El inventario de piezas y equipamiento genérico, cada uno con su estado de aptitud vigente.</p>
-    <figure class="figure reveal">
-      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/activos</span></div>
-      <img src="manual-img/02-activos-listado.jpg" alt="Listado de activos" /></div>
-      <figcaption>Listado de activos.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>En esta pantalla</h4>
-      <dl>
-        <dt><span class="tagb">Partes</span> / <span class="tagb">Genéricos</span></dt><dd>Dos solapas: las piezas de presión (partes) y el equipamiento genérico (manómetros, sensores, kits).</dd>
-        <dt>Buscador y Filtros</dt><dd>Buscar por descripción, serie, código o referencia. <b>Filtros</b> acota por estado, vencimiento, cliente, etc.</dd>
-        <dt>Normal / Columnas</dt><dd>Cambia la densidad de la tabla y permite elegir qué columnas se ven.</dd>
-        <dt>Columnas de la tabla</dt><dd>Parte, Cliente, N° de serie, <b>Código</b>, Ref. cliente, Informe (link al informe determinante), <b>Vencimiento</b> y <b>Estado</b> de aptitud.</dd>
-        <dt><span class="tagb">Exportar a Excel</span></dt><dd>Descarga el listado filtrado. Disponible también para el rol Consulta.</dd>
-        <dt><span class="tagb g">+ Nuevo equipo</span></dt><dd>Alta manual de una pieza. Solo taller y superadministrador. El equipo nuevo recibe un <b>código con el prefijo de la empresa</b> (p. ej. <span class="mono">PDG-0001</span>).</dd>
-      </dl>
+    <div class="figure reveal">
+      <p class="shoturl">sistema.odessaoil.com/activos</p>
+      <div class="shot">
+        <img src="manual-img-hd/02-activos.png" alt="Listado de activos" />
+        <span class="pin" style="left:17%;top:20.5%">1</span>
+        <span class="pin" style="left:30%;top:27%">2</span>
+        <span class="pin" style="left:80%;top:14%">3</span>
+        <span class="pin" style="left:93.5%;top:14%">4</span>
+        <span class="pin" style="left:74%;top:33%">5</span>
+      </div>
+      <ol class="legend">
+        <li><b>Partes / Genéricos.</b> Las piezas de presión y el equipamiento genérico (manómetros, sensores).</li>
+        <li><b>Buscador y Filtros.</b> Por descripción, serie, código o referencia; los filtros acotan por estado, vencimiento, cliente.</li>
+        <li><b>Exportar a Excel.</b> Descarga el listado filtrado (también lo tiene el rol Consulta).</li>
+        <li><b>+ Nuevo equipo.</b> Alta manual (solo taller y superadmin). El equipo nuevo recibe un código con el prefijo de la empresa (<span class="mono">PDG-0001</span>).</li>
+        <li><b>Columnas.</b> Código, Informe determinante, Vencimiento y Estado de aptitud. «Columnas» elige cuáles se ven.</li>
+      </ol>
     </div>
   </div>
 </section>
@@ -231,47 +222,52 @@
     <p class="eyebrow reveal"><span class="n">4</span> El corazón del sistema</p>
     <h2 class="title reveal">La ficha del equipo</h2>
     <p class="intro reveal">Todo lo que se sabe de una pieza: su estado, sus vencimientos, su historial y sus documentos. Se llega tocando cualquier pieza del listado.</p>
-    <figure class="figure reveal">
-      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/activos/…</span></div>
-      <img src="manual-img/03-ficha-encabezado.jpg" alt="Encabezado de la ficha" /></div>
-      <figcaption>Encabezado de la ficha, con los vencimientos por tipo de certificación.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>En el encabezado</h4>
-      <dl>
-        <dt><span class="tagb g">Estado de aptitud</span></dt><dd>Apto, Por vencer o No apto. Se deriva de las inspecciones; nunca se escribe a mano.</dd>
-        <dt>Vencimiento</dt><dd>La fecha que manda — la del certificado que vence primero — con los días que faltan.</dd>
-        <dt>Inspección determinante</dt><dd>El último informe con dictamen apto o no apto. El número es un link al informe.</dd>
-        <dt><b>Vencimientos por certificación</b></dt><dd>Clave: una pieza puede tener varias certificaciones a la vez (anual y de conformidad), <b>cada una con su fecha</b>. Acá se ven todas. La pieza está apta solo si está al día en todas.</dd>
-        <dt><span class="tagb">Informe N°</span> / <span class="tagb">Editar ficha</span></dt><dd>Abrir el informe determinante, o editar los datos técnicos del equipo.</dd>
-      </dl>
+    <div class="figure reveal">
+      <p class="shoturl">sistema.odessaoil.com/activos/…</p>
+      <div class="shot">
+        <img src="manual-img-hd/03-ficha.png" alt="Ficha del equipo" />
+        <span class="pin" style="left:22.5%;top:26%">1</span>
+        <span class="pin" style="left:50.5%;top:25.5%">2</span>
+        <span class="pin" style="left:74.5%;top:25.5%">3</span>
+        <span class="pin" style="left:29%;top:37%">4</span>
+        <span class="pin" style="left:94%;top:16%">5</span>
+      </div>
+      <ol class="legend">
+        <li><b>Estado de aptitud.</b> Apto, Por vencer o No apto. Se deriva de las inspecciones; nunca se escribe a mano.</li>
+        <li><b>Vencimiento.</b> La fecha que manda — la del certificado que vence primero — con los días que faltan.</li>
+        <li><b>Inspección determinante.</b> El último informe con dictamen apto o no apto (link al informe).</li>
+        <li><b>Vencimientos por certificación.</b> Clave: una pieza puede tener varias certificaciones a la vez (anual y de conformidad), <b>cada una con su fecha</b>. Está apta solo si está al día en todas.</li>
+        <li><b>Informe N° / Editar ficha.</b> Abrir el informe determinante o editar los datos técnicos.</li>
+      </ol>
     </div>
 
-    <figure class="figure reveal">
-      <div class="frame"><img src="manual-img/05-editar-ficha.jpg" alt="Editar ficha técnica" /></div>
-      <figcaption>Diálogo «Editar ficha técnica».</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>Editar la ficha técnica</h4>
-      <dl>
-        <dt>Descripción / Descripción del taller / Serie / Ref. del cliente</dt><dd>Identificación de la pieza, incluido cómo la llama el taller si difiere.</dd>
-        <dt>Clasificación</dt><dd><b>Tipo de equipo</b> (define el tiempo de taller y la fecha límite de envío) y <b>Fabricante</b>. <i>Nota: el campo «Servicio» se quitó de la ficha — el servicio/vencimiento lo define el informe, no una característica fija del equipo.</i></dd>
-        <dt>Presiones y conexiones</dt><dd>Presión de prueba y de trabajo; conexión superior, inferior y laterales.</dd>
-        <dt>Guardar cambios</dt><dd>Cada cambio queda registrado en la auditoría con el antes y el después.</dd>
-      </dl>
+    <h3 class="sub reveal">Editar la ficha técnica</h3>
+    <div class="figure reveal">
+      <div class="shot">
+        <img src="manual-img-hd/05-editar.png" alt="Editar ficha técnica" />
+        <span class="pin" style="left:50%;top:49%">1</span>
+        <span class="pin" style="left:50%;top:73%">2</span>
+        <span class="pin" style="left:76%;top:92%">3</span>
+      </div>
+      <ol class="legend">
+        <li><b>Clasificación.</b> Tipo de equipo (define el tiempo de taller y la fecha límite de envío) y Fabricante. <i>El campo «Servicio» se quitó de la ficha: el servicio/vencimiento lo define el informe.</i></li>
+        <li><b>Presiones y conexiones.</b> Presión de prueba y de trabajo; conexión superior, inferior y laterales.</li>
+        <li><b>Guardar cambios.</b> Cada cambio queda en la auditoría con el antes y el después.</li>
+      </ol>
     </div>
 
-    <figure class="figure reveal">
-      <div class="frame"><img src="manual-img/04-ficha-bitacora.jpg" alt="Bitácora de inspecciones" /></div>
-      <figcaption>Bitácora de inspecciones y documentos de la pieza.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>Bitácora, trazabilidad y documentos</h4>
-      <dl>
-        <dt>Bitácora de inspecciones</dt><dd>Cada vez que la pieza pasó por el taller: el informe, el resultado (<span class="tagb g">Apto</span>, <span class="tagb r">No apto</span>, No aplica), si <b>determina aptitud</b>, la fecha y la vigencia. Es el historial que respalda la certificación.</dd>
-        <dt>Trazabilidad del equipo</dt><dd>Todo lo que le pasó a la pieza: envíos, taller, inspecciones, documentos y accesos, en una línea de tiempo con quién, qué y cuándo.</dd>
-        <dt>Documentos de la pieza</dt><dd>Documentación propia del activo (certificado del fabricante, fotos), independiente de cada inspección. <b>Adjuntar</b> sube un archivo.</dd>
-      </dl>
+    <h3 class="sub reveal">La bitácora de inspecciones</h3>
+    <div class="figure reveal">
+      <div class="shot">
+        <img src="manual-img-hd/04-bitacora.png" alt="Bitácora de inspecciones" />
+        <span class="pin" style="left:25%;top:14%">1</span>
+        <span class="pin" style="left:61%;top:7%">2</span>
+      </div>
+      <ol class="legend">
+        <li><b>Bitácora de inspecciones.</b> Cada vez que la pieza pasó por el taller: el informe, el resultado (Apto, No apto, No aplica), si determina aptitud, la fecha y la vigencia. Es el historial que respalda la certificación.</li>
+        <li><b>Trazabilidad del equipo.</b> Todo lo que le pasó a la pieza — envíos, taller, inspecciones, documentos, accesos — con quién, qué y cuándo.</li>
+      </ol>
+      <p class="cap">Más arriba, en la misma ficha, está «Documentos de la pieza»: el certificado del fabricante, fotos y documentación propia del activo, con el botón «Adjuntar».</p>
     </div>
   </div>
 </section>
@@ -281,32 +277,31 @@
   <div class="wrap">
     <p class="eyebrow reveal"><span class="n">5</span> Las inspecciones</p>
     <h2 class="title reveal">Informes</h2>
-    <p class="intro reveal">Cada inspección es un informe: un trabajo que hace la empresa sobre una o varias piezas, con su resultado y vencimiento. Es lo que actualiza el estado de los equipos.</p>
-    <figure class="figure reveal">
-      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/informes</span></div>
-      <img src="manual-img/12-informes-listado.jpg" alt="Listado de informes" /></div>
-      <figcaption>Listado de informes.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>En esta pantalla</h4>
-      <dl>
-        <dt>Columnas</dt><dd>N° informe, Cliente, Equipo/set, Fecha, Piezas (cuántas dictamina), Documentos y Estado (<span class="tagb g">Final</span> o borrador).</dd>
-        <dt><span class="tagb g">+ Nuevo informe</span></dt><dd>Arma un informe: empresa, número de informe y fecha. Después se le suman las piezas y se las dictamina.</dd>
-      </dl>
+    <p class="intro reveal">Cada inspección es un informe: un trabajo sobre una o varias piezas, con su resultado y vencimiento. Es lo que actualiza el estado de los equipos.</p>
+    <div class="figure reveal">
+      <p class="shoturl">sistema.odessaoil.com/informes</p>
+      <div class="shot">
+        <img src="manual-img-hd/12-informes.png" alt="Listado de informes" />
+        <span class="pin" style="left:93%;top:16%">1</span>
+        <span class="pin" style="left:72%;top:30%">2</span>
+      </div>
+      <ol class="legend">
+        <li><b>+ Nuevo informe.</b> Arma un informe: empresa, número y fecha. Después se le suman las piezas.</li>
+        <li><b>Columnas.</b> Cliente, fecha, cuántas piezas dictamina, documentos y estado (Final o borrador).</li>
+      </ol>
     </div>
-
-    <figure class="figure reveal">
-      <div class="frame"><img src="manual-img/13-informe-detalle.jpg" alt="Detalle de un informe" /></div>
-      <figcaption>Detalle de un informe con varias piezas.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>Dentro de un informe</h4>
-      <dl>
-        <dt>Encabezado</dt><dd>Estado, fecha de inspección, piezas incluidas, equipo/set, <b>servicio</b> (la operación, que define la vigencia) y cuándo se finalizó.</dd>
-        <dt>Piezas inspeccionadas</dt><dd>Un mismo informe resuelve varias piezas, y <b>cada una lleva su propio dictamen y vigencia</b>: pueden convivir aptas y rechazadas.</dd>
-        <dt>Documentos del informe</dt><dd>Certificados e informes firmados que cubren las piezas. <b>Adjuntar</b> sube el PDF.</dd>
-        <dt><span class="tagb">Finalizar</span></dt><dd>Hace el informe definitivo. Recién ahí actualiza el estado y el vencimiento de cada pieza. Un borrador no certifica nada.</dd>
-      </dl>
+    <div class="figure reveal">
+      <div class="shot">
+        <img src="manual-img-hd/13-informe.png" alt="Detalle de un informe" />
+        <span class="pin" style="left:92%;top:14.5%">1</span>
+        <span class="pin" style="left:35%;top:55%">2</span>
+        <span class="pin" style="left:80%;top:48%">3</span>
+      </div>
+      <ol class="legend">
+        <li><b>Finalizar.</b> Hace el informe definitivo. Recién ahí actualiza el estado y el vencimiento de cada pieza. Un borrador no certifica nada.</li>
+        <li><b>Piezas inspeccionadas.</b> Un informe resuelve varias piezas, y <b>cada una lleva su propio dictamen y vigencia</b>: conviven aptas y rechazadas.</li>
+        <li><b>Documentos del informe.</b> Certificados e informes firmados que cubren las piezas.</li>
+      </ol>
     </div>
   </div>
 </section>
@@ -316,31 +311,31 @@
   <div class="wrap">
     <p class="eyebrow reveal"><span class="n">6</span> Lo que manda el cliente</p>
     <h2 class="title reveal">Envíos al taller</h2>
-    <p class="intro reveal">El operador del cliente declara acá los equipos que manda. Hasta que el taller no les da recepción, un envío es solo una declaración.</p>
-    <figure class="figure reveal">
-      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/envios</span></div>
-      <img src="manual-img/20-envios-operador.jpg" alt="Envíos al taller" /></div>
-      <figcaption>Envíos al taller (vista del operador).</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>En esta pantalla</h4>
-      <dl>
-        <dt>Estados de un envío</dt><dd><span class="tagb a">Borrador</span> se está armando · <span class="tagb">Pendiente de recepción</span> ya se mandó, espera al taller · <span class="tagb g">Recibido</span> el taller lo recibió.</dd>
-        <dt><span class="tagb g">+ Nuevo envío</span></dt><dd>Crea un envío. El sistema le da un número automático (<span class="mono">ENV-2026-0001</span>).</dd>
-      </dl>
+    <p class="intro reveal">El operador declara acá los equipos que manda. Hasta que el taller no les da recepción, un envío es solo una declaración.</p>
+    <div class="figure reveal">
+      <p class="shoturl">sistema.odessaoil.com/envios</p>
+      <div class="shot">
+        <img src="manual-img-hd/20-envios.png" alt="Envíos al taller" />
+        <span class="pin" style="left:72%;top:35%">1</span>
+        <span class="pin" style="left:92%;top:16%">2</span>
+      </div>
+      <ol class="legend">
+        <li><b>Estados.</b> Borrador (se arma), Pendiente de recepción (ya se mandó), Recibido (el taller lo recibió).</li>
+        <li><b>+ Nuevo envío.</b> Crea un envío con número automático (<span class="mono">ENV-2026-0001</span>).</li>
+      </ol>
     </div>
-
-    <figure class="figure reveal">
-      <div class="frame"><img src="manual-img/21-envio-detalle.jpg" alt="Detalle de un envío" /></div>
-      <figcaption>Detalle de un envío en borrador.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>Dentro de un envío</h4>
-      <dl>
-        <dt>Equipos declarados</dt><dd>Cada línea: equipo, serie, qué pide (operaciones) y su estado (<span class="tagb g">Registrado</span> si ya existe, <span class="tagb a">Alta pendiente</span> si el taller lo dará de alta al recibir).</dd>
-        <dt><span class="tagb">Agregar equipo</span></dt><dd>Suma una pieza: registrada del inventario, o nueva descrita a mano, con las operaciones que pide.</dd>
-        <dt><span class="tagb">Remitir al taller</span></dt><dd>Envía el borrador. Pasa a «Pendiente de recepción» y ya no se edita.</dd>
-      </dl>
+    <div class="figure reveal">
+      <div class="shot">
+        <img src="manual-img-hd/21-envio.png" alt="Detalle de un envío" />
+        <span class="pin" style="left:92%;top:18%">1</span>
+        <span class="pin" style="left:90%;top:48%">2</span>
+        <span class="pin" style="left:35%;top:72%">3</span>
+      </div>
+      <ol class="legend">
+        <li><b>Remitir al taller.</b> Envía el borrador. Pasa a «Pendiente de recepción» y ya no se edita.</li>
+        <li><b>Agregar equipo.</b> Suma una pieza: registrada del inventario o nueva descrita a mano, con las operaciones que pide.</li>
+        <li><b>Equipos declarados.</b> Cada línea con su estado: Registrado, o Alta pendiente si el taller lo dará de alta al recibir.</li>
+      </ol>
     </div>
   </div>
 </section>
@@ -350,70 +345,68 @@
   <div class="wrap">
     <p class="eyebrow reveal"><span class="n">7</span> El trabajo del taller</p>
     <h2 class="title reveal">Gestión de equipos</h2>
-    <p class="intro reveal">El recorrido del equipo en el taller: ingreso, dictamen, reparación si hace falta y despacho. Cada pieza avanza por etapas y en cada una se ofrece solo la acción que corresponde.</p>
-    <figure class="figure reveal">
-      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/taller/recepciones</span></div>
-      <img src="manual-img/06-gestion-pipeline.jpg" alt="Gestión de equipos" /></div>
-      <figcaption>Gestión de equipos: tarjetas por etapa y la tabla de piezas.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>En esta pantalla</h4>
-      <dl>
-        <dt>Tarjetas por etapa</dt><dd>El conteo en vivo: Pendiente de recepción, Pendientes, En proceso, Fuera de plazo, Urgentes, Rechazadas, Esperando al cliente, Listas para despachar, Despachadas.</dd>
-        <dt>Solapas</dt><dd>Filtran la tabla por esa etapa. Cada pieza muestra su cliente, informe, fechas de ingreso y compromiso, aptitud y etapa.</dd>
-        <dt><span class="tagb g">Ingresar equipo</span></dt><dd>Ingreso directo: cuando un equipo llega sin que el cliente haya cargado un envío.</dd>
-      </dl>
+    <p class="intro reveal">El recorrido del equipo en el taller: ingreso, dictamen, reparación si hace falta y despacho. En cada etapa se ofrece solo la acción que corresponde.</p>
+    <div class="figure reveal">
+      <p class="shoturl">sistema.odessaoil.com/taller/recepciones</p>
+      <div class="shot">
+        <img src="manual-img-hd/06-gestion.png" alt="Gestión de equipos" />
+        <span class="pin" style="left:30%;top:26%">1</span>
+        <span class="pin" style="left:42%;top:52%">2</span>
+        <span class="pin" style="left:92%;top:17%">3</span>
+        <span class="pin" style="left:72%;top:72%">4</span>
+      </div>
+      <ol class="legend">
+        <li><b>Tarjetas por etapa.</b> El conteo en vivo: pendientes, en proceso, fuera de plazo, urgentes, listas para despachar, despachadas.</li>
+        <li><b>Solapas.</b> Filtran la tabla por esa etapa.</li>
+        <li><b>Ingresar equipo.</b> Ingreso directo: un equipo que llega sin que el cliente haya cargado un envío.</li>
+        <li><b>Tabla de piezas.</b> Cada una con su cliente, informe, fechas, aptitud, etapa y las acciones que correspondan.</li>
+      </ol>
     </div>
 
-    <h3 style="margin:38px 0 10px;font-size:21px">Dar recepción — y la recepción parcial</h3>
-    <p class="intro reveal" style="margin-bottom:18px">Cuando llega un envío, el taller le da recepción. <b>Se asume que llegó todo lo declarado</b>; el taller solo marca lo que no llegó.</p>
-    <div class="steps-mini reveal">
-      <div class="smini"><div class="n">1</div><b>Pendiente de recepción</b><span>El envío espera en la solapa correspondiente, con sus equipos declarados.</span></div>
-      <div class="smini"><div class="n">2</div><b>Se destilda lo que falta</b><span>Cada equipo que no llegó pide un motivo. El resto entra al taller.</span></div>
-      <div class="smini"><div class="n">3</div><b>Aviso al operador</b><span>Sale un correo con lo que no llegó. Si no llega nada, el envío se rechaza.</span></div>
+    <h3 class="sub reveal">Dar recepción — y la recepción parcial</h3>
+    <p class="intro reveal">Cuando llega un envío, el taller le da recepción. <b>Se asume que llegó todo lo declarado</b>; solo se marca lo que no llegó.</p>
+    <div class="figure reveal">
+      <div class="shot">
+        <img src="manual-img-hd/09-pendiente.png" alt="Pendiente de recepción" />
+        <span class="pin" style="left:22%;top:52%">1</span>
+        <span class="pin" style="left:36%;top:75%">2</span>
+        <span class="pin" style="left:90%;top:62%">3</span>
+      </div>
+      <ol class="legend">
+        <li><b>Solapa «Pendiente de recepción».</b> Lista los envíos remitidos que esperan al taller.</li>
+        <li><b>Equipos declarados.</b> Lo que el cliente dijo que mandó, con lo que pide cada uno.</li>
+        <li><b>Dar recepción.</b> Abre el control de lo que llegó.</li>
+      </ol>
+    </div>
+    <div class="figure reveal">
+      <div class="shot">
+        <img src="manual-img-hd/11-recepcion-falta.png" alt="Recepción parcial" />
+        <span class="pin" style="left:30%;top:33%">1</span>
+        <span class="pin" style="left:50%;top:51%">2</span>
+        <span class="pin" style="left:70%;top:91%">3</span>
+      </div>
+      <ol class="legend">
+        <li><b>Equipos declarados.</b> Cada uno con una tilde «Llegó» marcada por defecto. Se destilda el que no llegó.</li>
+        <li><b>Por qué no llegó.</b> Obligatorio por cada equipo destildado: es lo que se le informa al operador por correo.</li>
+        <li><b>Dar recepción.</b> El botón dice cuántos entran y cuántos no. Lo que llega entra al taller; lo que no, queda registrado y se avisa. Si no llega nada, el envío se rechaza.</li>
+      </ol>
+      <p class="cap">Al destildar un equipo aparece su motivo y el botón pasa a «Recibir 3 · 1 no llegó».</p>
     </div>
 
-    <figure class="figure reveal">
-      <div class="frame"><img src="manual-img/09-pendiente-recepcion.jpg" alt="Pendiente de recepción" /></div>
-      <figcaption>Envíos pendientes de recepción, con sus equipos declarados y el botón «Dar recepción».</figcaption>
-    </figure>
-    <figure class="figure reveal">
-      <div class="frame"><img src="manual-img/10-recepcion-parcial.jpg" alt="Dar recepción - todo llegó" /></div>
-      <figcaption>Diálogo de recepción: por defecto todos los equipos figuran como «Llegó».</figcaption>
-    </figure>
-    <figure class="figure reveal">
-      <div class="frame"><img src="manual-img/11-recepcion-parcial-falta.jpg" alt="Dar recepción - uno no llegó" /></div>
-      <figcaption>Al destildar un equipo aparece su motivo y el botón pasa a «Recibir 3 · 1 no llegó».</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>En el diálogo de recepción</h4>
-      <dl>
-        <dt>Equipos declarados</dt><dd>Cada uno con una tilde <b>«Llegó»</b> marcada por defecto. Se destilda el que no llegó.</dd>
-        <dt>Por qué no llegó</dt><dd>Obligatorio por cada equipo destildado: es lo que se le informa al operador por correo.</dd>
-        <dt>Fecha comprometida / Observaciones</dt><dd>Opcionales. La fecha se aplica a los equipos que ingresan.</dd>
-        <dt><span class="tagb">Dar recepción</span></dt><dd>El botón dice cuántos entran y cuántos no. Lo que llega entra al taller; lo que no, queda registrado y se avisa.</dd>
-      </dl>
+    <h3 class="sub reveal">Dictaminar, despachar y deshacer</h3>
+    <div class="note reveal">En la tabla, cada pieza muestra solo los botones de su etapa: <b>Iniciar</b> (toma el equipo) → <b>Aprobar / Rechazar</b> (el dictamen; rechazar exige motivo y abre el circuito de reparación) → <b>Despachar</b> (sale del taller). Desde «Rechazadas» se puede <b>Consultar al cliente</b> la reparación o marcarla <b>Sin solución</b>.</div>
+    <div class="figure reveal">
+      <div class="shot">
+        <img src="manual-img-hd/08-deshacer.png" alt="Diálogo Deshacer" />
+        <span class="pin" style="left:50%;top:48%">1</span>
+        <span class="pin" style="left:63%;top:62%">2</span>
+      </div>
+      <ol class="legend">
+        <li><b>Por qué se deshace.</b> Obligatorio. Queda en la auditoría.</li>
+        <li><b>Deshacer dictamen.</b> Borra un dictamen cargado por error y devuelve la pieza a «En proceso». Solo el superadministrador, y solo si no se despachó.</li>
+      </ol>
+      <p class="cap">El botón «Deshacer» aparece en las piezas aprobadas o rechazadas, solo para el superadministrador.</p>
     </div>
-
-    <h3 style="margin:38px 0 10px;font-size:21px">Dictaminar, despachar y deshacer</h3>
-    <figure class="figure reveal">
-      <div class="frame"><img src="manual-img/07-gestion-acciones-deshacer.jpg" alt="Acciones del taller" /></div>
-      <figcaption>Acciones por pieza: Despachar y, solo para el superadmin, Deshacer.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>Las acciones, etapa por etapa</h4>
-      <dl>
-        <dt>Iniciar</dt><dd>Marca que el taller tomó el equipo: pasa de Pendiente a En proceso.</dd>
-        <dt>Aprobar / Rechazar</dt><dd>El dictamen. Rechazar exige motivo y abre el circuito de reparación.</dd>
-        <dt>Consultar al cliente / Sin solución</dt><dd>Desde Rechazadas: pedirle al cliente que autorice la reparación, o marcarla sin solución (se le avisa por correo).</dd>
-        <dt><span class="tagb">Despachar</span></dt><dd>La pieza sale del taller y vuelve al cliente. El hito queda registrado con su usuario.</dd>
-        <dt><span class="tagb r">Deshacer</span></dt><dd>Solo el superadministrador, y solo en piezas aprobadas o rechazadas que no se despacharon. Sirve para corregir un dictamen cargado por error.</dd>
-      </dl>
-    </div>
-    <figure class="figure reveal">
-      <div class="frame"><img src="manual-img/08-deshacer-dialogo.jpg" alt="Diálogo Deshacer" /></div>
-      <figcaption>Al deshacer, se pide el motivo y queda en la auditoría; la pieza vuelve a «En proceso».</figcaption>
-    </figure>
   </div>
 </section>
 
@@ -422,116 +415,116 @@
   <div class="wrap">
     <p class="eyebrow reveal"><span class="n">8</span> La foto del parque</p>
     <h2 class="title reveal">Reportes</h2>
-    <p class="intro reveal">Status de los equipos, vencimientos y trabajos del taller, por organización y por período.</p>
-    <figure class="figure reveal">
-      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">sistema.odessaoil.com/reportes</span></div>
-      <img src="manual-img/18-reportes.jpg" alt="Reportes" /></div>
-      <figcaption>Reportes.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>En esta pantalla</h4>
-      <dl>
-        <dt>Filtros</dt><dd>Por organización y por rango de fechas de trabajos.</dd>
-        <dt>Status de los equipos</dt><dd>Apto, Próximo a vencer, No apto y Sin inspección, sobre el total.</dd>
-        <dt>Vencimientos</dt><dd>Cuántos vencen en 30, 60, 90 días y cuántos ya están fuera de tiempo para mandarlos. La tabla ordena por la fecha límite de envío.</dd>
-        <dt><span class="tagb">Descargar Excel</span></dt><dd>Exporta todo el reporte para compartir o archivar.</dd>
-      </dl>
+    <p class="intro reveal">Status de los equipos, vencimientos y trabajos del taller, por organización y período.</p>
+    <div class="figure reveal">
+      <p class="shoturl">sistema.odessaoil.com/reportes</p>
+      <div class="shot">
+        <img src="manual-img-hd/18-reportes.png" alt="Reportes" />
+        <span class="pin" style="left:34%;top:42%">1</span>
+        <span class="pin" style="left:34%;top:63%">2</span>
+        <span class="pin" style="left:92%;top:16%">3</span>
+      </div>
+      <ol class="legend">
+        <li><b>Status de los equipos.</b> Apto, Próximo a vencer, No apto y Sin inspección, sobre el total.</li>
+        <li><b>Vencimientos.</b> Cuántos vencen en 30, 60, 90 días y cuántos ya están fuera de tiempo para mandarlos.</li>
+        <li><b>Descargar Excel.</b> Exporta todo el reporte para compartir o archivar.</li>
+      </ol>
     </div>
   </div>
 </section>
 
-<!-- ADMINISTRACION -->
+<!-- ADMIN -->
 <section id="admin">
   <div class="wrap">
     <p class="eyebrow reveal"><span class="n">9</span> Solo el superadministrador</p>
     <h2 class="title reveal">Administración</h2>
-    <p class="intro reveal">Donde se configura el sistema: empresas, usuarios, operaciones (con sus vigencias) y la auditoría. Solo lo ve el superadministrador.</p>
+    <p class="intro reveal">Donde se configura el sistema: operaciones (con sus vigencias), empresas, usuarios y la auditoría.</p>
 
-    <figure class="figure reveal">
-      <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">…/administracion/operaciones</span></div>
-      <img src="manual-img/14-operaciones.jpg" alt="Operaciones" /></div>
-      <figcaption>Operaciones: qué hace el taller, cuánto tarda y cuánto vale la certificación que emite.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>Operaciones</h4>
-      <dl>
-        <dt>Valores por defecto</dt><dd>Demora estimada, margen de seguridad y vigencia por defecto. La fecha límite de envío sale del vencimiento menos el tiempo de taller menos el margen.</dd>
-        <dt>Tabla de operaciones</dt><dd>Cada operación: si <b>certifica</b> o solo registra, su demora y la <b>vigencia que emite</b>. <i>Acá se definen las vigencias de COS (anual) y COC (conformidad).</i></dd>
-        <dt><span class="tagb g">+ Nueva operación</span> / Editar</dt><dd>Alta y edición de operaciones y sus plazos.</dd>
-      </dl>
+    <h3 class="sub reveal">Operaciones</h3>
+    <div class="figure reveal">
+      <p class="shoturl">…/administracion/operaciones</p>
+      <div class="shot">
+        <img src="manual-img-hd/14-operaciones.png" alt="Operaciones" />
+        <span class="pin" style="left:34%;top:24%">1</span>
+        <span class="pin" style="left:70%;top:52%">2</span>
+        <span class="pin" style="left:92%;top:17%">3</span>
+      </div>
+      <ol class="legend">
+        <li><b>Valores por defecto.</b> Demora, margen de seguridad y vigencia por defecto. La fecha límite de envío sale del vencimiento menos el tiempo de taller menos el margen.</li>
+        <li><b>Vigencia que emite.</b> Cuánto dura la certificación de cada operación. <i>Acá se definen las vigencias de COS (anual) y COC (conformidad).</i></li>
+        <li><b>+ Nueva operación / Editar.</b> Alta y edición de operaciones y sus plazos.</li>
+      </ol>
     </div>
 
-    <figure class="figure reveal">
-      <div class="frame"><img src="manual-img/15-organizaciones.jpg" alt="Organizaciones" /></div>
-      <figcaption>Organizaciones (empresas cliente).</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>Organizaciones</h4>
-      <dl>
-        <dt>Tabla</dt><dd>Cada empresa con su contacto, cantidad de usuarios, equipos, equipos en taller y estado. El vínculo con la empresa es lo que <b>aísla la información</b> entre clientes.</dd>
-        <dt>Operaciones / Editar</dt><dd><b>Operaciones</b> define qué operaciones tiene habilitadas ese cliente y cómo se llaman para él. <b>Editar</b> cambia sus datos.</dd>
-        <dt><span class="tagb g">+ Nueva organización</span></dt><dd>Da de alta una empresa cliente.</dd>
-      </dl>
+    <h3 class="sub reveal">Organizaciones y Usuarios</h3>
+    <div class="figure reveal">
+      <div class="shot">
+        <img src="manual-img-hd/15-organizaciones.png" alt="Organizaciones" />
+        <span class="pin" style="left:55%;top:40%">1</span>
+        <span class="pin" style="left:90%;top:40%">2</span>
+      </div>
+      <ol class="legend">
+        <li><b>Empresas cliente.</b> Cada una con su contacto, usuarios, equipos y cuántos tiene en taller. El vínculo con la empresa es lo que <b>aísla la información</b> entre clientes.</li>
+        <li><b>Operaciones / Editar.</b> Qué operaciones tiene habilitadas ese cliente y cómo se llaman para él.</li>
+      </ol>
+    </div>
+    <div class="figure reveal">
+      <div class="shot">
+        <img src="manual-img-hd/16-usuarios.png" alt="Usuarios" />
+        <span class="pin" style="left:50%;top:38%">1</span>
+        <span class="pin" style="left:92%;top:18%">2</span>
+        <span class="pin" style="left:85%;top:52%">3</span>
+      </div>
+      <ol class="legend">
+        <li><b>Rol de cada usuario.</b> Superadministrador, Taller, Cliente·Operador o Cliente·Consulta.</li>
+        <li><b>+ Nuevo usuario.</b> Al crearlo se genera una contraseña temporal que el usuario cambia al entrar.</li>
+        <li><b>Editar / Restablecer acceso / Desactivar.</b> Cambiar datos y rol, generar clave nueva, o dar de baja el acceso sin borrar el historial.</li>
+      </ol>
     </div>
 
-    <figure class="figure reveal">
-      <div class="frame"><img src="manual-img/16-usuarios.jpg" alt="Usuarios" /></div>
-      <figcaption>Usuarios y sus roles.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>Usuarios</h4>
-      <dl>
-        <dt>Tabla</dt><dd>Cada usuario con su organización, rol, último acceso y estado.</dd>
-        <dt><span class="tagb g">+ Nuevo usuario</span></dt><dd>Al crear un usuario o restablecer su acceso se genera una contraseña temporal que el usuario cambia al entrar.</dd>
-        <dt>Editar / Restablecer acceso / Desactivar</dt><dd>Cambiar datos y rol, generar una clave nueva, o dar de baja el acceso sin borrar el historial.</dd>
-      </dl>
+    <h3 class="sub reveal">Auditoría</h3>
+    <div class="figure reveal">
+      <div class="shot">
+        <img src="manual-img-hd/17-auditoria.png" alt="Auditoría" />
+        <span class="pin" style="left:50%;top:46%">1</span>
+      </div>
+      <ol class="legend">
+        <li><b>Registro inmutable.</b> Cada acceso y acción sensible: fecha, acción, equipo, detalle, usuario, cliente e IP. <b>No se puede editar ni eliminar</b> desde la aplicación.</li>
+      </ol>
     </div>
-
-    <figure class="figure reveal">
-      <div class="frame"><img src="manual-img/17-auditoria.jpg" alt="Auditoría" /></div>
-      <figcaption>Auditoría: registro inmutable de accesos y acciones.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>Auditoría</h4>
-      <dl>
-        <dt>Registro inmutable</dt><dd>Cada acceso y cada acción sensible: fecha, acción, equipo, detalle, usuario, cliente e IP. <b>No se puede editar ni eliminar</b> desde la aplicación.</dd>
-        <dt>Filtros</dt><dd>Por descripción o correo, tipo de acción, cliente y rango de fechas.</dd>
-      </dl>
-    </div>
-    <div class="note reveal">El menú de Administración incluye también <b>Productos</b> (el maestro que el taller usa para clasificar) y <b>Solicitudes de acceso</b> (las altas de cuenta pedidas desde la web, para aprobar o rechazar).</div>
+    <div class="note reveal">El menú de Administración incluye también <b>Productos</b> (el maestro para clasificar) y <b>Solicitudes de acceso</b> (altas pedidas desde la web, para aprobar o rechazar).</div>
   </div>
 </section>
 
-<!-- ROLES EN LA PRACTICA -->
+<!-- ROLES -->
 <section id="roles">
   <div class="wrap">
     <p class="eyebrow reveal"><span class="n">10</span> La misma app, distinta según quién entra</p>
     <h2 class="title reveal">Los roles en la práctica</h2>
     <p class="intro reveal">El menú y los botones cambian según el rol. Dos ejemplos del lado del cliente.</p>
-
-    <figure class="figure reveal">
-      <div class="frame"><img src="manual-img/19-operador-panel.jpg" alt="Panel del operador" /></div>
-      <figcaption>Cliente · Operador: su empresa, su menú, solo sus equipos.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>Cliente · Operador</h4>
-      <dl>
-        <dt>Menú reducido</dt><dd>Operación (Panel, Activos, Sets, Informes, Envíos al taller, Reportes) y Gestión de equipos. <b>No ve Administración.</b></dd>
-        <dt>Datos aislados</dt><dd>El panel y los listados muestran solo los equipos de su empresa.</dd>
-        <dt>Lo que puede hacer de más</dt><dd>Crear envíos y, cuando el taller lo consulta, autorizar o rechazar una reparación.</dd>
-      </dl>
+    <div class="figure reveal">
+      <div class="shot">
+        <img src="manual-img-hd/19-operador-panel.png" alt="Panel del operador" />
+        <span class="pin" style="left:8%;top:12%">1</span>
+        <span class="pin" style="left:7%;top:62%">2</span>
+        <span class="pin" style="left:28%;top:28%">3</span>
+      </div>
+      <ol class="legend">
+        <li><b>Su empresa.</b> Arriba a la izquierda figura la organización del cliente, no «Acceso interno».</li>
+        <li><b>Menú reducido.</b> Operación, Envíos al taller y Gestión de equipos. <b>No ve Administración.</b></li>
+        <li><b>Datos aislados.</b> El panel y los listados muestran solo los equipos de su empresa. (El operador además crea envíos y autoriza reparaciones.)</li>
+      </ol>
     </div>
-
-    <figure class="figure reveal">
-      <div class="frame"><img src="manual-img/22-consulta-activos.jpg" alt="Activos del rol consulta" /></div>
-      <figcaption>Cliente · Consulta: la misma información, pero solo para mirar.</figcaption>
-    </figure>
-    <div class="whats reveal">
-      <h4>Cliente · Consulta</h4>
-      <dl>
-        <dt>Solo lectura</dt><dd>Ve activos, vencimientos, informes y el estado en el taller de su empresa. Puede <b>Exportar a Excel</b>, pero <b>no aparece «Nuevo equipo»</b> ni ningún botón de carga.</dd>
-        <dt>Para qué sirve</dt><dd>Seguir el estado del parque sin riesgo de cambiar nada. Ideal para supervisión.</dd>
-      </dl>
+    <div class="figure reveal">
+      <div class="shot">
+        <img src="manual-img-hd/22-consulta.png" alt="Activos del rol consulta" />
+        <span class="pin" style="left:92%;top:14%">1</span>
+        <span class="pin" style="left:70%;top:14%">2</span>
+      </div>
+      <ol class="legend">
+        <li><b>Exportar a Excel.</b> El rol Consulta puede ver y exportar.</li>
+        <li><b>Solo lectura.</b> <b>No aparece «Nuevo equipo»</b> ni ningún botón de carga. Ideal para seguir el estado del parque sin riesgo de cambiar nada.</li>
+      </ol>
     </div>
   </div>
 </section>
@@ -556,7 +549,7 @@
 <footer>
   <div class="wrap">
     <div class="brand"><span style="width:34px;height:34px;border-radius:50%;background:radial-gradient(120% 120% at 30% 25%,#2a3340,#0d1117 70%);display:grid;place-items:center;color:#fff;font-style:italic;font-size:16px">O</span> Odessa Oil</div>
-    <small>Manual de usuario · v2.0 · 30/10/2026 — Capturas reales del sistema. Inspección, certificación y trazabilidad.</small>
+    <small>Manual de usuario · v3.0 · 30/10/2026 — Capturas reales y guías paso a paso.</small>
   </div>
 </footer>
 
@@ -564,7 +557,7 @@
   var prog=document.getElementById('progress');
   function onScroll(){var h=document.documentElement;prog.style.width=Math.max(0,Math.min(1,h.scrollTop/(h.scrollHeight-h.clientHeight)))*100+'%';}
   document.addEventListener('scroll',onScroll,{passive:true});onScroll();
-  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.12});
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.1});
   document.querySelectorAll('.reveal:not(.in)').forEach(function(el){io.observe(el);});
 </script>
 </body>
