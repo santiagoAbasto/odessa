@@ -51,16 +51,16 @@
   h3.sub{font-size:21px;margin:38px 0 8px}
   p{margin:0 0 13px}
 
-  /* Figure with annotated screenshot */
+  /* Figure with annotated screenshot — clean numbered dot, no blur/box */
   .figure{margin:22px 0 10px;break-inside:avoid}
   .shoturl{font-size:11px;color:var(--muted);font-family:"JetBrains Mono",monospace;margin:0 0 6px;padding-left:2px}
   .shot{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);line-height:0;background:#fff}
   .shot img{display:block;width:100%;height:auto}
-  .pin{position:absolute;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;background:var(--amber);color:#fff;font-weight:700;font-size:15px;display:grid;place-items:center;border:3px solid #fff;box-shadow:0 3px 11px rgba(194,65,12,.55);font-family:Inter;line-height:1}
+  .pin{position:absolute;transform:translate(-50%,-50%);width:23px;height:23px;border-radius:50%;background:var(--amber);color:#fff;font-weight:700;font-size:12.5px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;font-family:Inter;line-height:1}
   .legend{list-style:none;margin:16px 0 0;padding:0;counter-reset:leg;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper-raised);box-shadow:var(--shadow-soft)}
   .legend li{position:relative;padding:11px 16px 11px 50px;font-size:14px;color:var(--ink-soft);border-bottom:1px solid var(--line-soft)}
   .legend li:last-child{border-bottom:0}
-  .legend li::before{counter-increment:leg;content:counter(leg);position:absolute;left:14px;top:10px;width:25px;height:25px;border-radius:50%;background:var(--amber);color:#fff;font-weight:700;font-size:13px;display:grid;place-items:center;font-family:Inter}
+  .legend li::before{counter-increment:leg;content:counter(leg);position:absolute;left:14px;top:10px;width:23px;height:23px;border-radius:50%;background:var(--amber);color:#fff;font-weight:700;font-size:12.5px;display:flex;align-items:center;justify-content:center;font-family:Inter}
   .legend li b{color:var(--ink)}
   .cap{font-size:12px;color:var(--muted);margin:16px 0 0;text-align:center}
 
@@ -91,7 +91,7 @@
   .reveal{opacity:0;transform:translateY(18px);transition:opacity .6s cubic-bezier(.2,.7,.2,1),transform .6s cubic-bezier(.2,.7,.2,1)}
   .reveal.in{opacity:1;transform:none}
 
-  @media (max-width:760px){.roles{grid-template-columns:1fr}.gloss .g{grid-template-columns:1fr;gap:3px}.topbar nav{display:none}.pin{width:24px;height:24px;font-size:12px}}
+  @media (max-width:760px){.roles{grid-template-columns:1fr}.gloss .g{grid-template-columns:1fr;gap:3px}.topbar nav{display:none}.pin{width:19px;height:19px;font-size:11px}}
   @media print{
     @page{size:A4;margin:13mm 12mm}
     html{scroll-behavior:auto}.topbar,.progress{display:none!important}
@@ -120,7 +120,7 @@
 <header class="cover">
   <div class="wrap">
     <div class="cover-logo reveal in">O</div>
-    <span class="kicker reveal in">Manual de usuario · v3.0 · guía paso a paso</span>
+    <span class="kicker reveal in">Manual de usuario · v3.1 · guía paso a paso</span>
     <h1 class="reveal in">El sistema de <em>Odessa Oil</em>,<br>con el dedo en cada botón.</h1>
     <p class="lead reveal in">Cada pantalla, con su captura real y <b>guías numeradas</b> que señalan qué hace cada botón. Del ingreso al despacho certificado, y la vista de cada rol.</p>
     <div class="meta reveal in">
@@ -141,16 +141,16 @@
       <p class="shoturl">sistema.odessaoil.com/ingresar</p>
       <div class="shot">
         <img src="manual-img-hd/00-ingreso.png" alt="Pantalla de ingreso" />
-        <span class="pin" style="left:75%;top:43%">1</span>
-        <span class="pin" style="left:75%;top:54%">2</span>
-        <span class="pin" style="left:75%;top:66%">3</span>
-        <span class="pin" style="left:75%;top:72%">4</span>
+        <span class="pin" style="left:75.6%;top:43.8%">1</span>
+        <span class="pin" style="left:75.6%;top:52.4%">2</span>
+        <span class="pin" style="left:75.6%;top:63.1%">3</span>
+        <span class="pin" style="left:84.2%;top:57.4%">4</span>
       </div>
       <ol class="legend">
         <li><b>Correo electrónico.</b> El que asignó el administrador.</li>
         <li><b>Contraseña.</b> En el primer ingreso se pide cambiar la temporal.</li>
         <li><b>Ingresar.</b> Entra al sistema. <i>«Mantener sesión iniciada»</i> deja la sesión abierta (no usar en equipos compartidos).</li>
-        <li><b>¿Olvidó su contraseña? / Solicite acceso.</b> Recuperar el acceso o pedir una cuenta nueva.</li>
+        <li><b>¿Olvidó su contraseña?</b> Recupera el acceso. «Solicite acceso» pide una cuenta nueva.</li>
       </ol>
     </div>
 
@@ -174,10 +174,10 @@
       <p class="shoturl">sistema.odessaoil.com/panel</p>
       <div class="shot">
         <img src="manual-img-hd/01-panel.png" alt="Panel de control" />
-        <span class="pin" style="left:34%;top:21%">1</span>
-        <span class="pin" style="left:33%;top:49%">2</span>
+        <span class="pin" style="left:29%;top:22.6%">1</span>
+        <span class="pin" style="left:32%;top:37.1%">2</span>
         <span class="pin" style="left:86%;top:42%">3</span>
-        <span class="pin" style="left:36%;top:4.5%">4</span>
+        <span class="pin" style="left:37.4%;top:3.1%">4</span>
       </div>
       <ol class="legend">
         <li><b>Estado del parque.</b> Total de activos, Apto, Próximo a vencer y No apto, de un vistazo.</li>
@@ -199,10 +199,10 @@
       <p class="shoturl">sistema.odessaoil.com/activos</p>
       <div class="shot">
         <img src="manual-img-hd/02-activos.png" alt="Listado de activos" />
-        <span class="pin" style="left:17%;top:20.5%">1</span>
-        <span class="pin" style="left:30%;top:27%">2</span>
-        <span class="pin" style="left:80%;top:14%">3</span>
-        <span class="pin" style="left:93.5%;top:14%">4</span>
+        <span class="pin" style="left:22.1%;top:21.8%">1</span>
+        <span class="pin" style="left:31%;top:28.7%">2</span>
+        <span class="pin" style="left:83.8%;top:15.8%">3</span>
+        <span class="pin" style="left:93.9%;top:15.8%">4</span>
         <span class="pin" style="left:74%;top:33%">5</span>
       </div>
       <ol class="legend">
@@ -210,7 +210,7 @@
         <li><b>Buscador y Filtros.</b> Por descripción, serie, código o referencia; los filtros acotan por estado, vencimiento, cliente.</li>
         <li><b>Exportar a Excel.</b> Descarga el listado filtrado (también lo tiene el rol Consulta).</li>
         <li><b>+ Nuevo equipo.</b> Alta manual (solo taller y superadmin). El equipo nuevo recibe un código con el prefijo de la empresa (<span class="mono">PDG-0001</span>).</li>
-        <li><b>Columnas.</b> Código, Informe determinante, Vencimiento y Estado de aptitud. «Columnas» elige cuáles se ven.</li>
+        <li><b>Columna Vencimiento / Estado.</b> El vencimiento y la aptitud de cada pieza. «Columnas» elige cuáles se ven.</li>
       </ol>
     </div>
   </div>
@@ -226,11 +226,11 @@
       <p class="shoturl">sistema.odessaoil.com/activos/…</p>
       <div class="shot">
         <img src="manual-img-hd/03-ficha.png" alt="Ficha del equipo" />
-        <span class="pin" style="left:22.5%;top:26%">1</span>
-        <span class="pin" style="left:50.5%;top:25.5%">2</span>
-        <span class="pin" style="left:74.5%;top:25.5%">3</span>
-        <span class="pin" style="left:29%;top:37%">4</span>
-        <span class="pin" style="left:94%;top:16%">5</span>
+        <span class="pin" style="left:32.3%;top:22.6%">1</span>
+        <span class="pin" style="left:58.7%;top:22.6%">2</span>
+        <span class="pin" style="left:85.1%;top:22.6%">3</span>
+        <span class="pin" style="left:58.7%;top:33.1%">4</span>
+        <span class="pin" style="left:94.4%;top:15.8%">5</span>
       </div>
       <ol class="legend">
         <li><b>Estado de aptitud.</b> Apto, Por vencer o No apto. Se deriva de las inspecciones; nunca se escribe a mano.</li>
@@ -245,9 +245,9 @@
     <div class="figure reveal">
       <div class="shot">
         <img src="manual-img-hd/05-editar.png" alt="Editar ficha técnica" />
-        <span class="pin" style="left:50%;top:49%">1</span>
-        <span class="pin" style="left:50%;top:73%">2</span>
-        <span class="pin" style="left:76%;top:92%">3</span>
+        <span class="pin" style="left:41%;top:47%">1</span>
+        <span class="pin" style="left:41%;top:68%">2</span>
+        <span class="pin" style="left:71.1%;top:88.8%">3</span>
       </div>
       <ol class="legend">
         <li><b>Clasificación.</b> Tipo de equipo (define el tiempo de taller y la fecha límite de envío) y Fabricante. <i>El campo «Servicio» se quitó de la ficha: el servicio/vencimiento lo define el informe.</i></li>
@@ -260,14 +260,14 @@
     <div class="figure reveal">
       <div class="shot">
         <img src="manual-img-hd/04-bitacora.png" alt="Bitácora de inspecciones" />
-        <span class="pin" style="left:25%;top:14%">1</span>
-        <span class="pin" style="left:61%;top:7%">2</span>
+        <span class="pin" style="left:25.9%;top:6.7%">1</span>
+        <span class="pin" style="left:75%;top:6.7%">2</span>
       </div>
       <ol class="legend">
-        <li><b>Bitácora de inspecciones.</b> Cada vez que la pieza pasó por el taller: el informe, el resultado (Apto, No apto, No aplica), si determina aptitud, la fecha y la vigencia. Es el historial que respalda la certificación.</li>
+        <li><b>Bitácora de inspecciones.</b> Cada vez que la pieza pasó por el taller: el informe, el resultado (Apto, No apto, No aplica), si determina aptitud, la fecha y la vigencia.</li>
         <li><b>Trazabilidad del equipo.</b> Todo lo que le pasó a la pieza — envíos, taller, inspecciones, documentos, accesos — con quién, qué y cuándo.</li>
       </ol>
-      <p class="cap">Más arriba, en la misma ficha, está «Documentos de la pieza»: el certificado del fabricante, fotos y documentación propia del activo, con el botón «Adjuntar».</p>
+      <p class="cap">Más arriba, en la misma ficha, está «Documentos de la pieza», con el botón «Adjuntar».</p>
     </div>
   </div>
 </section>
@@ -282,20 +282,20 @@
       <p class="shoturl">sistema.odessaoil.com/informes</p>
       <div class="shot">
         <img src="manual-img-hd/12-informes.png" alt="Listado de informes" />
-        <span class="pin" style="left:93%;top:16%">1</span>
+        <span class="pin" style="left:93.7%;top:15.8%">1</span>
         <span class="pin" style="left:72%;top:30%">2</span>
       </div>
       <ol class="legend">
         <li><b>+ Nuevo informe.</b> Arma un informe: empresa, número y fecha. Después se le suman las piezas.</li>
-        <li><b>Columnas.</b> Cliente, fecha, cuántas piezas dictamina, documentos y estado (Final o borrador).</li>
+        <li><b>Columna Piezas.</b> Cuántas piezas dictamina cada informe; además cliente, fecha, documentos y estado (Final o borrador).</li>
       </ol>
     </div>
     <div class="figure reveal">
       <div class="shot">
         <img src="manual-img-hd/13-informe.png" alt="Detalle de un informe" />
-        <span class="pin" style="left:92%;top:14.5%">1</span>
-        <span class="pin" style="left:35%;top:55%">2</span>
-        <span class="pin" style="left:80%;top:48%">3</span>
+        <span class="pin" style="left:95%;top:13.7%">1</span>
+        <span class="pin" style="left:29.5%;top:39.2%">2</span>
+        <span class="pin" style="left:82.2%;top:39.2%">3</span>
       </div>
       <ol class="legend">
         <li><b>Finalizar.</b> Hace el informe definitivo. Recién ahí actualiza el estado y el vencimiento de cada pieza. Un borrador no certifica nada.</li>
@@ -316,8 +316,8 @@
       <p class="shoturl">sistema.odessaoil.com/envios</p>
       <div class="shot">
         <img src="manual-img-hd/20-envios.png" alt="Envíos al taller" />
-        <span class="pin" style="left:72%;top:35%">1</span>
-        <span class="pin" style="left:92%;top:16%">2</span>
+        <span class="pin" style="left:70%;top:32.9%">1</span>
+        <span class="pin" style="left:94.2%;top:15.8%">2</span>
       </div>
       <ol class="legend">
         <li><b>Estados.</b> Borrador (se arma), Pendiente de recepción (ya se mandó), Recibido (el taller lo recibió).</li>
@@ -327,9 +327,9 @@
     <div class="figure reveal">
       <div class="shot">
         <img src="manual-img-hd/21-envio.png" alt="Detalle de un envío" />
-        <span class="pin" style="left:92%;top:18%">1</span>
-        <span class="pin" style="left:90%;top:48%">2</span>
-        <span class="pin" style="left:35%;top:72%">3</span>
+        <span class="pin" style="left:93.6%;top:15.8%">1</span>
+        <span class="pin" style="left:92.3%;top:43.8%">2</span>
+        <span class="pin" style="left:27.4%;top:42.7%">3</span>
       </div>
       <ol class="legend">
         <li><b>Remitir al taller.</b> Envía el borrador. Pasa a «Pendiente de recepción» y ya no se edita.</li>
@@ -352,8 +352,8 @@
         <img src="manual-img-hd/06-gestion.png" alt="Gestión de equipos" />
         <span class="pin" style="left:30%;top:26%">1</span>
         <span class="pin" style="left:42%;top:52%">2</span>
-        <span class="pin" style="left:92%;top:17%">3</span>
-        <span class="pin" style="left:72%;top:72%">4</span>
+        <span class="pin" style="left:93.4%;top:15.8%">3</span>
+        <span class="pin" style="left:68%;top:78%">4</span>
       </div>
       <ol class="legend">
         <li><b>Tarjetas por etapa.</b> El conteo en vivo: pendientes, en proceso, fuera de plazo, urgentes, listas para despachar, despachadas.</li>
@@ -368,9 +368,9 @@
     <div class="figure reveal">
       <div class="shot">
         <img src="manual-img-hd/09-pendiente.png" alt="Pendiente de recepción" />
-        <span class="pin" style="left:22%;top:52%">1</span>
-        <span class="pin" style="left:36%;top:75%">2</span>
-        <span class="pin" style="left:90%;top:62%">3</span>
+        <span class="pin" style="left:12%;top:52%">1</span>
+        <span class="pin" style="left:35%;top:74%">2</span>
+        <span class="pin" style="left:92.6%;top:56.4%">3</span>
       </div>
       <ol class="legend">
         <li><b>Solapa «Pendiente de recepción».</b> Lista los envíos remitidos que esperan al taller.</li>
@@ -381,9 +381,9 @@
     <div class="figure reveal">
       <div class="shot">
         <img src="manual-img-hd/11-recepcion-falta.png" alt="Recepción parcial" />
-        <span class="pin" style="left:30%;top:33%">1</span>
-        <span class="pin" style="left:50%;top:51%">2</span>
-        <span class="pin" style="left:70%;top:91%">3</span>
+        <span class="pin" style="left:30%;top:28%">1</span>
+        <span class="pin" style="left:50.8%;top:42.2%">2</span>
+        <span class="pin" style="left:67.1%;top:89.5%">3</span>
       </div>
       <ol class="legend">
         <li><b>Equipos declarados.</b> Cada uno con una tilde «Llegó» marcada por defecto. Se destilda el que no llegó.</li>
@@ -398,8 +398,8 @@
     <div class="figure reveal">
       <div class="shot">
         <img src="manual-img-hd/08-deshacer.png" alt="Diálogo Deshacer" />
-        <span class="pin" style="left:50%;top:48%">1</span>
-        <span class="pin" style="left:63%;top:62%">2</span>
+        <span class="pin" style="left:50%;top:45.9%">1</span>
+        <span class="pin" style="left:61.7%;top:63.3%">2</span>
       </div>
       <ol class="legend">
         <li><b>Por qué se deshace.</b> Obligatorio. Queda en la auditoría.</li>
@@ -420,9 +420,9 @@
       <p class="shoturl">sistema.odessaoil.com/reportes</p>
       <div class="shot">
         <img src="manual-img-hd/18-reportes.png" alt="Reportes" />
-        <span class="pin" style="left:34%;top:42%">1</span>
-        <span class="pin" style="left:34%;top:63%">2</span>
-        <span class="pin" style="left:92%;top:16%">3</span>
+        <span class="pin" style="left:24.7%;top:33.3%">1</span>
+        <span class="pin" style="left:38.8%;top:51.2%">2</span>
+        <span class="pin" style="left:93.3%;top:15.8%">3</span>
       </div>
       <ol class="legend">
         <li><b>Status de los equipos.</b> Apto, Próximo a vencer, No apto y Sin inspección, sobre el total.</li>
@@ -445,14 +445,14 @@
       <p class="shoturl">…/administracion/operaciones</p>
       <div class="shot">
         <img src="manual-img-hd/14-operaciones.png" alt="Operaciones" />
-        <span class="pin" style="left:34%;top:24%">1</span>
+        <span class="pin" style="left:50%;top:24%">1</span>
         <span class="pin" style="left:70%;top:52%">2</span>
-        <span class="pin" style="left:92%;top:17%">3</span>
+        <span class="pin" style="left:93.2%;top:15.8%">3</span>
       </div>
       <ol class="legend">
         <li><b>Valores por defecto.</b> Demora, margen de seguridad y vigencia por defecto. La fecha límite de envío sale del vencimiento menos el tiempo de taller menos el margen.</li>
         <li><b>Vigencia que emite.</b> Cuánto dura la certificación de cada operación. <i>Acá se definen las vigencias de COS (anual) y COC (conformidad).</i></li>
-        <li><b>+ Nueva operación / Editar.</b> Alta y edición de operaciones y sus plazos.</li>
+        <li><b>+ Nueva operación.</b> Alta de operaciones; «Editar» cambia sus plazos.</li>
       </ol>
     </div>
 
@@ -461,7 +461,7 @@
       <div class="shot">
         <img src="manual-img-hd/15-organizaciones.png" alt="Organizaciones" />
         <span class="pin" style="left:55%;top:40%">1</span>
-        <span class="pin" style="left:90%;top:40%">2</span>
+        <span class="pin" style="left:87.6%;top:35.2%">2</span>
       </div>
       <ol class="legend">
         <li><b>Empresas cliente.</b> Cada una con su contacto, usuarios, equipos y cuántos tiene en taller. El vínculo con la empresa es lo que <b>aísla la información</b> entre clientes.</li>
@@ -472,8 +472,8 @@
       <div class="shot">
         <img src="manual-img-hd/16-usuarios.png" alt="Usuarios" />
         <span class="pin" style="left:50%;top:38%">1</span>
-        <span class="pin" style="left:92%;top:18%">2</span>
-        <span class="pin" style="left:85%;top:52%">3</span>
+        <span class="pin" style="left:93.7%;top:18%">2</span>
+        <span class="pin" style="left:83.8%;top:41.7%">3</span>
       </div>
       <ol class="legend">
         <li><b>Rol de cada usuario.</b> Superadministrador, Taller, Cliente·Operador o Cliente·Consulta.</li>
@@ -505,9 +505,9 @@
     <div class="figure reveal">
       <div class="shot">
         <img src="manual-img-hd/19-operador-panel.png" alt="Panel del operador" />
-        <span class="pin" style="left:8%;top:12%">1</span>
-        <span class="pin" style="left:7%;top:62%">2</span>
-        <span class="pin" style="left:28%;top:28%">3</span>
+        <span class="pin" style="left:8.7%;top:11.8%">1</span>
+        <span class="pin" style="left:8.7%;top:50.8%">2</span>
+        <span class="pin" style="left:29%;top:22.6%">3</span>
       </div>
       <ol class="legend">
         <li><b>Su empresa.</b> Arriba a la izquierda figura la organización del cliente, no «Acceso interno».</li>
@@ -518,12 +518,12 @@
     <div class="figure reveal">
       <div class="shot">
         <img src="manual-img-hd/22-consulta.png" alt="Activos del rol consulta" />
-        <span class="pin" style="left:92%;top:14%">1</span>
-        <span class="pin" style="left:70%;top:14%">2</span>
+        <span class="pin" style="left:93.3%;top:15.8%">1</span>
+        <span class="pin" style="left:80%;top:15.8%">2</span>
       </div>
       <ol class="legend">
         <li><b>Exportar a Excel.</b> El rol Consulta puede ver y exportar.</li>
-        <li><b>Solo lectura.</b> <b>No aparece «Nuevo equipo»</b> ni ningún botón de carga. Ideal para seguir el estado del parque sin riesgo de cambiar nada.</li>
+        <li><b>Solo lectura.</b> En esa barra <b>no aparece «Nuevo equipo»</b> ni ningún botón de carga. Ideal para seguir el estado del parque sin riesgo de cambiar nada.</li>
       </ol>
     </div>
   </div>
@@ -549,7 +549,7 @@
 <footer>
   <div class="wrap">
     <div class="brand"><span style="width:34px;height:34px;border-radius:50%;background:radial-gradient(120% 120% at 30% 25%,#2a3340,#0d1117 70%);display:grid;place-items:center;color:#fff;font-style:italic;font-size:16px">O</span> Odessa Oil</div>
-    <small>Manual de usuario · v3.0 · 30/10/2026 — Capturas reales y guías paso a paso.</small>
+    <small>Manual de usuario · v3.1 · 30/10/2026 — Capturas reales y guías paso a paso.</small>
   </div>
 </footer>
 
