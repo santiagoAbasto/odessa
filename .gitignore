@@ -90,3 +90,7 @@ pnpm-debug.log*
 /vendor.bad-*/
 /vendor.partial-*/
 /node_modules 2/
+
+# Cerebro del proyecto (nuestro: diagramas y grafo) - nunca al repo ni al server
+cerebro/
+graphify-out/
