@@ -156,5 +156,7 @@ export interface ReceptionRow {
     /** Salida de Rechazadas sin consultar al cliente. */
     markUnrepairable: boolean;
     dispatch: boolean;
+    /** Deshacer un dictamen cargado por error. Sólo superadmin. */
+    revert: boolean;
   };
 }

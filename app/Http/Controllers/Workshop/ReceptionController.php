@@ -157,6 +157,9 @@ class ReceptionController extends Controller
                     // la atraviesa y veía el botón en todas las filas.
                     'decideRepair' => $stage === 'awaiting_client' && $user->can('authorizeRepair', $r),
                     'dispatch' => $r->isDispatchable() && $user->can('dispatchReception', $r),
+                    // Deshacer un dictamen cargado por error: sólo superadmin,
+                    // sólo aprobado/rechazado y antes de que siga avanzando.
+                    'revert' => in_array($stage, ['approved', 'rejected'], true) && $user->can('revert', $r),
                 ];
             })(),
         ]);
@@ -342,6 +345,22 @@ class ReceptionController extends Controller
         return back()->with('success', $data['outcome'] === Reception::OUTCOME_APPROVED
             ? 'Trabajo aprobado. La pieza queda lista para despachar.'
             : 'Trabajo rechazado. Decida si pasa a reparación.');
+    }
+
+    /** Deshace un dictamen cargado por error y vuelve la recepción a «en proceso». */
+    public function revert(Request $request, Reception $reception, ChangeReceptionStage $stages): RedirectResponse
+    {
+        $this->authorize('revert', $reception);
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ], [
+            'reason.required' => 'Indique por qué se deshace el dictamen.',
+        ]);
+
+        $stages->revertResolution($reception, $data['reason']);
+
+        return back()->with('success', 'Dictamen deshecho. La recepción vuelve a «en proceso».');
     }
 
     /** Le pide al cliente que decida si autoriza la reparación. */

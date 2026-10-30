@@ -126,6 +126,54 @@ class ChangeReceptionStage
     }
 
     /**
+     * Deshace un dictamen cargado por error (aprobado o rechazado) y devuelve
+     * la recepción a "en proceso". Sólo mientras no haya seguido su curso: si
+     * ya se consultó al cliente, se marcó sin solución o se despachó, no se
+     * toca. Queda en la auditoría con quién lo deshizo y por qué.
+     */
+    public function revertResolution(Reception $reception, ?string $reason = null): Reception
+    {
+        if (! $reception->isResolved()) {
+            throw ValidationException::withMessages([
+                'outcome' => 'Esta recepción no tiene un dictamen que deshacer.',
+            ]);
+        }
+
+        if ($reception->isDispatched()) {
+            throw ValidationException::withMessages([
+                'outcome' => 'La recepción ya fue despachada: no se puede deshacer el dictamen.',
+            ]);
+        }
+
+        if ($reception->repair_requested_at !== null || $reception->unrepairable_at !== null) {
+            throw ValidationException::withMessages([
+                'outcome' => 'El dictamen ya siguió su curso (consulta al cliente o sin solución): no se puede deshacer.',
+            ]);
+        }
+
+        $previo = $reception->outcome;
+
+        DB::transaction(function () use ($reception) {
+            $reception->forceFill([
+                // Vuelve a "en proceso": el inicio queda, el dictamen se borra.
+                'released_at' => null,
+                'released_by' => null,
+                'outcome' => null,
+                'outcome_notes' => null,
+            ])->save();
+        });
+
+        ActivityLogger::log(
+            action: 'reception.resolution_reverted',
+            subject: $reception,
+            description: 'Se deshizo el dictamen'.($reason !== null && $reason !== '' ? ': '.$reason : ''),
+            new: ['reverted_from' => $previo, 'reason' => $reason],
+        );
+
+        return $reception;
+    }
+
+    /**
      * Le pide al cliente que decida si autoriza la reparación.
      *
      * Es el paso que faltaba. Antes el taller mandaba a reparar por su cuenta

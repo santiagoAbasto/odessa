@@ -80,6 +80,14 @@ final class Permissions
     public const RECEPTIONS_DISPATCH = 'receptions.dispatch';
 
     /**
+     * Deshacer un dictamen cargado por error (aprobado o rechazado), mientras
+     * el equipo no se haya despachado ni se haya consultado al cliente. Sólo
+     * el superadministrador: al no figurar en la lista del taller, `all()` lo
+     * deja únicamente para él.
+     */
+    public const RECEPTIONS_REVERT = 'receptions.revert';
+
+    /**
      * Contestar si se autoriza una reparación.
      *
      * Es el único permiso operativo que tiene un cliente sobre el taller, y

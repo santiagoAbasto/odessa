@@ -230,6 +230,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/recepciones/{reception}/despachar', [ReceptionController::class, 'dispatchReception'])
             ->middleware('permission:'.Permissions::RECEPTIONS_DISPATCH)
             ->name('receptions.dispatch');
+
+        // Deshacer un dictamen cargado por error. Permiso propio: sólo lo tiene
+        // el superadministrador.
+        Route::post('/recepciones/{reception}/deshacer', [ReceptionController::class, 'revert'])
+            ->middleware('permission:'.Permissions::RECEPTIONS_REVERT)
+            ->name('receptions.revert');
     });
 
     // --- Administración --------------------------------------------------

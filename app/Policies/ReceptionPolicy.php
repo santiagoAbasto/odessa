@@ -63,6 +63,19 @@ class ReceptionPolicy
     }
 
     /**
+     * Deshacer un dictamen cargado por error. Sólo el superadministrador tiene
+     * el permiso. No exige la etapa exacta —de eso se encarga la Action, que
+     * sabe que sólo un aprobado/rechazado sin consulta ni despacho se deshace—;
+     * acá alcanza con cortar lo ya despachado.
+     */
+    public function revert(User $user, Reception $reception): bool
+    {
+        return $user->can(Permissions::RECEPTIONS_REVERT)
+            && $user->canAccessOrganization($reception->organization_id)
+            && ! $reception->isDispatched();
+    }
+
+    /**
      * Sale del taller lo aprobado, lo ya reparado, y lo que el cliente
      * decidió no reparar —eso vuelve como está, sin certificar. Lo que no
      * sale es un equipo rechazado sobre el que nadie decidió nada.

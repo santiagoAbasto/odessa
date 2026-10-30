@@ -8,6 +8,7 @@ import {
   PackagePlus,
   Play,
   Truck,
+  Undo2,
   Warehouse,
   X,
   Zap,
@@ -353,6 +354,25 @@ export default function Receptions({
                 <Truck aria-hidden />
                 Despachar
               </ConfirmButton>
+            )}
+
+            {/*
+              Deshacer un dictamen cargado por error. Sólo lo ve el superadmin,
+              sólo en aprobado/rechazado y antes de que el equipo siga su curso.
+              Pide un motivo porque el porqué es lo que queda en la auditoría.
+            */}
+            {row.original.can.revert && (
+              <NotesActionButton
+                url={`/taller/recepciones/${row.original.id}/deshacer`}
+                field="reason"
+                icon={Undo2}
+                label="Deshacer"
+                title="Deshacer el dictamen"
+                description="Borra el dictamen cargado por error y devuelve la recepción a «En proceso». Queda registrado en la auditoría."
+                notesLabel="Por qué se deshace"
+                confirmLabel="Deshacer dictamen"
+                maxLength={500}
+              />
             )}
           </div>
         ),
