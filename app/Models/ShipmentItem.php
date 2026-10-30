@@ -20,12 +20,18 @@ class ShipmentItem extends Model
 
     protected $fillable = [
         'shipment_id', 'asset_id', 'declared_description', 'declared_serial',
-        'is_urgent', 'notes', 'special_operation',
+        'is_urgent', 'notes', 'special_operation', 'not_arrived_at', 'not_arrived_reason',
     ];
 
     protected function casts(): array
     {
-        return ['is_urgent' => 'boolean'];
+        return ['is_urgent' => 'boolean', 'not_arrived_at' => 'datetime'];
+    }
+
+    /** El taller marcó que este equipo no llegó: no entró al taller. */
+    public function didNotArrive(): bool
+    {
+        return $this->not_arrived_at !== null;
     }
 
     public function shipment(): BelongsTo

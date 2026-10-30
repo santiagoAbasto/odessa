@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { Check, PackageCheck, X, Zap } from 'lucide-react';
+import { PackageCheck, Zap } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,13 +19,12 @@ export interface ArrivingItem {
 }
 
 /**
- * Dar recepción a un envío: el paso entre "Pendiente de recepción" y el
- * taller.
+ * Dar recepción a un envío: el paso entre "Pendiente de recepción" y el taller.
  *
- * Es certificar que llegó lo que el cliente declaró, así que se controla
- * equipo por equipo contra lo que pide cada uno. Sólo se confirma con todos
- * tildados; si falta algo o llegó mal, se rechaza el envío con el motivo. El
- * servidor exige lo mismo: esto es la ayuda, no la regla.
+ * Se asume que llegó lo que el cliente declaró. El taller sólo destilda lo que
+ * NO llegó e indica el motivo: eso no entra al taller y se le avisa al operador
+ * por correo. Lo que sí llegó ingresa y queda en Pendientes. Si no llegó nada,
+ * el envío queda rechazado.
  */
 export function ReceiveShipmentDialog({
   shipmentId,
@@ -37,19 +36,25 @@ export function ReceiveShipmentDialog({
   items: ArrivingItem[];
 }) {
   const [open, setOpen] = useState(false);
+  const allIds = items.map((item) => item.id);
 
   const { data, setData, post, processing, errors, reset } = useForm({
-    decision: 'authorize' as 'authorize' | 'reject',
-    arrived: [] as number[],
+    // Siempre es una recepción; el rechazo total es "no llegó ninguno".
+    decision: 'authorize' as const,
+    arrived: allIds,
+    reasons: {} as Record<number, string>,
     review_notes: '',
     promised_at: '',
   });
 
-  const recibir = data.decision === 'authorize';
-  const todos = items.length > 0 && data.arrived.length === items.length;
+  const arrivedCount = data.arrived.length;
+  const missingCount = items.length - arrivedCount;
+  const reasonError = (id: number) => (errors as Record<string, string | undefined>)[`reasons.${id}`];
 
-  const toggle = (id: number, checked: boolean) =>
-    setData('arrived', checked ? [...data.arrived, id] : data.arrived.filter((value) => value !== id));
+  const toggle = (id: number, arrived: boolean) =>
+    setData('arrived', arrived ? [...data.arrived, id] : data.arrived.filter((value) => value !== id));
+
+  const setReason = (id: number, value: string) => setData('reasons', { ...data.reasons, [id]: value });
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -61,6 +66,13 @@ export function ReceiveShipmentDialog({
       },
     });
   };
+
+  const buttonLabel =
+    arrivedCount === 0
+      ? 'Rechazar envío (no llegó nada)'
+      : missingCount === 0
+        ? `Dar recepción (${arrivedCount})`
+        : `Recibir ${arrivedCount} · ${missingCount} no llegó${missingCount === 1 ? '' : 'n'}`;
 
   return (
     <Dialog
@@ -79,7 +91,7 @@ export function ReceiveShipmentDialog({
 
       <DialogContent
         title={`Dar recepción · ${reference}`}
-        description="Controle que llegó cada equipo declarado. Al confirmar, quedan en Pendientes del taller."
+        description="Se asume que llegó lo declarado. Destilde lo que no llegó e indique el motivo: no entra al taller y se le avisa al operador."
         className="max-w-2xl"
         footer={
           <>
@@ -91,118 +103,100 @@ export function ReceiveShipmentDialog({
             <Button
               type="submit"
               form={`form-recepcion-${shipmentId}`}
-              variant={recibir ? 'primary' : 'danger'}
+              variant={arrivedCount === 0 ? 'danger' : 'primary'}
               size="sm"
               loading={processing}
-              disabled={recibir && !todos}
             >
-              {recibir ? `Dar recepción (${data.arrived.length}/${items.length})` : 'Rechazar envío'}
+              {buttonLabel}
             </Button>
           </>
         }
       >
         <form id={`form-recepcion-${shipmentId}`} onSubmit={submit} className="flex flex-col gap-4" noValidate>
-          <div className="grid grid-cols-2 gap-2">
-            {(
-              [
-                [
-                  'authorize',
-                  Check,
-                  'Llegó: controlar y recibir',
-                  'border-[var(--tone-success-fg)] bg-[var(--tone-success-bg)] text-[var(--tone-success-fg)]',
-                ],
-                [
-                  'reject',
-                  X,
-                  'Falta algo o llegó mal: rechazar',
-                  'border-[var(--tone-danger-fg)] bg-[var(--tone-danger-bg)] text-[var(--tone-danger-fg)]',
-                ],
-              ] as const
-            ).map(([value, Icon, label, activeClass]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setData('decision', value)}
-                aria-pressed={data.decision === value}
-                className={cn(
-                  'flex items-center gap-2 rounded-sm border px-3 py-2.5 text-left text-[12.5px] transition-colors',
-                  data.decision === value ? activeClass : 'border-[var(--border-default)] hover:bg-[var(--surface-hover)]',
-                )}
-              >
-                <Icon className="size-4 shrink-0" aria-hidden />
-                {label}
-              </button>
-            ))}
-          </div>
+          <fieldset className="flex flex-col gap-1.5">
+            <legend className="mb-1.5 text-[12px] font-medium">Equipos declarados</legend>
 
-          {recibir && (
-            <fieldset className="flex flex-col gap-1.5">
-              <legend className="mb-1.5 flex w-full items-center justify-between text-[12px] font-medium">
-                <span>Equipos declarados</span>
-                <button
-                  type="button"
-                  className="text-[11.5px] font-normal text-[var(--text-accent)] hover:underline"
-                  onClick={() => setData('arrived', todos ? [] : items.map((item) => item.id))}
-                >
-                  {todos ? 'Destildar todos' : 'Tildar todos'}
-                </button>
-              </legend>
+            {items.map((item) => {
+              const arrived = data.arrived.includes(item.id);
 
-              {items.map((item) => (
-                <label
+              return (
+                <div
                   key={item.id}
                   className={cn(
-                    'flex items-start gap-2.5 rounded-sm border px-3 py-2.5 text-[12.5px] transition-colors',
-                    data.arrived.includes(item.id)
+                    'rounded-sm border px-3 py-2.5 text-[12.5px] transition-colors',
+                    arrived
                       ? 'border-[var(--tone-success-fg)]/40 bg-[var(--tone-success-bg)]'
-                      : 'border-[var(--border-default)]',
+                      : 'border-[var(--tone-danger-fg)]/40 bg-[var(--tone-danger-bg)]',
                   )}
                 >
-                  <input
-                    type="checkbox"
-                    checked={data.arrived.includes(item.id)}
-                    onChange={(event) => toggle(item.id, event.target.checked)}
-                    className="mt-0.5 size-3.5 rounded-xs accent-[var(--accent)]"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5 font-medium">
-                      {item.isUrgent && <Zap className="size-3.5 text-[var(--tone-danger-fg)]" aria-label="Urgente" />}
-                      {item.name}
-                      <span className="font-mono text-[11px] font-normal text-[var(--text-muted)]">
-                        {item.serial ?? 'sin serie'}
+                  <label className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={arrived}
+                      onChange={(event) => toggle(item.id, event.target.checked)}
+                      className="mt-0.5 size-3.5 rounded-xs accent-[var(--accent)]"
+                      aria-label={`Llegó ${item.name}`}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        {item.isUrgent && <Zap className="size-3.5 text-[var(--tone-danger-fg)]" aria-label="Urgente" />}
+                        {item.name}
+                        <span className="font-mono text-[11px] font-normal text-[var(--text-muted)]">
+                          {item.serial ?? 'sin serie'}
+                        </span>
+                        <span
+                          className={cn(
+                            'ml-auto shrink-0 text-[11px] font-medium',
+                            arrived ? 'text-[var(--tone-success-fg)]' : 'text-[var(--tone-danger-fg)]',
+                          )}
+                        >
+                          {arrived ? 'Llegó' : 'No llegó'}
+                        </span>
                       </span>
+                      {(item.operations.length > 0 || item.specialOperation) && (
+                        <span className="mt-1 flex flex-wrap items-center gap-1">
+                          {item.operations.map((operation) => (
+                            <Badge key={operation} tone="info">
+                              {operation}
+                            </Badge>
+                          ))}
+                          {item.specialOperation && (
+                            <span className="text-[11.5px] text-[var(--text-secondary)]">
+                              <span className="font-medium text-[var(--tone-warning-fg)]">Especial:</span>{' '}
+                              {item.specialOperation}
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </span>
-                    {(item.operations.length > 0 || item.specialOperation) && (
-                      <span className="mt-1 flex flex-wrap items-center gap-1">
-                        {item.operations.map((operation) => (
-                          <Badge key={operation} tone="info">
-                            {operation}
-                          </Badge>
-                        ))}
-                        {item.specialOperation && (
-                          <span className="text-[11.5px] text-[var(--text-secondary)]">
-                            <span className="font-medium text-[var(--tone-warning-fg)]">Especial:</span>{' '}
-                            {item.specialOperation}
-                          </span>
+                  </label>
+
+                  {!arrived && (
+                    <div className="mt-2 pl-6">
+                      <Field label="Por qué no llegó" error={reasonError(item.id)} required>
+                        {(props) => (
+                          <Textarea
+                            {...props}
+                            value={data.reasons[item.id] ?? ''}
+                            maxLength={500}
+                            rows={2}
+                            placeholder="Es lo que se le informa al operador."
+                            onChange={(event) => setReason(item.id, event.target.value)}
+                            invalid={Boolean(reasonError(item.id))}
+                          />
                         )}
-                      </span>
-                    )}
-                  </span>
-                </label>
-              ))}
+                      </Field>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </fieldset>
 
-              {errors.arrived && (
-                <p role="alert" className="text-[11.5px] text-[var(--tone-danger-fg)]">
-                  {errors.arrived}
-                </p>
-              )}
-            </fieldset>
-          )}
-
-          {recibir && (
+          {arrivedCount > 0 && (
             <Field
               label="Fecha comprometida de entrega"
-              hint="Opcional. Se aplica a todos los equipos del envío."
+              hint="Opcional. Se aplica a los equipos que ingresan."
               error={errors.promised_at}
             >
               {(props) => (
@@ -217,10 +211,9 @@ export function ReceiveShipmentDialog({
           )}
 
           <Field
-            label={recibir ? 'Observaciones de cómo llegó' : 'Motivo del rechazo'}
-            hint={recibir ? 'Opcional. Por ejemplo: embalaje, golpes, documentación.' : 'El cliente ve este motivo.'}
+            label="Observaciones"
+            hint="Opcional. Por ejemplo: embalaje, golpes, documentación."
             error={errors.review_notes}
-            required={!recibir}
           >
             {(props) => (
               <Textarea

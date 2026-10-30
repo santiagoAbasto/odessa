@@ -169,6 +169,9 @@ class ShipmentController extends Controller
                 'specialOperation' => $item->special_operation,
                 'receptionId' => $item->reception?->public_id,
                 'receptionUrl' => $item->reception?->url(),
+                // Marcado al dar recepción: este equipo no llegó al taller.
+                'didNotArrive' => $item->didNotArrive(),
+                'notArrivedReason' => $item->not_arrived_reason,
             ])->all(),
             // Lo que el cliente puede pedir para cada equipo que agrega.
             'operationOptions' => $habilitadas->map(fn (Service $s) => [
@@ -367,26 +370,14 @@ class ShipmentController extends Controller
             'promised_at' => ['nullable', 'date', 'after_or_equal:today'],
             'arrived' => ['array'],
             'arrived.*' => ['integer'],
+            // Motivo por cada equipo que no llegó, indexado por id de línea.
+            'reasons' => ['array'],
+            'reasons.*' => ['nullable', 'string', 'max:500'],
         ], [
             'decision.required' => 'Indique si le da recepción o lo rechaza.',
         ]);
 
-        /*
-         * Dar recepción es certificar que llegó lo que el cliente declaró:
-         * el taller confirma equipo por equipo. Si falta alguno o llegó mal,
-         * el camino es rechazar el envío con el motivo, no recibirlo igual.
-         */
-        if ($data['decision'] === 'authorize') {
-            $declarados = $shipment->items()->pluck('id')->sort()->values()->all();
-            $confirmados = collect($data['arrived'] ?? [])->map(fn ($id) => (int) $id)->unique()->sort()->values()->all();
-
-            if ($declarados !== $confirmados) {
-                return back()->withErrors([
-                    'arrived' => 'Confirme que llegó cada equipo declarado. Si falta alguno o llegó mal, rechace el envío indicando el motivo.',
-                ]);
-            }
-        }
-
+        // Rechazo del envío entero: no se ingresa nada y el cliente ve el motivo.
         if ($data['decision'] === 'reject') {
             if (blank($data['review_notes'] ?? null)) {
                 return back()->withErrors(['review_notes' => 'Indique el motivo del rechazo.']);
@@ -397,9 +388,40 @@ class ShipmentController extends Controller
             return back()->with('success', 'Envío rechazado. El cliente verá el motivo.');
         }
 
-        $action->authorize($shipment, $data['review_notes'] ?? null, $data['promised_at'] ?? null);
+        /*
+         * Recepción: lo que llegó entra al taller; lo que no, se marca con su
+         * motivo y se le avisa al operador. Se asume que llegó lo declarado;
+         * el taller sólo destilda lo que falta.
+         */
+        $declarados = $shipment->items()->pluck('id')->all();
+        $llegaron = array_values(array_intersect(array_map('intval', $data['arrived'] ?? []), $declarados));
+        $faltantes = array_values(array_diff($declarados, $llegaron));
 
-        return back()->with('success', 'Envío recibido. Los equipos quedan en Pendientes del taller.');
+        $razones = collect($data['reasons'] ?? [])
+            ->mapWithKeys(fn ($texto, $id) => [(int) $id => is_string($texto) ? trim($texto) : ''])
+            ->all();
+
+        // Cada equipo que no llegó necesita un motivo: es lo que se informa.
+        $sinMotivo = [];
+        foreach ($faltantes as $id) {
+            if (blank($razones[$id] ?? null)) {
+                $sinMotivo["reasons.{$id}"] = 'Indique por qué no llegó este equipo.';
+            }
+        }
+
+        if ($sinMotivo !== []) {
+            return back()->withErrors($sinMotivo);
+        }
+
+        $action->receive($shipment, $llegaron, $razones, $data['review_notes'] ?? null, $data['promised_at'] ?? null);
+
+        if ($llegaron === []) {
+            return back()->with('success', 'Ningún equipo llegó: el envío queda rechazado y se le avisó al operador.');
+        }
+
+        return back()->with('success', $faltantes === []
+            ? 'Envío recibido. Los equipos quedan en Pendientes del taller.'
+            : sprintf('Recibido parcial: %d ingresaron, %d no llegaron. Se le avisó al operador.', count($llegaron), count($faltantes)));
     }
 
     /** Sólo para mostrar en el formulario; no reserva el número. */

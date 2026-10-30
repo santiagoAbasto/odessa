@@ -43,31 +43,38 @@ class ShipmentArrivalTest extends TestCase
         return $envio;
     }
 
-    public function test_no_se_da_recepcion_sin_confirmar_cada_equipo(): void
+    public function test_no_se_recibe_si_falta_el_motivo_de_lo_que_no_llego(): void
     {
         $envio = $this->remitido($this->organization());
-        $primero = $envio->items()->first();
+        $items = $envio->items()->orderBy('id')->get();
+        $primero = $items->first();
+        $segundo = $items->get(1);
 
+        // Llegó el primero; el segundo no, pero no se dijo por qué: no avanza.
         $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP))
             ->post("/envios/{$envio->public_id}/revisar", ['decision' => 'authorize', 'arrived' => [$primero->id]])
-            ->assertSessionHasErrors('arrived');
+            ->assertSessionHasErrors("reasons.{$segundo->id}");
 
         $this->assertSame(Shipment::STATUS_SUBMITTED, $envio->fresh()->status);
         $this->assertSame(0, Reception::withoutGlobalScope('organization')->count());
     }
 
-    public function test_un_equipo_de_otro_envio_no_cuenta_como_confirmado(): void
+    public function test_un_equipo_de_otro_envio_no_cuenta_como_llegado(): void
     {
         $org = $this->organization();
         $envio = $this->remitido($org, 1);
         $otro = $this->remitido($org, 1);
 
+        // Confirmar con una línea de otro envío no recibe nada: la propia queda
+        // como no llegada y, sin motivo, la recepción no avanza.
         $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP))
             ->post("/envios/{$envio->public_id}/revisar", [
                 'decision' => 'authorize',
                 'arrived' => [$otro->items()->first()->id],
             ])
-            ->assertSessionHasErrors('arrived');
+            ->assertSessionHasErrors('reasons.'.$envio->items()->first()->id);
+
+        $this->assertSame(Shipment::STATUS_SUBMITTED, $envio->fresh()->status);
     }
 
     public function test_confirmado_todo_entra_al_taller_con_las_observaciones_de_llegada(): void
