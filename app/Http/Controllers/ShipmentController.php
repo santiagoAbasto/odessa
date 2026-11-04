@@ -11,6 +11,7 @@ use App\Support\ActivityLogger;
 use App\Support\Permissions;
 use App\Support\TableQuery;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,9 @@ use Inertia\Response;
  */
 class ShipmentController extends Controller
 {
+    /** Resultados por búsqueda: una tanda corta, no toda la empresa. */
+    private const SEARCH_LIMIT = 20;
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', Shipment::class);
@@ -185,18 +189,6 @@ class ShipmentController extends Controller
                 'review' => $user->can('review', $shipment),
                 'delete' => $user->can('delete', $shipment),
             ],
-            // Sólo las piezas del propio cliente pueden declararse en un envío.
-            'availableAssets' => Inertia::defer(fn () => $user->can('update', $shipment)
-                ? Asset::query()
-                    ->forOrganization($shipment->organization_id)
-                    ->orderBy('description')
-                    ->limit(500)
-                    ->get(['public_id', 'description', 'serial_number', 'code'])
-                    ->map(fn (Asset $a) => [
-                        'id' => $a->public_id,
-                        'label' => trim($a->description.' · '.($a->serial_number ?? 'sin serie')),
-                    ])
-                : []),
         ]);
     }
 
@@ -253,6 +245,39 @@ class ShipmentController extends Controller
         return redirect()
             ->route('shipments.show', $shipment)
             ->with('success', "Envío {$shipment->reference} creado. Agregue los equipos y remítalo al taller.");
+    }
+
+    /**
+     * Buscador predictivo de equipos para declarar en el envío.
+     *
+     * Reemplaza al desplegable fijo, que traía sólo los primeros 500 equipos
+     * de la empresa: con miles, el resto no se podía elegir. Acá se busca por
+     * lo que escribe la persona y se devuelve una tanda corta.
+     *
+     * Sólo equipos de la empresa del envío (declarar uno ajeno no es posible,
+     * ver addItem) y sin los que ya están declarados en este envío.
+     */
+    public function availableAssets(Request $request, Shipment $shipment): JsonResponse
+    {
+        $this->authorize('update', $shipment);
+
+        $yaDeclarados = $shipment->items()->whereNotNull('asset_id')->pluck('asset_id');
+
+        $assets = Asset::query()
+            ->forOrganization($shipment->organization_id)
+            ->whereNotIn('assets.id', $yaDeclarados)
+            ->when(trim((string) $request->query('q')) !== '', fn ($q) => $q->matching(trim((string) $request->query('q'))))
+            ->orderBy('assets.description')
+            ->limit(self::SEARCH_LIMIT)
+            ->get(['assets.id', 'assets.public_id', 'assets.description', 'assets.serial_number', 'assets.code']);
+
+        return response()->json([
+            'options' => $assets->map(fn (Asset $a) => [
+                'id' => $a->public_id,
+                'label' => trim($a->description.' · '.($a->serial_number ?? 'sin serie')),
+                'code' => $a->code,
+            ])->all(),
+        ]);
     }
 
     public function addItem(Request $request, Shipment $shipment): RedirectResponse

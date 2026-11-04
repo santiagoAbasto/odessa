@@ -27,8 +27,9 @@ use Inertia\Response;
  * Un administrador de cliente sólo ve y gestiona usuarios de su empresa: el
  * listado se acota por `organization_id` y cada acción vuelve a pasar por la
  * Policy. La contraseña inicial, y la de quien pierde el acceso, la genera el
- * sistema: el administrador se la pasa al usuario y éste la reemplaza al
- * entrar. No depende de que el servidor pueda mandar correos.
+ * sistema y le llega al usuario por dos caminos: un correo con un enlace para
+ * elegir la suya, y la temporal que el administrador le pasa por WhatsApp. Si
+ * el servidor no puede mandar correos, el segundo camino sigue funcionando.
  */
 class UserController extends Controller
 {
@@ -149,16 +150,14 @@ class UserController extends Controller
          * WhatsApp si el correo no llega. Cualquiera de los dos termina en una
          * contraseña elegida por él, y al usar uno el otro deja de servir.
          */
-        $user->notify(new WelcomeUser(route('welcome.show', [
-            'token' => Password::broker('invitations')->createToken($user),
-            'email' => $user->email,
-        ])));
+        $this->sendChooseLink($user);
 
         return back()->with('temporaryAccess', $this->temporaryAccess($user, $temporal, created: true));
     }
 
     /**
-     * Para quien perdió el acceso: una contraseña temporal nueva.
+     * Para quien perdió el acceso: una contraseña temporal nueva y un correo
+     * con un enlace para elegir la suya, igual que en el alta.
      *
      * La anterior deja de funcionar y se cierran las sesiones abiertas del
      * usuario, por si el motivo es que alguien más la conocía.
@@ -190,7 +189,19 @@ class UserController extends Controller
             organizationId: $user->organization_id,
         );
 
+        // Después de revocar: el enlace nuevo es el único que queda vivo.
+        $this->sendChooseLink($user, reset: true);
+
         return back()->with('temporaryAccess', $this->temporaryAccess($user, $temporal, created: false));
+    }
+
+    /** Correo con el enlace (7 días, un solo uso) para que el usuario elija su contraseña. */
+    private function sendChooseLink(User $user, bool $reset = false): void
+    {
+        $user->notify(new WelcomeUser(route('welcome.show', [
+            'token' => Password::broker('invitations')->createToken($user),
+            'email' => $user->email,
+        ]), $reset));
     }
 
     /** Sin símbolos: se dicta o se pega en un mensaje sin confundirse. */

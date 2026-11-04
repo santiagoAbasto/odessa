@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Actions\RecalculateAssetStatus;
 use App\Enums\AssetStatus;
+use App\Enums\InspectionResult;
 use App\Models\Organization;
 use App\Models\Reception;
 use App\Models\Shipment;
@@ -234,6 +236,43 @@ class WorkshopFlowTest extends TestCase
         $this->assertSame(AssetStatus::Unfit, $activo->status);
         $this->assertNull($activo->expires_at);
         $this->assertNull($activo->send_by_at);
+    }
+
+    /**
+     * Caso «Puente 4» (04/11/2026): se marcó sin solución a las 11:08, el equipo
+     * volvió, se aprobó y se cargó un informe apto EL MISMO DÍA. `inspected_at`
+     * es un día y `unrepairable_at` un instante: cualquier hora cae después de
+     * las 00:00, así que el sin solución ganaba siempre y la pieza seguía no apta.
+     */
+    public function test_un_informe_apto_cerrado_despues_del_sin_solucion_el_mismo_dia_la_deja_apta(): void
+    {
+        $this->travelTo(now()->setTime(12, 0));
+        $r = $this->recepcion(
+            ['unrepairable_at' => now()->setTime(11, 8), 'dispatched_at' => now()->setTime(11, 9)] + $this->hitos('unrepairable')
+        );
+        $informe = $this->reportFor($r->asset, InspectionResult::Apto, now()->toDateString(), now()->addYear()->toDateString());
+        $informe->forceFill(['finalized_at' => now()->setTime(11, 20)])->save();
+
+        app(RecalculateAssetStatus::class)($r->asset);
+
+        $activo = $r->asset->fresh();
+        $this->assertSame(AssetStatus::Fit, $activo->status);
+        $this->assertNotNull($activo->expires_at);
+    }
+
+    /** La regla de fondo sigue en pie: un informe cerrado ANTES del sin solución no la levanta. */
+    public function test_un_informe_apto_cerrado_antes_del_sin_solucion_el_mismo_dia_no_la_levanta(): void
+    {
+        $this->travelTo(now()->setTime(12, 0));
+        $r = $this->recepcion(
+            ['unrepairable_at' => now()->setTime(11, 8), 'dispatched_at' => now()->setTime(11, 9)] + $this->hitos('unrepairable')
+        );
+        $informe = $this->reportFor($r->asset, InspectionResult::Apto, now()->toDateString(), now()->addYear()->toDateString());
+        $informe->forceFill(['finalized_at' => now()->setTime(10, 0)])->save();
+
+        app(RecalculateAssetStatus::class)($r->asset);
+
+        $this->assertSame(AssetStatus::Unfit, $r->asset->fresh()->status);
     }
 
     public function test_sin_solucion_no_se_marca_fuera_de_rechazadas(): void

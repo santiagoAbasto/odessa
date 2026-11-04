@@ -25,12 +25,25 @@ class InspectionReportPolicy
         return $user->can(Permissions::REPORTS_CREATE);
     }
 
-    /** Un FMR final o anulado es inmutable: se corrige emitiendo una revisión. */
+    /**
+     * Un borrador o preliminar se edita siempre. Uno FINAL también, pero sólo
+     * el personal del taller (pedido de Daniel, 04/11/2026): alguien puede
+     * equivocarse, y cada corrección recalcula las piezas y queda en
+     * auditoría. Uno anulado es inmutable.
+     */
     public function update(User $user, InspectionReport $report): bool
     {
         return $user->can(Permissions::REPORTS_UPDATE)
             && $user->canAccessOrganization($report->organization_id)
-            && $report->status->isEditable();
+            && ($report->status->isEditable() || ($user->isStaff() && $report->status === ReportStatus::Final));
+    }
+
+    /** Dar de baja un informe cargado por error. Taller y superadministrador. */
+    public function delete(User $user, InspectionReport $report): bool
+    {
+        return $user->isStaff()
+            && $user->can(Permissions::REPORTS_DELETE)
+            && $user->canAccessOrganization($report->organization_id);
     }
 
     public function finalize(User $user, InspectionReport $report): bool

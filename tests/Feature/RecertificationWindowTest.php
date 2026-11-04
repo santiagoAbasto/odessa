@@ -127,11 +127,13 @@ class RecertificationWindowTest extends TestCase
 
         $pieza = $this->asset($organizacion, ['catalog_item_id' => $tipo->getKey()]);
 
-        $this->reportFor($pieza, InspectionResult::Apto, '2026-01-10', '2026-10-30');
+        // Relativo a hoy: con fechas fijas la prueba vencía sola y daba null (04/11/2026).
+        $vence = now()->addDays(200)->startOfDay();
+        $this->reportFor($pieza, InspectionResult::Apto, '2026-01-10', $vence->toDateString());
         app(RecalculateAssetStatus::class)($pieza);
 
         // 30/10 − 60 − 15 = 16/08, bastante antes que el 15/09 por defecto.
-        $this->assertSame('2026-08-16', $pieza->fresh()->send_by_at->toDateString());
+        $this->assertSame($vence->copy()->subDays(75)->toDateString(), $pieza->fresh()->send_by_at->toDateString());
     }
 
     public function test_el_recalculo_deja_la_fecha_limite_en_la_pieza(): void
@@ -143,10 +145,12 @@ class RecertificationWindowTest extends TestCase
 
         $pieza = $this->asset($this->organization());
 
-        $this->reportFor($pieza, InspectionResult::Apto, '2026-01-10', '2026-10-30');
+        // Relativo a hoy: con fechas fijas la prueba vencía sola y daba null (04/11/2026).
+        $vence = now()->addDays(200)->startOfDay();
+        $this->reportFor($pieza, InspectionResult::Apto, '2026-01-10', $vence->toDateString());
         app(RecalculateAssetStatus::class)($pieza);
 
-        $this->assertSame('2026-09-15', $pieza->fresh()->send_by_at->toDateString());
+        $this->assertSame($vence->copy()->subDays(45)->toDateString(), $pieza->fresh()->send_by_at->toDateString());
     }
 
     public function test_una_pieza_sin_dictamen_no_tiene_fecha_limite(): void

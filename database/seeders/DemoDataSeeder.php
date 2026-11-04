@@ -370,6 +370,8 @@ class DemoDataSeeder extends Seeder
         $conjunto = Asset::withoutGlobalScope('organization')->create([
             'organization_id' => $organization->getKey(),
             'kind' => Asset::KIND_PART,
+            // Un conjunto es un set: así aparece en «Sets de equipos».
+            'is_set' => true,
             'description' => 'Preventor de reventones — conjunto',
             'workshop_description' => 'BOP completo',
             'serial_number' => Str::upper(fake()->bothify('BOP-####')),

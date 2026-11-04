@@ -36,6 +36,8 @@ class AuditActions
         'asset.created' => ['Dio de alta una pieza', 'Piezas', 'success'],
         'asset.updated' => ['Modificó los datos de una pieza', 'Piezas', 'warning'],
         'asset.deleted' => ['Dio de baja una pieza', 'Piezas', 'danger'],
+        'asset.components_added' => ['Agregó piezas a un set', 'Piezas', 'success'],
+        'asset.component_removed' => ['Quitó una pieza de un set', 'Piezas', 'warning'],
         'asset.status_recalculated' => ['Se recalculó el estado de una pieza', 'Piezas', 'neutral'],
         'asset.exported' => ['Descargó el listado en Excel', 'Piezas', 'warning'],
         'recertification.notified' => ['Se avisó al cliente de una recertificación', 'Piezas', 'warning'],
@@ -44,6 +46,11 @@ class AuditActions
         'report.created' => ['Creó un informe de inspección', 'Inspecciones', 'success'],
         'report.updated' => ['Modificó un informe de inspección', 'Inspecciones', 'warning'],
         'report.finalized' => ['Finalizó un informe de inspección', 'Inspecciones', 'success'],
+        'inspection_report.finalized' => ['Finalizó un informe de inspección', 'Inspecciones', 'success'],
+        'report.assets_added' => ['Agregó equipos a un informe', 'Inspecciones', 'neutral'],
+        'report.asset_removed' => ['Quitó un equipo de un informe', 'Inspecciones', 'warning'],
+        'report.lines_resolved' => ['Dictaminó equipos de un informe', 'Inspecciones', 'warning'],
+        'report.deleted' => ['Eliminó un informe de inspección', 'Inspecciones', 'danger'],
 
         // --- Envíos del cliente ---
         'shipment.created' => ['Creó un envío al taller', 'Envíos', 'success'],

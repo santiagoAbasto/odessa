@@ -127,14 +127,25 @@ class InspectionWorkflowTest extends TestCase
         ]);
     }
 
-    public function test_un_informe_final_ya_no_es_editable(): void
+    /**
+     * Cambió el 04/11/2026 a pedido de Daniel: antes un informe final era
+     * inmutable («se corrige emitiendo una revisión»); ahora el taller y el
+     * superadministrador lo corrigen, con recálculo y auditoría
+     * (ReportAmendmentTest). Lo que no cambió: el cliente no edita nunca y uno
+     * anulado queda firme.
+     */
+    public function test_un_informe_final_lo_edita_el_taller_pero_no_el_cliente_ni_uno_anulado(): void
     {
         $organizacion = $this->organization();
-        $informe = $this->reportFor($this->asset($organizacion), status: ReportStatus::Final);
+        $final = $this->reportFor($this->asset($organizacion), status: ReportStatus::Final);
+        $anulado = $this->reportFor($this->asset($organizacion), status: ReportStatus::Cancelled);
 
-        $gerente = $this->staffUser(Permissions::ROLE_WORKSHOP);
+        $taller = $this->staffUser(Permissions::ROLE_WORKSHOP);
+        $cliente = $this->clientUser($organizacion, Permissions::ROLE_CLIENT_OPERATOR);
 
-        $this->assertFalse($gerente->can('update', $informe));
+        $this->assertTrue($taller->can('update', $final));
+        $this->assertFalse($cliente->can('update', $final));
+        $this->assertFalse($taller->can('update', $anulado));
     }
 
     public function test_el_detalle_del_informe_lista_sus_piezas_y_documentos(): void

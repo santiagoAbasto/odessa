@@ -45,31 +45,7 @@ class FinalizeInspectionReport
         $previous = $report->status;
 
         DB::transaction(function () use ($report) {
-            $defaultValidity = (int) config('odessa.default_validity_days');
-
-            // La misma operación puede tener otra vigencia para este cliente:
-            // la define Odessa por empresa, y pesa más que la del catálogo.
-            $overrides = Organization::query()->find($report->organization_id)?->validityOverrides() ?? [];
-            $validity = fn (?Service $service) => $service === null
-                ? null
-                : ($overrides[$service->getKey()] ?? $service->validity_days);
-
-            $report->loadMissing('lines.service', 'service');
-
-            foreach ($report->lines as $line) {
-                if (! $line->result->determinesFitness()) {
-                    continue;
-                }
-
-                if ($line->expires_at === null) {
-                    $days = $validity($line->service)
-                        ?? $validity($report->service)
-                        ?? $defaultValidity;
-
-                    $line->expires_at = Carbon::parse($report->inspected_at)->addDays($days);
-                    $line->save();
-                }
-            }
+            $this->fillMissingExpiries($report);
 
             $report->forceFill([
                 'status' => ReportStatus::Final,
@@ -91,5 +67,42 @@ class FinalizeInspectionReport
         );
 
         return $report->refresh();
+    }
+
+    /**
+     * Completa el vencimiento de las líneas con dictamen que no lo traen:
+     * fecha del informe + vigencia de la operación.
+     *
+     * Es la misma regla al finalizar y al corregir un informe ya final, por eso
+     * vive aparte: una corrección que dejara un «apto» sin vencimiento haría
+     * figurar la pieza certificada para siempre.
+     */
+    public function fillMissingExpiries(InspectionReport $report): void
+    {
+        $defaultValidity = (int) config('odessa.default_validity_days');
+
+        // La misma operación puede tener otra vigencia para este cliente:
+        // la define Odessa por empresa, y pesa más que la del catálogo.
+        $overrides = Organization::query()->find($report->organization_id)?->validityOverrides() ?? [];
+        $validity = fn (?Service $service) => $service === null
+            ? null
+            : ($overrides[$service->getKey()] ?? $service->validity_days);
+
+        $report->load('lines.service', 'service');
+
+        foreach ($report->lines as $line) {
+            if (! $line->result->determinesFitness()) {
+                continue;
+            }
+
+            if ($line->expires_at === null) {
+                $days = $validity($line->service)
+                    ?? $validity($report->service)
+                    ?? $defaultValidity;
+
+                $line->expires_at = Carbon::parse($report->inspected_at)->addDays($days);
+                $line->save();
+            }
+        }
     }
 }

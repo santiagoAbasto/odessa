@@ -342,6 +342,7 @@ function CreateAssetDialog({
   const { data, setData, post, processing, errors, reset } = useForm({
     organization_public_id: '',
     kind,
+    is_set: false as boolean,
     description: '',
     serial_number: '',
     client_reference: '',
@@ -437,6 +438,25 @@ function CreateAssetDialog({
             )}
           </Field>
         </div>
+
+        {/* Pedido de Daniel: marcar desde el alta que el equipo será un set de piezas. */}
+        {kind === 'generic' && (
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xs border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2.5">
+            <input
+              type="checkbox"
+              checked={data.is_set}
+              onChange={(event) => setData('is_set', event.target.checked)}
+              className="mt-0.5 size-3.5 shrink-0 rounded-xs accent-[var(--accent)]"
+            />
+            <span>
+              <span className="block text-[12.5px] font-medium">Esto será un set de equipos</span>
+              <span className="block text-[11.5px] text-[var(--text-secondary)]">
+                Se compone de varias piezas. Al darlo de alta se abre su ficha para buscar y tildar las piezas
+                que lo forman, y aparece en «Sets de equipos».
+              </span>
+            </span>
+          </label>
+        )}
 
         {kind === 'generic' && (
           <div className="grid gap-4 sm:grid-cols-2">

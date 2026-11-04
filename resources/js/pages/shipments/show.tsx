@@ -8,6 +8,7 @@ import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/components/
 import { EmptyState } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
 import { Input, Select, Textarea } from '@/components/ui/input';
+import { SearchSelect } from '@/components/ui/search-select';
 import { Panel, PanelHeader } from '@/components/ui/panel';
 import { ReceiveShipmentDialog } from '@/components/workshop/receive-shipment-dialog';
 import AppLayout from '@/layouts/app-layout';
@@ -54,23 +55,16 @@ interface OperationOption {
   description: string | null;
 }
 
-interface AvailableAsset {
-  id: string;
-  label: string;
-}
-
 export default function ShipmentShow({
   shipment,
   items,
   can,
-  availableAssets,
   operationOptions,
 }: {
   shipment: ShipmentDetail;
   items: ShipmentItem[];
   operationOptions: OperationOption[];
   can: { update: boolean; submit: boolean; review: boolean; delete: boolean };
-  availableAssets?: AvailableAsset[];
 }) {
   return (
     <AppLayout
@@ -174,7 +168,7 @@ export default function ShipmentShow({
               viviera adentro se desmontaría perdiendo lo cargado y el mensaje.
             */
             can.update ? (
-              <AddItemDialog shipmentId={shipment.id} assets={availableAssets} operations={operationOptions} />
+              <AddItemDialog shipmentId={shipment.id} operations={operationOptions} />
             ) : undefined
           }
         />
@@ -318,12 +312,9 @@ function Metric({ label, children }: { label: string; children: React.ReactNode 
 
 function AddItemDialog({
   shipmentId,
-  assets,
   operations,
 }: {
   shipmentId: string;
-  /** Llega diferida: mientras tanto el desplegable avisa que está cargando. */
-  assets: AvailableAsset[] | undefined;
   operations: OperationOption[];
 }) {
   const [open, setOpen] = useState(false);
@@ -389,22 +380,20 @@ function AddItemDialog({
         <form id="form-item" onSubmit={submit} className="flex flex-col gap-4" noValidate>
           <Field
             label="Pieza registrada"
-            hint="Si el equipo ya está en el sistema, elíjalo aquí."
+            hint="Escriba descripción, serie, código o número de parte. Si no está registrada, deje vacío y descríbala abajo."
             error={errors.asset_public_id}
           >
             {(props) => (
-              <Select
-                {...props}
+              <SearchSelect
+                id={props.id}
+                aria-describedby={props['aria-describedby']}
+                url={`/envios/${shipmentId}/equipos-disponibles`}
                 value={data.asset_public_id}
-                onChange={(event) => setData('asset_public_id', event.target.value)}
-              >
-                <option value="">{assets ? '— No está registrado —' : 'Cargando piezas…'}</option>
-                {(assets ?? []).map((asset) => (
-                  <option key={asset.id} value={asset.id}>
-                    {asset.label}
-                  </option>
-                ))}
-              </Select>
+                onChange={(id) => setData('asset_public_id', id)}
+                placeholder="Buscar equipo por descripción, serie o código…"
+                emptyMessage="Ningún equipo registrado coincide. Puede describirlo abajo."
+                invalid={Boolean(errors.asset_public_id)}
+              />
             )}
           </Field>
 

@@ -26,6 +26,8 @@ export interface EditableAsset {
   connectionSide1Id: number | null;
   connectionSide2Id: number | null;
   parent: { id: string } | null;
+  /** Equipo armado como conjunto de piezas. */
+  isSet: boolean;
 }
 
 export interface EditCatalogs {
@@ -69,6 +71,7 @@ export function EditAssetDialog({
     connection_side_1_id: asset.connectionSide1Id?.toString() ?? '',
     connection_side_2_id: asset.connectionSide2Id?.toString() ?? '',
     parent_public_id: asset.parent?.id ?? '',
+    is_set: asset.isSet,
   });
 
   const submit = (event: FormEvent) => {
@@ -254,13 +257,33 @@ export function EditAssetDialog({
 
         <section>
           <h3 className="mb-3 text-[10px] font-semibold tracking-[0.1em] text-[var(--text-muted)] uppercase">
-            Equipo compuesto
+            Set de equipos
           </h3>
+
+          <label className="mb-4 flex cursor-pointer items-start gap-2.5">
+            <input
+              type="checkbox"
+              checked={data.is_set}
+              onChange={(event) => setData('is_set', event.target.checked)}
+              className="mt-0.5 size-3.5 shrink-0 rounded-xs accent-[var(--accent)]"
+            />
+            <span>
+              <span className="block text-[12.5px] font-medium">Esto es un set de equipos</span>
+              <span className="block text-[11.5px] text-[var(--text-secondary)]">
+                Un set se compone de varias piezas, que se le agregan desde su ficha. Aparece en «Sets de
+                equipos».
+              </span>
+              {errors.is_set && (
+                <span className="mt-1 block text-[11.5px] text-[var(--tone-danger-fg)]">{errors.is_set}</span>
+              )}
+            </span>
+          </label>
+
           {optionField(
             'Forma parte de',
             'parent_public_id',
             catalogs.possibleParents,
-            'Si esta pieza es componente de un conjunto, elíjalo aquí. El conjunto queda bloqueado mientras alguno de sus componentes no esté apto.',
+            'Si esta pieza es componente de un set, elíjalo aquí (sólo se ofrecen sets). El set queda bloqueado mientras alguna de sus piezas no esté apta.',
           )}
         </section>
       </form>

@@ -5,8 +5,6 @@ namespace App\Http\Controllers;
 use App\Actions\CreateAsset;
 use App\Actions\RecalculateAssetStatus;
 use App\Enums\AssetStatus;
-use App\Enums\InspectionResult;
-use App\Enums\ReportStatus;
 use App\Models\Asset;
 use App\Models\CatalogItem;
 use App\Models\Connection;
@@ -16,14 +14,15 @@ use App\Models\Organization;
 use App\Models\PressureRating;
 use App\Models\Service;
 use App\Support\ActivityLogger;
+use App\Support\AssetCertificationSummary;
 use App\Support\AssetTimeline;
 use App\Support\Permissions;
 use App\Support\SpreadsheetExport;
 use App\Support\TableQuery;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -128,7 +127,8 @@ class AssetController extends Controller
 
         $query = Asset::query()
             ->where('assets.kind', $kind)
-            ->with(['catalogItem:id,description,part_number', 'currentReport:id,number,inspected_at', 'organization:id,name'])
+            // turnaround_days: hace falta para calcular «mandar antes de».
+            ->with(['catalogItem:id,description,part_number,turnaround_days', 'currentReport:id,number,inspected_at', 'organization:id,name'])
             ->select('assets.*');
 
         $this->applyFilters($query, $filters);
@@ -141,44 +141,62 @@ class AssetController extends Controller
         );
 
         $user = $request->user();
+        $summary = new AssetCertificationSummary;
 
         return SpreadsheetExport::download(
             filename: SpreadsheetExport::filename(
                 $kind === Asset::KIND_PART ? 'piezas' : 'equipos',
                 $user->organization?->name,
             ),
+            /*
+             * «Vence» y «Mandar antes de» salen de las inspecciones, no del
+             * estado: un equipo no apto conserva el plazo de la certificación
+             * que sigue vigente. Después, el detalle de cada tipo (COS, COC…).
+             */
             headings: [
-                'Código', 'Descripción', 'Número de serie', 'Referencia del cliente',
-                'Marca', 'Modelo', 'Estado', 'Vence', 'Días para vencer',
+                'Código', 'Descripción', 'Número de parte', 'Número de serie', 'Referencia del cliente',
+                'Marca', 'Modelo', 'Estado', 'Vence', 'Días para vencer', 'Mandar antes de',
+                ...$summary->headings(),
                 'Último informe', 'Última inspección', 'Empresa',
             ],
-            rows: fn () => $this->exportRows($query),
+            rows: fn () => $this->exportRows($query, $summary),
         );
     }
 
     /**
      * Se recorre por tandas con `lazy()`: un cliente con miles de piezas no
-     * debe cargar la colección entera en memoria para bajarse una planilla.
+     * debe cargar la colección entera en memoria para bajarse una planilla. Las
+     * certificaciones se resuelven con UNA consulta por tanda, no por equipo.
      *
      * @return \Generator<int, array<int, mixed>>
      */
-    private function exportRows(Builder $query): \Generator
+    private function exportRows(Builder $query, AssetCertificationSummary $summary): \Generator
     {
-        foreach ($query->lazy(500) as $asset) {
-            yield [
-                $asset->code,
-                $asset->displayName(),
-                $asset->serial_number,
-                $asset->client_reference,
-                $asset->brand,
-                $asset->model,
-                $asset->status->label(),
-                $asset->expires_at?->format('d/m/Y'),
-                $asset->expires_at ? today()->diffInDays($asset->expires_at, false) : null,
-                $asset->currentReport?->number,
-                $asset->currentReport?->inspected_at?->format('d/m/Y'),
-                $asset->organization?->name,
-            ];
+        foreach ($query->lazy(500)->chunk(500) as $tanda) {
+            $certificaciones = $summary->forAssets($tanda);
+
+            foreach ($tanda as $asset) {
+                $resumen = $certificaciones[$asset->getKey()];
+                $vence = $resumen['nextExpiry'];
+
+                yield [
+                    $asset->code,
+                    $asset->displayName(),
+                    $asset->catalogItem?->part_number,
+                    $asset->serial_number,
+                    $asset->client_reference,
+                    $asset->brand,
+                    $asset->model,
+                    $asset->status->label(),
+                    $vence?->format('d/m/Y'),
+                    $vence ? (int) today()->diffInDays($vence, false) : null,
+                    $summary->sendBy($asset, $vence)?->format('d/m/Y'),
+                    ...$summary->cells($resumen['certifications']),
+                    $asset->currentReport?->number,
+                    $asset->currentReport?->inspected_at?->format('d/m/Y'),
+                    $asset->organization?->name,
+                ];
+            }
         }
     }
 
@@ -195,6 +213,9 @@ class AssetController extends Controller
 
         // Bitácora: todos los FMR donde apareció la pieza, del más nuevo al más viejo.
         $history = $asset->inspectionLines()
+            // El join no pasa por los scopes del informe: whereHas sí, y deja
+            // afuera lo que el usuario no puede ver (el borrador, al cliente).
+            ->whereHas('inspectionReport')
             ->with(['inspectionReport:id,public_id,number,inspected_at,status', 'inspectionReport.documents', 'service:id,code,name'])
             ->join('inspection_reports', 'inspection_reports.id', '=', 'inspection_report_asset.inspection_report_id')
             ->orderByDesc('inspection_reports.inspected_at')
@@ -276,11 +297,14 @@ class AssetController extends Controller
                 'connectionSide1Id' => $asset->connection_side_1_id,
                 'connectionSide2Id' => $asset->connection_side_2_id,
 
+                'isSet' => $asset->is_set,
                 'isComposite' => $asset->components->isNotEmpty(),
                 'effectiveStatus' => $asset->effectiveStatus()->value,
                 'effectiveStatusLabel' => $asset->effectiveStatus()->label(),
                 'effectiveStatusTone' => $asset->effectiveStatus()->tone(),
                 'effectiveExpiresAt' => $asset->effectiveExpiresAt()?->toDateString(),
+                // Sus piezas lo dejan peor de lo que dice su propio dictamen: es lo único que justifica el aviso rojo.
+                'blockedByComponents' => $asset->effectiveStatus()->severity() > $asset->status->severity(),
                 'parent' => $asset->parent ? [
                     'id' => $asset->parent->public_id,
                     'name' => $asset->parent->description,
@@ -339,53 +363,10 @@ class AssetController extends Controller
      */
     private function certifications(Asset $asset): array
     {
-        $determinantes = Service::query()
-            ->where('determines_fitness', true)
-            ->get(['id', 'code', 'name'])
-            ->keyBy('id');
-
-        if ($determinantes->isEmpty()) {
-            return [];
-        }
-
-        $lineas = DB::table('inspection_report_asset as l')
-            ->join('inspection_reports as r', 'r.id', '=', 'l.inspection_report_id')
-            ->where('l.asset_id', $asset->getKey())
-            ->where('r.status', ReportStatus::Final->value)
-            ->whereNull('r.deleted_at')
-            ->whereIn('l.result', [InspectionResult::Apto->value, InspectionResult::NoApto->value])
-            ->orderByDesc('r.inspected_at')
-            ->orderByDesc('l.id')
-            ->get(['l.service_id', 'r.service_id as report_service_id', 'l.result', 'l.expires_at', 'r.inspected_at']);
-
-        $ultima = [];
-
-        foreach ($lineas as $linea) {
-            // Vale la operación de la línea; si no tiene, la del informe.
-            $serviceId = $linea->service_id ?? $linea->report_service_id;
-
-            // Sólo las que dan aptitud, y una sola —la más reciente— por tipo.
-            if ($serviceId === null || ! $determinantes->has($serviceId) || isset($ultima[$serviceId])) {
-                continue;
-            }
-
-            $servicio = $determinantes->get($serviceId);
-
-            $ultima[$serviceId] = [
-                'code' => $servicio->code,
-                'name' => $servicio->name,
-                'result' => InspectionResult::from($linea->result)->label(),
-                'isApt' => $linea->result === InspectionResult::Apto->value,
-                'expiresAt' => $linea->expires_at ? Carbon::parse($linea->expires_at)->toDateString() : null,
-                'inspectedAt' => $linea->inspected_at ? Carbon::parse($linea->inspected_at)->toDateString() : null,
-            ];
-        }
-
-        // El más próximo a vencer primero; los sin fecha, al final.
-        return collect($ultima)
-            ->sortBy(fn (array $c) => $c['expiresAt'] ?? '9999-12-31')
-            ->values()
-            ->all();
+        // Mismo cálculo que usan las planillas: ver AssetCertificationSummary.
+        return array_values(
+            (new AssetCertificationSummary)->forAssets([$asset])[$asset->getKey()]['certifications'] ?? []
+        );
     }
 
     /**
@@ -420,6 +401,8 @@ class AssetController extends Controller
                 'nullable', 'uuid',
             ],
             'kind' => ['nullable', Rule::in([Asset::KIND_PART, Asset::KIND_GENERIC])],
+            // «Esto será un set de equipos»: después se le tildan las piezas.
+            'is_set' => ['sometimes', 'boolean'],
             'description' => ['required', 'string', 'min:3', 'max:180'],
             'serial_number' => ['nullable', 'string', 'max:120'],
             'client_reference' => ['nullable', 'string', 'max:120'],
@@ -440,7 +423,14 @@ class AssetController extends Controller
             return back()->withErrors(['organization_public_id' => 'La empresa elegida no existe.']);
         }
 
+        $data['is_set'] = $request->boolean('is_set');
         $asset = $createAsset($organization, $data);
+
+        // Un set recién creado está vacío: se lo lleva a su ficha para tildar las piezas.
+        if ($asset->is_set) {
+            return redirect("/activos/{$asset->public_id}")
+                ->with('success', "Se creó el set «{$asset->displayName()}». Agregue las piezas que lo componen.");
+        }
 
         return back()->with('success', "Se dio de alta «{$asset->displayName()}».");
     }
@@ -466,17 +456,31 @@ class AssetController extends Controller
             'connection_bottom_id' => ['nullable', 'integer', 'exists:connections,id'],
             'connection_side_1_id' => ['nullable', 'integer', 'exists:connections,id'],
             'connection_side_2_id' => ['nullable', 'integer', 'exists:connections,id'],
-            // El conjunto del que esta pieza es componente.
+            // El set del que esta pieza es componente.
             'parent_public_id' => ['nullable', 'uuid'],
+            'is_set' => ['sometimes', 'boolean'],
         ], [
             'description.required' => 'La descripción no puede quedar vacía.',
         ]);
+
+        if ($request->has('is_set')) {
+            $data['is_set'] = $request->boolean('is_set');
+
+            // Un set con piezas no se «desarma» de rebote: quedarían colgando de algo que ya no es un set.
+            if (! $data['is_set'] && $asset->components()->exists()) {
+                return back()->withErrors([
+                    'is_set' => 'Este set tiene piezas: quítelas antes de dejar de tratarlo como set.',
+                ]);
+            }
+        } else {
+            unset($data['is_set']);
+        }
 
         $parentId = $this->resolveParent($asset, $data['parent_public_id'] ?? null);
 
         if ($parentId === false) {
             return back()->withErrors([
-                'parent_public_id' => 'El conjunto elegido no existe o no pertenece a esta empresa.',
+                'parent_public_id' => 'El set elegido no existe, no pertenece a esta empresa o formaría un círculo.',
             ]);
         }
 
@@ -502,11 +506,123 @@ class AssetController extends Controller
     }
 
     /**
-     * Resuelve el conjunto padre.
+     * Piezas que se pueden tildar para un set: libres (sin set), de la misma
+     * empresa, que no sean sets ni el propio set. Se busca por texto y vienen
+     * de a una tanda corta: una empresa puede tener miles.
+     */
+    public function availableComponents(Request $request, Asset $asset): JsonResponse
+    {
+        $this->authorize('update', $asset);
+        abort_unless($asset->is_set, 404);
+
+        $term = trim((string) $request->query('q'));
+
+        $piezas = $this->freePieces($asset)
+            ->when($term !== '', fn (Builder $q) => $q->matching($term))
+            ->orderBy('assets.description')
+            ->limit(20)
+            ->get(['assets.id', 'assets.public_id', 'assets.description', 'assets.serial_number', 'assets.code']);
+
+        return response()->json([
+            'options' => $piezas->map(fn (Asset $a) => [
+                'id' => $a->public_id,
+                'label' => trim($a->description.' · '.($a->serial_number ?? 'sin serie')),
+                'code' => $a->code,
+            ])->all(),
+        ]);
+    }
+
+    /**
+     * Cuelga del set las piezas tildadas.
      *
-     * Devuelve `false` si el conjunto no existe o es de otra empresa, y `null`
-     * si la pieza queda suelta. Una pieza no puede ser su propio conjunto:
-     * dejaría el recálculo girando sobre sí mismo.
+     * Sólo entran las válidas: de la misma empresa, libres y que no sean sets.
+     * Si ninguna lo es se avisa, para que no parezca que se guardó. El set se
+     * recalcula: no se despliega a medias, así que una pieza no apta lo bloquea.
+     */
+    public function addComponents(Request $request, Asset $asset, RecalculateAssetStatus $recalculate): RedirectResponse
+    {
+        $this->authorize('update', $asset);
+        abort_unless($asset->is_set, 404);
+
+        $data = $request->validate([
+            'piece_public_ids' => ['required', 'array', 'min:1'],
+            'piece_public_ids.*' => ['uuid'],
+        ], [
+            'piece_public_ids.required' => 'Tilde al menos una pieza.',
+        ]);
+
+        $piezas = $this->freePieces($asset)->whereIn('assets.public_id', $data['piece_public_ids'])->get();
+
+        if ($piezas->isEmpty()) {
+            return back()->withErrors([
+                'piece_public_ids' => 'Ninguna de las piezas elegidas se puede agregar: ya forman parte de otro set o no son de esta empresa.',
+            ]);
+        }
+
+        DB::transaction(function () use ($piezas, $asset, $recalculate) {
+            foreach ($piezas as $pieza) {
+                $pieza->forceFill(['parent_id' => $asset->getKey()])->save();
+            }
+
+            $recalculate($asset->refresh());
+        });
+
+        ActivityLogger::log(
+            action: 'asset.components_added',
+            subject: $asset,
+            description: sprintf('Se agregaron %d piezas al set %s', $piezas->count(), $asset->displayName()),
+            new: ['pieces' => $piezas->map(fn (Asset $p) => $p->displayName())->all()],
+            organizationId: $asset->organization_id,
+        );
+
+        return back()->with('success', sprintf('Se agregaron %d piezas al set.', $piezas->count()));
+    }
+
+    /** Saca una pieza del set y lo recalcula sin ella. */
+    public function removeComponent(Asset $asset, string $piece, RecalculateAssetStatus $recalculate): RedirectResponse
+    {
+        $this->authorize('update', $asset);
+        abort_unless($asset->is_set, 404);
+
+        $pieza = Asset::query()
+            ->forOrganization($asset->organization_id)
+            ->where('parent_id', $asset->getKey())
+            ->where('public_id', $piece)
+            ->firstOrFail();
+
+        DB::transaction(function () use ($pieza, $asset, $recalculate) {
+            $pieza->forceFill(['parent_id' => null])->save();
+            $recalculate($asset->refresh());
+        });
+
+        ActivityLogger::log(
+            action: 'asset.component_removed',
+            subject: $asset,
+            description: sprintf('Se quitó %s del set %s', $pieza->displayName(), $asset->displayName()),
+            organizationId: $asset->organization_id,
+        );
+
+        return back()->with('success', 'Pieza quitada del set.');
+    }
+
+    /** Piezas que todavía no pertenecen a ningún set y que pueden entrar a éste. */
+    private function freePieces(Asset $set): Builder
+    {
+        return Asset::query()
+            ->forOrganization($set->organization_id)
+            ->where('assets.is_set', false)
+            ->whereNull('assets.parent_id')
+            ->whereKeyNot($set->getKey());
+    }
+
+    /**
+     * Resuelve el set del que la pieza forma parte.
+     *
+     * Devuelve `false` si no existe, no es un set, es de otra empresa o
+     * cerraría un círculo, y `null` si la pieza queda suelta. Sólo se ofrecen
+     * sets (pedido de Daniel: «quiero que me salgan los sets, no todos los
+     * equipos»). Una pieza no puede ser su propio set ni colgar de uno de sus
+     * propios componentes, ni de más abajo: el recálculo giraría sobre sí mismo.
      */
     private function resolveParent(Asset $asset, ?string $parentPublicId): int|false|null
     {
@@ -516,11 +632,21 @@ class AssetController extends Controller
 
         $parent = Asset::query()
             ->forOrganization($asset->organization_id)
+            ->where('is_set', true)
             ->where('public_id', $parentPublicId)
             ->first();
 
         if ($parent === null || $parent->getKey() === $asset->getKey()) {
             return false;
+        }
+
+        // Se sube por la cadena de padres: si aparece esta pieza, sería un círculo.
+        $cursor = $parent->parent_id;
+        for ($saltos = 0; $cursor !== null && $saltos < 25; $saltos++) {
+            if ($cursor === $asset->getKey()) {
+                return false;
+            }
+            $cursor = DB::table('assets')->where('id', $cursor)->value('parent_id');
         }
 
         return $parent->getKey();
@@ -529,8 +655,8 @@ class AssetController extends Controller
     /**
      * Opciones de los desplegables de la ficha técnica.
      *
-     * Los conjuntos candidatos se limitan a piezas de la misma empresa y se
-     * excluye la propia: una pieza no puede ser su propio conjunto.
+     * Los sets candidatos se limitan a los de la misma empresa y se excluye el
+     * propio: una pieza no puede ser su propio set.
      *
      * @return array<string, mixed>
      */
@@ -550,8 +676,10 @@ class AssetController extends Controller
             'services' => Service::query()->where('is_active', true)->orderBy('name')
                 ->get(['id', 'name', 'code'])
                 ->map(fn (Service $s) => ['value' => $s->getKey(), 'label' => $s->label()])->all(),
+            // Sólo sets: no «todos los equipos» (pedido de Daniel, 04/11/2026).
             'possibleParents' => Asset::query()
                 ->forOrganization($asset->organization_id)
+                ->where('is_set', true)
                 ->whereKeyNot($asset->getKey())
                 ->orderBy('description')
                 ->limit(500)
@@ -570,19 +698,7 @@ class AssetController extends Controller
             // scope ya lo dejó viendo únicamente lo suyo.
             ->when($filters['organization'] ?? null, fn (Builder $q, string $v) => $q
                 ->whereHas('organization', fn (Builder $o) => $o->where('public_id', $v)))
-            ->when($filters['search'] ?? null, function (Builder $q, string $term) {
-                $like = TableQuery::like($term);
-                $q->where(function (Builder $inner) use ($like) {
-                    $inner->where('assets.description', 'like', $like)
-                        ->orWhere('assets.serial_number', 'like', $like)
-                        ->orWhere('assets.code', 'like', $like)
-                        ->orWhere('assets.client_reference', 'like', $like)
-                        ->orWhere('assets.workshop_description', 'like', $like)
-                        ->orWhereHas('catalogItem', fn (Builder $c) => $c
-                            ->where('description', 'like', $like)
-                            ->orWhere('part_number', 'like', $like));
-                });
-            })
+            ->when($filters['search'] ?? null, fn (Builder $q, string $term) => $q->matching($term))
             /*
              * Todas las series de un mismo producto, de todos los clientes.
              *

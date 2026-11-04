@@ -72,7 +72,7 @@ class RecalculateAssetStatus
             ->whereNull('r.deleted_at')
             ->orderByDesc('r.inspected_at')
             ->orderByDesc('l.id')
-            ->get(['l.service_id', 'r.service_id as report_service_id', 'l.result', 'l.expires_at', 'l.inspection_report_id', 'r.inspected_at']);
+            ->get(['l.service_id', 'r.service_id as report_service_id', 'l.result', 'l.expires_at', 'l.inspection_report_id', 'r.inspected_at', 'r.finalized_at']);
 
         if ($lineas->isEmpty()) {
             // Sin ningún informe, un rechazo devuelto sin reparar sigue siendo
@@ -125,7 +125,7 @@ class RecalculateAssetStatus
          * inspección anterior, si es posterior a ella. El equipo volvió al
          * cliente sin arreglar: no puede seguir figurando certificado.
          */
-        if ($this->wasReturnedUnrepairedAfter($asset, $masReciente->inspected_at)) {
+        if ($this->wasReturnedUnrepairedAfter($asset, $this->cutoff($masReciente))) {
             $asset->forceFill([
                 'status' => AssetStatus::Unfit,
                 'expires_at' => null,
@@ -149,6 +149,24 @@ class RecalculateAssetStatus
             // que la ficha rotula "último informe con dictamen".
             'current_inspection_report_id' => $masReciente->inspection_report_id,
         ])->save();
+    }
+
+    /**
+     * Desde cuándo cuenta una inspección para ordenarla contra un rechazo.
+     *
+     * `inspected_at` es un DÍA y el rechazo un instante: el mismo día, el
+     * rechazo caía siempre después de las 00:00 y le ganaba a un informe
+     * cargado después (caso «Puente 4», 04/11/2026). Si el informe se cerró ese
+     * mismo día vale la hora en que se cerró; si se cerró otro día (uno viejo
+     * cargado tarde) se mantiene el día de la inspección.
+     */
+    private function cutoff(object $linea): string
+    {
+        $finalizado = $linea->finalized_at;
+
+        return $finalizado && substr((string) $finalizado, 0, 10) === substr((string) $linea->inspected_at, 0, 10)
+            ? (string) $finalizado
+            : (string) $linea->inspected_at;
     }
 
     /**
@@ -199,11 +217,20 @@ class RecalculateAssetStatus
             return;
         }
 
-        $status = $asset->status;
+        /*
+         * Un set se arma con piezas que se inspeccionan una por una; él mismo no
+         * suele tener dictamen. Su «sin inspección» propio no cuenta: si contara,
+         * pesaría más que sus piezas aptas y el set no estaría listo nunca. Si
+         * tiene dictamen propio, sí cuenta, como en cualquier conjunto.
+         */
+        $propio = ($asset->is_set && $asset->status === AssetStatus::Unknown) ? null : $asset->status;
+        $status = $propio;
         $expiresAt = $asset->expires_at;
 
         foreach ($components as $component) {
-            $status = $status->worstWith($component->effectiveStatus());
+            $status = $status === null
+                ? $component->effectiveStatus()
+                : $status->worstWith($component->effectiveStatus());
 
             $componentExpiry = $component->effectiveExpiresAt();
 

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * FMR — Field Maintenance Report.
@@ -28,6 +29,24 @@ class InspectionReport extends Model
         'organization_id', 'number', 'asset_set_id', 'equipment_label',
         'inspected_at', 'status', 'service_id', 'notes',
     ];
+
+    /**
+     * Un borrador es una declaración en curso del taller: el cliente no lo ve
+     * hasta que se emite (pedido de Daniel, 04/11/2026).
+     *
+     * Va como scope global y no como filtro en cada pantalla porque por
+     * cualquier camino que llegue —listado, ficha, panel, binding por ruta,
+     * una relación— el borrador tiene que seguir oculto. El personal interno
+     * no queda filtrado.
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope('hide_drafts_from_clients', function (Builder $builder) {
+            if (Auth::user()?->isClientUser()) {
+                $builder->where($builder->getModel()->qualifyColumn('status'), '!=', ReportStatus::Draft->value);
+            }
+        });
+    }
 
     protected function casts(): array
     {

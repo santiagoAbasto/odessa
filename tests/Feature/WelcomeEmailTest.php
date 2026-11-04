@@ -194,6 +194,41 @@ class WelcomeEmailTest extends TestCase
     }
 
     /**
+     * Bug reportado el 04/11/2026: al restablecer el acceso el administrador
+     * veía la clave en pantalla pero al usuario no le llegaba ningún correo.
+     */
+    public function test_restablecer_acceso_le_manda_el_correo_al_usuario_con_un_enlace_nuevo(): void
+    {
+        [$usuario, $tokenViejo] = $this->alta();
+
+        Notification::fake();
+        $this->actingAs($this->staffUser(Permissions::ROLE_SUPER_ADMIN))
+            ->post("/administracion/usuarios/{$usuario->public_id}/restablecer-acceso")
+            ->assertSessionHas('temporaryAccess');
+        $temporal = session('temporaryAccess')['password'];
+        auth()->logout();
+
+        $url = '';
+        Notification::assertSentTo($usuario, WelcomeUser::class, function (WelcomeUser $aviso) use (&$url) {
+            $url = $aviso->url;
+
+            return $aviso->reset;
+        });
+
+        $html = (string) (new WelcomeUser($url, reset: true))->toMail($usuario)->render();
+        $this->assertStringContainsString('restableció su acceso', $html);
+        $this->assertStringNotContainsString($temporal, $html);
+
+        // El enlace viejo ya no sirve; el nuevo sí, y deja la contraseña elegida por él.
+        $this->elegir($tokenViejo)->assertSessionHasErrors('email');
+        $this->elegir(basename((string) parse_url($url, PHP_URL_PATH)))->assertSessionHasNoErrors();
+
+        $usuario->refresh();
+        $this->assertTrue(Hash::check(self::NUEVA, $usuario->password));
+        $this->assertFalse($usuario->must_change_password);
+    }
+
+    /**
      * Un enlace de recuperación vence en una hora. Si se pudiera validar como
      * bienvenida pasaría a vivir una semana: por eso cada uno tiene su tabla.
      */

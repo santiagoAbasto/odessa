@@ -170,9 +170,12 @@ class PermissionsTest extends TestCase
         $organizacion = $this->organization();
         $informe = $this->reportFor($this->asset($organizacion), status: ReportStatus::Draft);
 
+        // 404 y no 403: el borrador no existe para el cliente (DraftReportVisibilityTest).
         $this->actingAs($this->clientUser($organizacion, Permissions::ROLE_CLIENT_OPERATOR))
             ->post("/informes/{$informe->public_id}/finalizar")
-            ->assertForbidden();
+            ->assertNotFound();
+
+        $this->assertSame(ReportStatus::Draft, $informe->fresh()->status);
     }
 
     // --- Superadministrador ----------------------------------------------

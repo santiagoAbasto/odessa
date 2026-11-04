@@ -200,6 +200,8 @@ class AssetTimeline
     private function inspections(): Collection
     {
         return $this->asset->inspectionLines()
+            // Sólo los informes que el usuario puede ver: al cliente no le llega el borrador.
+            ->whereHas('inspectionReport')
             ->with(['inspectionReport:id,public_id,number,inspected_at,status,created_at', 'service:id,code,name'])
             ->get()
             ->map(function ($line) {

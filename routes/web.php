@@ -109,6 +109,16 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('permission:'.Permissions::ASSETS_UPDATE)
         ->name('assets.update');
 
+    // Armado de un set: qué piezas se pueden tildar, agregarlas y quitarlas.
+    Route::middleware('permission:'.Permissions::ASSETS_UPDATE)->group(function () {
+        Route::get('/activos/{asset}/piezas-disponibles', [AssetController::class, 'availableComponents'])
+            ->name('assets.components.available');
+        Route::post('/activos/{asset}/componentes', [AssetController::class, 'addComponents'])
+            ->name('assets.components.store');
+        Route::delete('/activos/{asset}/componentes/{piece}', [AssetController::class, 'removeComponent'])
+            ->name('assets.components.destroy');
+    });
+
     // --- Sets ------------------------------------------------------------
     Route::middleware('permission:'.Permissions::SETS_VIEW)->group(function () {
         Route::get('/sets', [AssetSetController::class, 'index'])->name('sets.index');
@@ -135,6 +145,9 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::middleware('permission:'.Permissions::REPORTS_UPDATE)->group(function () {
+        // Corregir los datos del informe, también uno ya final (la Policy decide quién).
+        Route::put('/informes/{report}', [InspectionReportController::class, 'update'])
+            ->name('reports.update');
         Route::get('/informes/{report}/equipos-disponibles', [InspectionReportController::class, 'availableAssets'])
             ->name('reports.available_assets');
         Route::post('/informes/{report}/equipos', [InspectionReportController::class, 'addAssets'])
@@ -145,6 +158,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/informes/{report}/dictamen', [InspectionReportController::class, 'updateLines'])
             ->name('reports.update_lines');
     });
+
+    // Baja de un informe cargado por error: taller y superadministrador, con motivo.
+    Route::delete('/informes/{report}', [InspectionReportController::class, 'destroy'])
+        ->middleware('permission:'.Permissions::REPORTS_DELETE)
+        ->name('reports.destroy');
 
     Route::post('/informes/{report}/finalizar', [InspectionReportController::class, 'finalize'])
         ->middleware('permission:'.Permissions::REPORTS_FINALIZE)
@@ -179,6 +197,7 @@ Route::middleware(['auth'])->group(function () {
 
         Route::middleware('permission:'.Permissions::SHIPMENTS_CREATE)->group(function () {
             Route::post('/', [ShipmentController::class, 'store'])->name('store');
+            Route::get('/{shipment}/equipos-disponibles', [ShipmentController::class, 'availableAssets'])->name('items.available');
             Route::post('/{shipment}/equipos', [ShipmentController::class, 'addItem'])->name('items.store');
             Route::delete('/{shipment}/equipos/{item}', [ShipmentController::class, 'removeItem'])->name('items.destroy');
             Route::post('/{shipment}/enviar', [ShipmentController::class, 'submit'])->name('submit');

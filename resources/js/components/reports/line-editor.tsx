@@ -1,6 +1,6 @@
 import { router, useForm } from '@inertiajs/react';
 import { ClipboardCheck, PackagePlus, Search } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
@@ -29,29 +29,44 @@ export function AddAssetsDialog({ reportId }: { reportId: string }) {
     asset_public_ids: [] as string[],
   });
 
+  // Cada apertura arranca de cero: mientras llega la primera tanda se muestra «cargando».
+  useEffect(() => {
+    if (open) setAssets(null);
+  }, [open]);
+
+  /*
+    La búsqueda se hace en el servidor: una empresa puede tener cientos o miles
+    de equipos y traerlos todos (con un tope) dejaba a los últimos sin poder
+    agregarse a ningún informe. Se consulta con una breve espera tras la última
+    tecla y se cancela la consulta anterior, para que una respuesta lenta no pise
+    a una más nueva. Lo tildado vive en `data`, aparte de la lista visible.
+  */
   useEffect(() => {
     if (!open) return;
 
-    setAssets(null);
-    fetch(`/informes/${reportId}/equipos-disponibles`, {
-      headers: { Accept: 'application/json' },
-    })
-      .then((response) => response.json())
-      .then((payload) => setAssets(payload.assets ?? []))
-      .catch(() => setAssets([]));
-  }, [open, reportId]);
-
-  const visibles = useMemo(() => {
-    if (assets === null) return [];
-    const termino = search.trim().toLowerCase();
-    if (!termino) return assets;
-
-    return assets.filter((asset) =>
-      [asset.name, asset.serialNumber, asset.code]
-        .filter(Boolean)
-        .some((campo) => String(campo).toLowerCase().includes(termino)),
+    const controller = new AbortController();
+    const timer = setTimeout(
+      () => {
+        fetch(`/informes/${reportId}/equipos-disponibles?q=${encodeURIComponent(search.trim())}`, {
+          headers: { Accept: 'application/json' },
+          signal: controller.signal,
+        })
+          .then((response) => response.json())
+          .then((payload) => setAssets(payload.assets ?? []))
+          .catch((error) => {
+            if (error?.name !== 'AbortError') setAssets([]);
+          });
+      },
+      search ? 250 : 0,
     );
-  }, [assets, search]);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [open, reportId, search]);
+
+  const visibles = assets ?? [];
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -115,11 +130,15 @@ export function AddAssetsDialog({ reportId }: { reportId: string }) {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar por descripción, serie o código…"
+              placeholder="Buscar por descripción, serie, código o número de parte…"
               aria-label="Buscar equipo"
+              autoComplete="off"
               className="pl-8"
             />
           </div>
+          <p className="-mt-1 text-[11px] text-[var(--text-muted)]">
+            Se muestran hasta 50. Escriba para encontrar uno puntual; lo que tilde se conserva al buscar otra cosa.
+          </p>
 
           {errors.asset_public_ids && (
             <p className="text-[11.5px] text-[var(--tone-danger-fg)]">{errors.asset_public_ids}</p>
@@ -134,9 +153,9 @@ export function AddAssetsDialog({ reportId }: { reportId: string }) {
               </div>
             ) : visibles.length === 0 ? (
               <p className="p-4 text-center text-[12px] text-[var(--text-secondary)]">
-                {assets.length === 0
-                  ? 'Esta empresa no tiene equipos fuera de este informe.'
-                  : 'Ningún equipo coincide con la búsqueda.'}
+                {search.trim()
+                  ? 'Ningún equipo coincide con la búsqueda.'
+                  : 'Esta empresa no tiene equipos fuera de este informe.'}
               </p>
             ) : (
               visibles.map((asset) => (
@@ -180,10 +199,13 @@ export function AddAssetsDialog({ reportId }: { reportId: string }) {
 export function ResolveLinesDialog({
   reportId,
   lineIds,
+  finalized = false,
   onDone,
 }: {
   reportId: string;
   lineIds: number[];
+  /** Informe ya final: guardar recalcula el estado de las piezas en el acto. */
+  finalized?: boolean;
   onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -222,7 +244,11 @@ export function ResolveLinesDialog({
 
       <DialogContent
         title={`Dictaminar ${lineIds.length} ${lineIds.length === 1 ? 'equipo' : 'equipos'}`}
-        description="El estado de las piezas no cambia hasta que se finalice el informe."
+        description={
+          finalized
+            ? 'El informe ya está finalizado: al guardar se recalcula el estado de estas piezas y queda en la auditoría.'
+            : 'El estado de las piezas no cambia hasta que se finalice el informe.'
+        }
         footer={
           <>
             <DialogClose asChild>

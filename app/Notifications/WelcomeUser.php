@@ -8,8 +8,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Bienvenida de un usuario recién creado, con un enlace para que elija su
- * contraseña.
+ * Bienvenida de un usuario recién creado, o aviso de acceso restablecido, con
+ * un enlace para que elija su contraseña.
  *
  * Nunca lleva la contraseña temporal: una clave escrita en un correo queda al
  * alcance de cualquiera que entre a esa casilla, hoy o dentro de un año. El
@@ -25,7 +25,8 @@ class WelcomeUser extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public readonly string $url) {}
+    /** `$reset`: el usuario ya existía y un administrador le restableció el acceso. */
+    public function __construct(public readonly string $url, public readonly bool $reset = false) {}
 
     /** @return list<string> */
     public function via(object $notifiable): array
@@ -40,7 +41,9 @@ class WelcomeUser extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject('Su acceso a '.config('app.name'))
             ->greeting("Hola, {$notifiable->name}")
-            ->line('Se creó su usuario en el portal de '.config('app.name').'.')
+            ->line($this->reset
+                ? 'Un administrador restableció su acceso al portal de '.config('app.name').'. Su contraseña anterior ya no sirve.'
+                : 'Se creó su usuario en el portal de '.config('app.name').'.')
             ->line('Para empezar, elija su contraseña desde este enlace:')
             ->action('Elegir mi contraseña', $this->url)
             ->line("Su usuario es **{$notifiable->email}**.")

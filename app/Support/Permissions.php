@@ -59,6 +59,9 @@ final class Permissions
 
     public const REPORTS_CANCEL = 'reports.cancel';
 
+    /** Dar de baja un informe cargado por error, incluso ya final. */
+    public const REPORTS_DELETE = 'reports.delete';
+
     public const REPORTS_EXPORT = 'reports.export';
 
     // --- Documentos -----------------------------------------------------
@@ -201,7 +204,7 @@ final class Permissions
             self::PRODUCTS_VIEW,
             self::SETS_VIEW, self::SETS_MANAGE,
             self::REPORTS_VIEW, self::REPORTS_CREATE, self::REPORTS_UPDATE,
-            self::REPORTS_FINALIZE, self::REPORTS_CANCEL, self::REPORTS_EXPORT,
+            self::REPORTS_FINALIZE, self::REPORTS_CANCEL, self::REPORTS_DELETE, self::REPORTS_EXPORT,
             self::DOCUMENTS_VIEW, self::DOCUMENTS_UPLOAD, self::DOCUMENTS_DELETE,
             self::RECEPTIONS_VIEW, self::RECEPTIONS_CREATE, self::RECEPTIONS_UPDATE,
             self::RECEPTIONS_RELEASE, self::RECEPTIONS_DISPATCH,

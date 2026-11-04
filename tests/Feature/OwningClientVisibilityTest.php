@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Asset;
-use App\Models\AssetSet;
 use App\Models\Reception;
 use App\Support\Permissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -108,10 +107,8 @@ class OwningClientVisibilityTest extends TestCase
     {
         $organizacion = $this->organization('ACME');
 
-        AssetSet::create([
-            'organization_id' => $organizacion->getKey(),
-            'name' => 'Conjunto de prueba',
-        ]);
+        // Un set es un equipo marcado como tal (ya no la agrupación del sistema anterior).
+        $this->asset($organizacion, ['kind' => Asset::KIND_GENERIC, 'is_set' => true, 'description' => 'Conjunto de prueba']);
 
         $response = $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP))
             ->get('/sets');

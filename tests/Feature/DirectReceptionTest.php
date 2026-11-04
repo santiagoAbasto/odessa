@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Asset;
+use App\Models\Organization;
 use App\Models\Reception;
 use App\Support\Permissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -174,6 +175,15 @@ class DirectReceptionTest extends TestCase
         $this->assertDatabaseHas('activity_logs', ['action' => 'asset.created']);
     }
 
+    /** @return list<array{id: string, label: string}> */
+    private function piezasDe(Organization $empresa, string $q = ''): array
+    {
+        return $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP))
+            ->getJson("/taller/recepciones/piezas/{$empresa->public_id}?q=".urlencode($q))
+            ->assertOk()
+            ->json('options');
+    }
+
     public function test_el_listado_de_piezas_para_el_formulario_respeta_la_empresa(): void
     {
         $unaEmpresa = $this->organization('UNA');
@@ -182,14 +192,40 @@ class DirectReceptionTest extends TestCase
         $this->asset($unaEmpresa, ['serial_number' => 'DE-UNA']);
         $this->asset($otraEmpresa, ['serial_number' => 'DE-OTRA']);
 
-        $response = $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP))
-            ->getJson("/taller/recepciones/piezas/{$unaEmpresa->public_id}");
-
-        $response->assertOk();
-
-        $etiquetas = collect($response->json())->pluck('label')->implode(' | ');
+        $etiquetas = collect($this->piezasDe($unaEmpresa))->pluck('label')->implode(' | ');
 
         $this->assertStringContainsString('DE-UNA', $etiquetas);
         $this->assertStringNotContainsString('DE-OTRA', $etiquetas);
+    }
+
+    /** El defecto que había: el desplegable traía sólo los primeros 500 de la empresa. */
+    public function test_una_pieza_se_alcanza_buscando_aunque_la_empresa_tenga_cientos(): void
+    {
+        $empresa = $this->organization();
+        foreach (range(1, 120) as $n) {
+            $this->asset($empresa, ['description' => sprintf('Relleno %03d', $n), 'serial_number' => "REL-{$n}"]);
+        }
+        $buscada = $this->asset($empresa, ['description' => 'Zzz última en el orden', 'serial_number' => 'ALCANZAME-9']);
+
+        $this->assertSame([$buscada->public_id], collect($this->piezasDe($empresa, 'ALCANZAME'))->pluck('id')->all());
+    }
+
+    public function test_sin_texto_el_listado_de_piezas_viene_acotado(): void
+    {
+        $empresa = $this->organization();
+        foreach (range(1, 40) as $n) {
+            $this->asset($empresa, ['description' => sprintf('Pieza %03d', $n)]);
+        }
+
+        $this->assertCount(20, $this->piezasDe($empresa));
+    }
+
+    public function test_el_buscador_de_piezas_lo_usa_solo_quien_puede_ingresar_equipos(): void
+    {
+        $empresa = $this->organization();
+
+        $this->actingAs($this->clientUser($empresa, Permissions::ROLE_CLIENT_OPERATOR))
+            ->getJson("/taller/recepciones/piezas/{$empresa->public_id}")
+            ->assertStatus(403);
     }
 }

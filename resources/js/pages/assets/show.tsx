@@ -1,6 +1,7 @@
 import { Deferred, Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import { EditAssetDialog, type EditCatalogs } from '@/components/assets/edit-asset-dialog';
+import { AddComponentsDialog, RemoveComponentButton } from '@/components/assets/set-components';
 import { TraceabilityThread, type TimelineEvent } from '@/components/assets/traceability-thread';
 import { DocumentPanel, type DocumentPayload } from '@/components/documents/document-panel';
 import {
@@ -80,11 +81,14 @@ interface AssetDetail {
   connectionSide1Id: number | null;
   connectionSide2Id: number | null;
   /** Conjunto y componentes. */
+  isSet: boolean;
   isComposite: boolean;
   effectiveStatus: string;
   effectiveStatusLabel: string;
   effectiveStatusTone: Tone;
   effectiveExpiresAt: string | null;
+  /** Las piezas lo dejan peor que su propio dictamen. */
+  blockedByComponents: boolean;
   parent: { id: string; name: string | null; serial: string | null } | null;
   components: ComponentRow[];
   description: string | null;
@@ -132,6 +136,20 @@ export default function AssetShow({
   const [editing, setEditing] = useState(false);
   const isGeneric = asset.kind === 'generic';
 
+  /*
+    Un set con piezas muestra su estado EFECTIVO —el que sale de sus piezas—, no
+    el propio: no se inspecciona como tal, y su «sin inspección» no dice nada.
+  */
+  const usaPiezas = asset.isSet && asset.components.length > 0;
+  const shown = usaPiezas
+    ? {
+        status: asset.effectiveStatus,
+        label: asset.effectiveStatusLabel,
+        tone: asset.effectiveStatusTone,
+        expiresAt: asset.effectiveExpiresAt,
+      }
+    : { status: asset.status, label: asset.statusLabel, tone: asset.statusTone, expiresAt: asset.expiresAt };
+
   const identity: [string, string | null][] = [
     ['Número de serie', asset.serialNumber],
     ['Código', asset.code],
@@ -155,6 +173,144 @@ export default function AssetShow({
     ['Presión de trabajo', asset.workingPressure],
     ...Object.entries(asset.connections).map(([label, value]) => [`Conexión ${label.toLowerCase()}`, value] as [string, string]),
   ];
+
+  /*
+    Un set va ARRIBA: lo primero que se hace al crearlo es tildarle piezas, y la
+    ficha es larga. Una pieza o conjunto común conserva el lugar de siempre.
+  */
+  const compositePanel = (
+    <>
+        {/* ================= Set de equipos / equipo compuesto ================= */}
+        {(asset.isSet || asset.isComposite || asset.parent) && (
+          <Panel className="mb-5">
+            <PanelHeader
+              title={asset.isSet ? 'Set de equipos' : 'Equipo compuesto'}
+              description={
+                asset.isSet || asset.isComposite
+                  ? 'El set no se despliega a medias: alcanza con que una pieza no esté apta para bloquearlo.'
+                  : 'Esta pieza es componente de un set.'
+              }
+              actions={
+                asset.isSet && can.edit ? (
+                  <AddComponentsDialog setId={asset.id} hasComponents={asset.components.length > 0} />
+                ) : undefined
+              }
+            />
+
+            {asset.parent && (
+              <div className="border-b border-[var(--border-subtle)] px-4 py-3">
+                <p className="text-[10px] font-semibold tracking-[0.1em] text-[var(--text-muted)] uppercase">
+                  Forma parte de
+                </p>
+                <Link
+                  href={`/activos/${asset.parent.id}`}
+                  className="mt-1 inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--text-accent)] hover:underline"
+                >
+                  <Puzzle className="size-3.5" aria-hidden />
+                  {asset.parent.name ?? 'Set'}
+                  {asset.parent.serial && (
+                    <span className="font-mono text-[11px] text-[var(--text-muted)]">
+                      {asset.parent.serial}
+                    </span>
+                  )}
+                </Link>
+              </div>
+            )}
+
+            {asset.isSet && asset.components.length === 0 && (
+              <EmptyState
+                icon={Puzzle}
+                title="Este set todavía no tiene piezas"
+                description={
+                  can.edit
+                    ? 'Use «Agregar piezas» para buscar y tildar las que lo componen.'
+                    : 'Odessa le va a cargar las piezas que lo componen.'
+                }
+              />
+            )}
+
+            {asset.components.length > 0 && (
+              <>
+                {/*
+                  Cuando el set está bloqueado, lo primero es decir por
+                  cuál de sus piezas: sin eso el taller no sabe qué reparar.
+                */}
+                {asset.blockedByComponents && (
+                  <div className="border-b border-[var(--tone-danger-fg)]/25 bg-[var(--tone-danger-bg)] px-4 py-3">
+                    <p className="text-[12.5px] font-medium text-[var(--tone-danger-fg)]">
+                      El set está {asset.effectiveStatusLabel.toLowerCase()} por sus piezas,
+                      aunque su propia certificación figure como {asset.statusLabel.toLowerCase()}.
+                    </p>
+                  </div>
+                )}
+
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[560px] text-[12.5px]">
+                    <thead>
+                      <tr>
+                        {['Pieza', 'Serie', 'Estado', 'Vence'].map((header) => (
+                          <th
+                            key={header}
+                            scope="col"
+                            className="h-9 border-b border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 text-left text-[10px] font-semibold tracking-[0.08em] text-[var(--text-secondary)] uppercase"
+                          >
+                            {header}
+                          </th>
+                        ))}
+                        {asset.isSet && can.edit && (
+                          <th
+                            scope="col"
+                            className="h-9 w-10 border-b border-[var(--border-default)] bg-[var(--surface-sunken)]"
+                          >
+                            <span className="sr-only">Acciones</span>
+                          </th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {asset.components.map((component) => (
+                        <tr
+                          key={component.id}
+                          className={cn(
+                            'border-b border-[var(--border-subtle)] last:border-b-0',
+                            component.isBlocking && 'bg-[var(--tone-danger-bg)]/40',
+                          )}
+                        >
+                          <td className="px-3 py-2.5">
+                            <Link
+                              href={`/activos/${component.id}`}
+                              className="font-medium text-[var(--text-accent)] hover:underline"
+                            >
+                              {component.name ?? 'Sin descripción'}
+                            </Link>
+                          </td>
+                          <td className="px-3 py-2.5 font-mono text-[11.5px] text-[var(--text-muted)]">
+                            {component.serial ?? '—'}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <Badge tone={component.statusTone}>{component.statusLabel}</Badge>
+                          </td>
+                          <td className="px-3 py-2.5 tabular">{formatDate(component.expiresAt)}</td>
+                          {asset.isSet && can.edit && (
+                            <td className="px-2 py-1.5 text-right">
+                              <RemoveComponentButton
+                                setId={asset.id}
+                                pieceId={component.id}
+                                name={component.name ?? 'la pieza'}
+                              />
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </Panel>
+        )}
+    </>
+  );
 
   return (
     <AppLayout
@@ -211,8 +367,8 @@ export default function AssetShow({
           <div className="bg-[var(--surface-raised)] p-4">
             <p className="text-[11px] font-medium text-[var(--text-secondary)]">Estado de aptitud</p>
             <div className="mt-2">
-              <Badge tone={asset.statusTone} className="px-2.5 py-1.5 text-[12.5px]">
-                {asset.statusLabel}
+              <Badge tone={shown.tone} className="px-2.5 py-1.5 text-[12.5px]">
+                {shown.label}
               </Badge>
             </div>
           </div>
@@ -220,19 +376,19 @@ export default function AssetShow({
           <div className="bg-[var(--surface-raised)] p-4">
             <p className="text-[11px] font-medium text-[var(--text-secondary)]">Vencimiento</p>
             <p className="mt-1.5 text-[20px] leading-none font-semibold tabular">
-              {formatDate(asset.expiresAt)}
+              {formatDate(shown.expiresAt)}
             </p>
             <p
               className={cn(
                 'mt-1.5 text-[11.5px]',
-                asset.status === 'unfit'
+                shown.status === 'unfit'
                   ? 'text-[var(--tone-danger-fg)]'
-                  : asset.status === 'expiring'
+                  : shown.status === 'expiring'
                     ? 'text-[var(--tone-warning-fg)]'
                     : 'text-[var(--text-muted)]',
               )}
             >
-              {expiryLabel(asset.expiresAt)}
+              {expiryLabel(shown.expiresAt)}
             </p>
           </div>
 
@@ -298,6 +454,8 @@ export default function AssetShow({
           </div>
         )}
       </Panel>
+
+      {asset.isSet && compositePanel}
 
       <div className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
         {/* ================= Ficha ================= */}
@@ -410,101 +568,7 @@ export default function AssetShow({
           />
         </div>
 
-        {/* ================= Equipo compuesto ================= */}
-        {(asset.isComposite || asset.parent) && (
-          <Panel className="mb-5">
-            <PanelHeader
-              title="Equipo compuesto"
-              description={
-                asset.isComposite
-                  ? 'El conjunto no se despliega a medias: alcanza con que una pieza no esté apta para bloquearlo.'
-                  : 'Esta pieza es componente de un conjunto.'
-              }
-            />
-
-            {asset.parent && (
-              <div className="border-b border-[var(--border-subtle)] px-4 py-3">
-                <p className="text-[10px] font-semibold tracking-[0.1em] text-[var(--text-muted)] uppercase">
-                  Forma parte de
-                </p>
-                <Link
-                  href={`/activos/${asset.parent.id}`}
-                  className="mt-1 inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--text-accent)] hover:underline"
-                >
-                  <Puzzle className="size-3.5" aria-hidden />
-                  {asset.parent.name ?? 'Conjunto'}
-                  {asset.parent.serial && (
-                    <span className="font-mono text-[11px] text-[var(--text-muted)]">
-                      {asset.parent.serial}
-                    </span>
-                  )}
-                </Link>
-              </div>
-            )}
-
-            {asset.isComposite && (
-              <>
-                {/*
-                  Cuando el conjunto está bloqueado, lo primero es decir por
-                  cuál de sus piezas: sin eso el taller no sabe qué reparar.
-                */}
-                {asset.effectiveStatus !== asset.status && (
-                  <div className="border-b border-[var(--tone-danger-fg)]/25 bg-[var(--tone-danger-bg)] px-4 py-3">
-                    <p className="text-[12.5px] font-medium text-[var(--tone-danger-fg)]">
-                      El conjunto está {asset.effectiveStatusLabel.toLowerCase()} por sus componentes,
-                      aunque su propia certificación figure como {asset.statusLabel.toLowerCase()}.
-                    </p>
-                  </div>
-                )}
-
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[560px] text-[12.5px]">
-                    <thead>
-                      <tr>
-                        {['Componente', 'Serie', 'Estado', 'Vence'].map((header) => (
-                          <th
-                            key={header}
-                            scope="col"
-                            className="h-9 border-b border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 text-left text-[10px] font-semibold tracking-[0.08em] text-[var(--text-secondary)] uppercase"
-                          >
-                            {header}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {asset.components.map((component) => (
-                        <tr
-                          key={component.id}
-                          className={cn(
-                            'border-b border-[var(--border-subtle)] last:border-b-0',
-                            component.isBlocking && 'bg-[var(--tone-danger-bg)]/40',
-                          )}
-                        >
-                          <td className="px-3 py-2.5">
-                            <Link
-                              href={`/activos/${component.id}`}
-                              className="font-medium text-[var(--text-accent)] hover:underline"
-                            >
-                              {component.name ?? 'Sin descripción'}
-                            </Link>
-                          </td>
-                          <td className="px-3 py-2.5 font-mono text-[11.5px] text-[var(--text-muted)]">
-                            {component.serial ?? '—'}
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <Badge tone={component.statusTone}>{component.statusLabel}</Badge>
-                          </td>
-                          <td className="px-3 py-2.5 tabular">{formatDate(component.expiresAt)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-          </Panel>
-        )}
+        {!asset.isSet && compositePanel}
 
         {/* ================= Hilo de trazabilidad ================= */}
         <Panel>

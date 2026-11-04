@@ -300,22 +300,33 @@ class ReceptionController extends Controller
         );
     }
 
-    /** Piezas de una empresa, para el desplegable del ingreso directo. */
+    /**
+     * Piezas de una empresa para el ingreso directo, buscadas por texto.
+     *
+     * Antes era un desplegable con las primeras 500: con más, el resto no se
+     * podía elegir y se terminaba dando de alta de nuevo una pieza que ya
+     * existía (con su historial partido). Responde el mismo formato que los
+     * demás buscadores: `{ options: [{ id, label, code }] }`.
+     */
     public function assetsFor(Request $request, Organization $organization): JsonResponse
     {
         $this->authorize('create', Reception::class);
 
-        return response()->json(
-            Asset::query()
-                ->forOrganization($organization->getKey())
-                ->orderBy('description')
-                ->limit(500)
-                ->get(['public_id', 'description', 'serial_number', 'code'])
-                ->map(fn (Asset $a) => [
-                    'value' => $a->public_id,
-                    'label' => trim($a->description.' · '.($a->serial_number ?? $a->code ?? 'sin serie')),
-                ])
-        );
+        $term = trim((string) $request->query('q'));
+
+        $options = Asset::query()
+            ->forOrganization($organization->getKey())
+            ->when($term !== '', fn ($q) => $q->matching($term))
+            ->orderBy('assets.description')
+            ->limit(20)
+            ->get(['assets.id', 'assets.public_id', 'assets.description', 'assets.serial_number', 'assets.code'])
+            ->map(fn (Asset $a) => [
+                'id' => $a->public_id,
+                'label' => trim($a->description.' · '.($a->serial_number ?? $a->code ?? 'sin serie')),
+                'code' => $a->code,
+            ]);
+
+        return response()->json(['options' => $options]);
     }
 
     public function start(Reception $reception, ChangeReceptionStage $stages): RedirectResponse

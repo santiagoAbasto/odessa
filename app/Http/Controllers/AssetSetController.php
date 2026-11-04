@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AssetStatus;
+use App\Models\Asset;
 use App\Models\AssetSet;
 use App\Support\TableQuery;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,35 +20,42 @@ class AssetSetController extends Controller
 
         $filters = TableQuery::filters($request, ['search', 'organization', 'status', 'serial', 'code']);
 
-        $sets = AssetSet::query()
-            ->with('organization:id,name')
-            ->withCount('assets')
-            ->when($filters['search'] ?? null, fn (Builder $q, string $v) => $q
-                ->where(fn (Builder $i) => $i
-                    ->where('name', 'like', TableQuery::like($v))
-                    ->orWhere('notes', 'like', TableQuery::like($v))))
+        /*
+         * Los sets son los equipos marcados como tales («esto será un set de
+         * equipos»), no todos los equipos: pedido de Daniel, 04/11/2026. Cada
+         * uno lleva sus piezas, y se abre en su ficha, que es donde se arma.
+         */
+        $sets = Asset::query()
+            ->sets()
+            ->with(['organization:id,name', 'catalogItem:id,description'])
+            ->withCount('components')
+            ->when($filters['search'] ?? null, fn (Builder $q, string $v) => $q->matching($v))
             ->tap(fn (Builder $q) => TableQuery::scopeToOrganization($q, $filters['organization'] ?? null))
-            /*
-             * Los tres filtros que siguen son del equipo, no del set: se busca
-             * el set que CONTIENE esa pieza. Es la forma en que realmente se
-             * usa —aparece un número de serie y hay que ubicar a qué conjunto
-             * pertenece— y por eso valía traerlos desde Activos.
-             */
+            // Con las piezas dentro, el estado del set es el efectivo: el peor de las suyas.
             ->when($filters['status'] ?? null, fn (Builder $q, string $v) => $q
-                ->whereHas('assets', fn (Builder $a) => $a->where('status', $v)))
+                ->whereRaw('COALESCE(assets.composite_status, assets.status) = ?', [$v]))
+            /*
+             * Serie y código son de la PIEZA, no del set: se busca el set que
+             * CONTIENE esa pieza. Es como realmente se usa —aparece un número
+             * de serie y hay que ubicar a qué conjunto pertenece.
+             */
             ->when($filters['serial'] ?? null, fn (Builder $q, string $v) => $q
-                ->whereHas('assets', fn (Builder $a) => $a->where('serial_number', 'like', TableQuery::like($v))))
+                ->whereHas('components', fn (Builder $a) => $a->where('serial_number', 'like', TableQuery::like($v))))
             ->when($filters['code'] ?? null, fn (Builder $q, string $v) => $q
-                ->whereHas('assets', fn (Builder $a) => $a->where('code', 'like', TableQuery::like($v))))
-            ->orderBy('name')
+                ->whereHas('components', fn (Builder $a) => $a->where('code', 'like', TableQuery::like($v))))
+            ->orderBy('assets.description')
             ->paginate(TableQuery::perPage($request))
             ->withQueryString()
-            ->through(fn (AssetSet $s) => [
-                'id' => $s->public_id,
-                'name' => $s->name,
-                'organization' => $s->organization?->name,
-                'assetsCount' => $s->assets_count,
-                'notes' => $s->notes,
+            ->through(fn (Asset $a) => [
+                'id' => $a->public_id,
+                'name' => $a->displayName(),
+                'organization' => $a->organization?->name,
+                'assetsCount' => $a->components_count,
+                'status' => $a->effectiveStatus()->value,
+                'statusLabel' => $a->effectiveStatus()->label(),
+                'statusTone' => $a->effectiveStatus()->tone(),
+                'href' => "/activos/{$a->public_id}",
+                'notes' => null,
             ]);
 
         return Inertia::render('sets/index', [
@@ -56,6 +64,22 @@ class AssetSetController extends Controller
             'showOrganization' => ! $request->user()->isClientUser(),
             'organizationOptions' => TableQuery::organizationOptions($request),
             'statusOptions' => AssetStatus::options(),
+            'canCreate' => $request->user()->can('create', Asset::class),
+            // Agrupaciones del sistema anterior: no se pierden, pero ya no se crean así.
+            'legacySets' => AssetSet::query()
+                ->with('organization:id,name')
+                ->withCount('assets')
+                ->orderBy('name')
+                ->limit(50)
+                ->get()
+                ->map(fn (AssetSet $s) => [
+                    'id' => $s->public_id,
+                    'name' => $s->name,
+                    'organization' => $s->organization?->name,
+                    'assetsCount' => $s->assets_count,
+                    'notes' => $s->notes,
+                    'href' => "/sets/{$s->public_id}",
+                ])->all(),
         ]);
     }
 

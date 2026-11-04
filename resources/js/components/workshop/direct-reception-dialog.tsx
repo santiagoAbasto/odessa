@@ -1,9 +1,10 @@
 import { useForm } from '@inertiajs/react';
-import { useEffect, useState, type FormEvent } from 'react';
+import { type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { DialogClose, DialogContent } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input, Select, Textarea } from '@/components/ui/input';
+import { SearchSelect } from '@/components/ui/search-select';
 import type { SelectOption } from '@/types';
 
 /**
@@ -38,41 +39,6 @@ export function DirectReceptionDialog({
     is_urgent: false,
     notes: '',
   });
-
-  /*
-    Las piezas se cargan al elegir la empresa, no antes: el listado completo
-    de todos los clientes sería enorme y además mezclaría inventarios.
-  */
-  const [assets, setAssets] = useState<SelectOption[]>([]);
-  const [loadingAssets, setLoadingAssets] = useState(false);
-
-  useEffect(() => {
-    if (!data.organization_public_id) {
-      setAssets([]);
-      return;
-    }
-
-    let cancelled = false;
-    setLoadingAssets(true);
-
-    fetch(`/taller/recepciones/piezas/${data.organization_public_id}`, {
-      headers: { Accept: 'application/json' },
-    })
-      .then((response) => (response.ok ? response.json() : []))
-      .then((rows: SelectOption[]) => {
-        if (!cancelled) setAssets(rows);
-      })
-      .catch(() => {
-        if (!cancelled) setAssets([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingAssets(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [data.organization_public_id]);
 
   const esPiezaNueva = data.asset_public_id === '';
 
@@ -138,27 +104,22 @@ export function DirectReceptionDialog({
 
         <Field
           label="Pieza"
-          hint={
-            loadingAssets
-              ? 'Cargando el inventario del cliente…'
-              : 'Si ya está registrada, elíjala. Si no, deje "Pieza nueva" y descríbala abajo.'
-          }
+          hint="Escriba descripción, serie o código. Si no está registrada, deje vacío: se da de alta al ingresar."
           error={errors.asset_public_id}
         >
           {(props) => (
-            <Select
-              {...props}
+            <SearchSelect
+              id={props.id}
+              aria-describedby={props['aria-describedby']}
+              // El inventario depende del cliente: sin cliente elegido no hay dónde buscar.
+              url={`/taller/recepciones/piezas/${data.organization_public_id}`}
               value={data.asset_public_id}
-              disabled={!data.organization_public_id || loadingAssets}
-              onChange={(event) => setData('asset_public_id', event.target.value)}
-            >
-              <option value="">Pieza nueva — dar de alta al ingresar</option>
-              {assets.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
+              onChange={(id) => setData('asset_public_id', id)}
+              disabled={!data.organization_public_id}
+              placeholder={data.organization_public_id ? 'Buscar la pieza del cliente…' : 'Primero elija el cliente'}
+              emptyMessage="Ninguna pieza registrada coincide. Puede darla de alta abajo."
+              invalid={Boolean(errors.asset_public_id)}
+            />
           )}
         </Field>
 

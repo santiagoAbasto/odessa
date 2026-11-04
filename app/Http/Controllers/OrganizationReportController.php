@@ -7,6 +7,7 @@ use App\Models\Asset;
 use App\Models\InspectionReport;
 use App\Models\Organization;
 use App\Models\Reception;
+use App\Support\AssetCertificationSummary;
 use App\Support\Permissions;
 use App\Support\SpreadsheetExport;
 use Illuminate\Database\Eloquent\Builder;
@@ -63,6 +64,7 @@ class OrganizationReportController extends Controller
         [$orgId, $desde, $hasta] = $this->params($request);
         $user = $request->user();
         $report = $this->build($orgId, $desde, $hasta);
+        $certificaciones = new AssetCertificationSummary;
 
         $empresa = $user->isClientUser()
             ? $user->organization?->name
@@ -91,14 +93,20 @@ class OrganizationReportController extends Controller
             sheets: [
                 ['name' => 'Resumen', 'headings' => ['Indicador', 'Valor'], 'rows' => fn () => $resumen],
                 [
+                    /*
+                     * TODOS los equipos, no sólo los certificados que vencen en
+                     * 90 días (pedido de Daniel, 04/11/2026). El vencimiento y el
+                     * «mandar antes de» salen de las inspecciones, sin depender
+                     * del estado, y se detalla qué inspección vence y cuándo.
+                     */
                     'name' => 'Vencimientos',
-                    'headings' => ['Equipo', 'Serie', 'Código', 'Empresa', 'Estado', 'Vence', 'Mandar antes de', 'Días para vencer', 'Fuera de tiempo'],
-                    'rows' => fn () => $this->expiryQuery($orgId)->lazy(500)->map(fn (Asset $a) => [
-                        $a->displayName(), $a->serial_number, $a->code, $a->organization?->name,
-                        $a->status->label(), $a->expires_at?->format('d/m/Y'), $a->send_by_at?->format('d/m/Y'),
-                        (int) today()->diffInDays($a->expires_at, false),
-                        $this->missed($a) ? 'Sí' : 'No',
-                    ]),
+                    'headings' => [
+                        'Equipo', 'Número de parte', 'Serie', 'Código', 'Empresa', 'Estado',
+                        'Vence', 'Inspección que vence primero', 'Días para vencer',
+                        'Mandar antes de', 'Fuera de tiempo',
+                        ...$certificaciones->headings(),
+                    ],
+                    'rows' => fn () => $this->expirySheetRows($orgId, $certificaciones),
                 ],
                 [
                     'name' => 'Trabajos',
@@ -250,6 +258,57 @@ class OrganizationReportController extends Controller
             ->orderByRaw('send_by_at is null')
             ->orderBy('send_by_at')
             ->orderBy('expires_at');
+    }
+
+    /**
+     * Filas de la hoja «Vencimientos»: todos los equipos, el que vence antes
+     * primero y los que no tienen fecha al final.
+     *
+     * Se ordena en memoria porque el orden sale de las inspecciones y no de una
+     * columna. ponytail: sirve hasta algunas decenas de miles de equipos por
+     * empresa; más allá habría que materializar el vencimiento en la tabla.
+     *
+     * @return list<list<mixed>>
+     */
+    private function expirySheetRows(?int $orgId, AssetCertificationSummary $certificaciones): array
+    {
+        $filas = [];
+
+        $query = $this->forOrg(Asset::query(), $orgId)
+            ->with(['organization:id,name', 'catalogItem:id,description,part_number,turnaround_days']);
+
+        foreach ($query->lazy(500)->chunk(500) as $tanda) {
+            $resumenes = $certificaciones->forAssets($tanda);
+
+            foreach ($tanda as $a) {
+                $resumen = $resumenes[$a->getKey()];
+                $vence = $resumen['nextExpiry'];
+                $mandar = $certificaciones->sendBy($a, $vence);
+
+                $filas[] = [
+                    $vence?->toDateString() ?? '9999-12-31',
+                    $a->displayName(),
+                    [
+                        $a->displayName(),
+                        $a->catalogItem?->part_number,
+                        $a->serial_number,
+                        $a->code,
+                        $a->organization?->name,
+                        $a->status->label(),
+                        $vence?->format('d/m/Y'),
+                        $resumen['nextType'],
+                        $vence ? (int) today()->diffInDays($vence, false) : null,
+                        $mandar?->format('d/m/Y'),
+                        $mandar ? ($mandar->lt(today()) ? 'Sí' : 'No') : null,
+                        ...$certificaciones->cells($resumen['certifications']),
+                    ],
+                ];
+            }
+        }
+
+        usort($filas, fn (array $x, array $y) => [$x[0], $x[1]] <=> [$y[0], $y[1]]);
+
+        return array_map(fn (array $f) => $f[2], $filas);
     }
 
     /** Lo que entró o salió del taller en el período. */

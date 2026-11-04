@@ -33,6 +33,7 @@ class CreateAsset
             'code' => $data['code'] ?? $this->nextCode($organization),
             'organization_id' => $organization->getKey(),
             'kind' => $data['kind'] ?? Asset::KIND_PART,
+            'is_set' => (bool) ($data['is_set'] ?? false),
             'description' => $data['description'],
             'workshop_description' => $data['workshop_description'] ?? null,
             'serial_number' => $data['serial_number'] ?? null,
@@ -56,7 +57,7 @@ class CreateAsset
             action: 'asset.created',
             subject: $asset,
             description: $reason ?? "Alta de {$asset->displayName()}",
-            new: ['serial_number' => $asset->serial_number, 'description' => $asset->description],
+            new: ['serial_number' => $asset->serial_number, 'description' => $asset->description, 'is_set' => $asset->is_set],
             organizationId: $organization->getKey(),
         );
 

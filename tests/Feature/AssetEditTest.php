@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Actions\RecalculateAssetStatus;
+use App\Enums\InspectionResult;
+use App\Models\ActivityLog;
 use App\Models\Asset;
 use App\Models\CatalogItem;
 use App\Support\Permissions;
@@ -98,11 +101,13 @@ class AssetEditTest extends TestCase
         $organizacion = $this->organization();
         $pieza = $this->asset($organizacion);
 
-        $this->reportFor($pieza, \App\Enums\InspectionResult::Apto, '2026-01-10', '2026-10-30');
-        app(\App\Actions\RecalculateAssetStatus::class)($pieza);
+        // Relativo a hoy: con fechas fijas la prueba vencía sola y daba null (04/11/2026).
+        $vence = now()->addDays(200)->startOfDay();
+        $this->reportFor($pieza, InspectionResult::Apto, '2026-01-10', $vence->toDateString());
+        app(RecalculateAssetStatus::class)($pieza);
 
         // Con el valor por defecto (30 + 15) el límite es el 15/09.
-        $this->assertSame('2026-09-15', $pieza->fresh()->send_by_at->toDateString());
+        $this->assertSame($vence->copy()->subDays(45)->toDateString(), $pieza->fresh()->send_by_at->toDateString());
 
         $preventor = CatalogItem::create([
             'kind' => $pieza->kind,
@@ -117,7 +122,7 @@ class AssetEditTest extends TestCase
             ->assertRedirect();
 
         // Con 60 + 15 el límite se adelanta al 16/08.
-        $this->assertSame('2026-08-16', $pieza->fresh()->send_by_at->toDateString());
+        $this->assertSame($vence->copy()->subDays(75)->toDateString(), $pieza->fresh()->send_by_at->toDateString());
     }
 
     public function test_el_cambio_queda_en_la_auditoria_con_el_antes_y_el_despues(): void
@@ -130,7 +135,7 @@ class AssetEditTest extends TestCase
                 'description' => 'Después',
             ]));
 
-        $registro = \App\Models\ActivityLog::where('action', 'asset.updated')->latest('id')->first();
+        $registro = ActivityLog::where('action', 'asset.updated')->latest('id')->first();
 
         $this->assertNotNull($registro);
         $this->assertSame($usuario->getKey(), $registro->user_id);
@@ -141,7 +146,8 @@ class AssetEditTest extends TestCase
     public function test_se_puede_asignar_la_pieza_a_un_conjunto(): void
     {
         $organizacion = $this->organization();
-        $conjunto = $this->asset($organizacion, ['description' => 'Conjunto']);
+        // «Forma parte de» sólo ofrece sets: el conjunto tiene que estar marcado como tal.
+        $conjunto = $this->asset($organizacion, ['description' => 'Conjunto', 'is_set' => true]);
         $pieza = $this->asset($organizacion, ['description' => 'Componente']);
 
         $this->actingAs($this->staffUser(Permissions::ROLE_WORKSHOP))

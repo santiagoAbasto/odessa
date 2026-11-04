@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Document;
+use App\Models\InspectionReport;
 use App\Models\User;
 use App\Support\Permissions;
 
@@ -22,6 +23,15 @@ class DocumentPolicy
 
     public function download(User $user, Document $document): bool
     {
+        // El adjunto de un borrador es del taller: el cliente lo recibe recién
+        // cuando el informe se emite. Se pregunta por el informe con sus scopes,
+        // que ya lo esconden (y también si fue dado de baja).
+        if ($user->isClientUser()
+            && $document->documentable_type === InspectionReport::class
+            && ! InspectionReport::query()->whereKey($document->documentable_id)->exists()) {
+            return false;
+        }
+
         return $user->can(Permissions::DOCUMENTS_VIEW)
             && $user->canAccessOrganization($document->organization_id);
     }

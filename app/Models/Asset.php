@@ -4,9 +4,10 @@ namespace App\Models;
 
 use App\Enums\AssetStatus;
 use App\Enums\InspectionResult;
-use App\Support\RecertificationWindow;
 use App\Models\Concerns\BelongsToOrganization;
 use App\Models\Concerns\HasPublicId;
+use App\Support\RecertificationWindow;
+use App\Support\TableQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * Una pieza física individual perteneciente a un cliente.
@@ -32,7 +35,7 @@ class Asset extends Model
     public const KIND_GENERIC = 'generic';
 
     protected $fillable = [
-        'organization_id', 'parent_id', 'catalog_item_id', 'kind', 'serial_number', 'code',
+        'organization_id', 'parent_id', 'catalog_item_id', 'kind', 'is_set', 'serial_number', 'code',
         'client_reference', 'manufacturer_reference', 'description', 'workshop_description',
         'brand', 'model', 'identifier', 'manufacturer_id', 'test_pressure_id',
         'working_pressure_id', 'service_id', 'connection_top_id', 'connection_bottom_id',
@@ -47,6 +50,7 @@ class Asset extends Model
     {
         return [
             'status' => AssetStatus::class,
+            'is_set' => 'boolean',
             'composite_status' => AssetStatus::class,
             'expires_at' => 'date',
             'composite_expires_at' => 'date',
@@ -170,9 +174,39 @@ class Asset extends Model
         return $query->where('kind', self::KIND_PART);
     }
 
+    /** Equipos armados como conjunto de piezas: los que lista «Sets de equipos». */
+    public function scopeSets(Builder $query): Builder
+    {
+        return $query->where('assets.is_set', true);
+    }
+
     public function scopeGenerics(Builder $query): Builder
     {
         return $query->where('kind', self::KIND_GENERIC);
+    }
+
+    /**
+     * Búsqueda de texto sobre lo que identifica a un equipo: descripción,
+     * serie, código, referencias y el tipo (descripción y número de parte).
+     *
+     * Es la única definición: la usan el listado de Activos y los buscadores
+     * predictivos (envíos, sets). Con columnas calificadas porque el listado
+     * ordena haciendo joins.
+     */
+    public function scopeMatching(Builder $query, string $term): Builder
+    {
+        $like = TableQuery::like($term);
+
+        return $query->where(function (Builder $inner) use ($like) {
+            $inner->where('assets.description', 'like', $like)
+                ->orWhere('assets.serial_number', 'like', $like)
+                ->orWhere('assets.code', 'like', $like)
+                ->orWhere('assets.client_reference', 'like', $like)
+                ->orWhere('assets.workshop_description', 'like', $like)
+                ->orWhereHas('catalogItem', fn (Builder $c) => $c
+                    ->where('description', 'like', $like)
+                    ->orWhere('part_number', 'like', $like));
+        });
     }
 
     public function scopeStatus(Builder $query, AssetStatus|string $status): Builder
@@ -251,7 +285,7 @@ class Asset extends Model
         return $this->composite_status ?? $this->status;
     }
 
-    public function effectiveExpiresAt(): ?\Illuminate\Support\Carbon
+    public function effectiveExpiresAt(): ?Carbon
     {
         return $this->composite_expires_at ?? $this->expires_at;
     }
@@ -261,9 +295,9 @@ class Asset extends Model
      * mostrarle al taller: no alcanza con decir que el conjunto no sirve,
      * hay que decir por cuál de sus piezas.
      *
-     * @return \Illuminate\Support\Collection<int, self>
+     * @return Collection<int, self>
      */
-    public function blockingComponents(): \Illuminate\Support\Collection
+    public function blockingComponents(): Collection
     {
         return $this->components
             ->filter(fn (self $c) => $c->effectiveStatus()->severity() > AssetStatus::Fit->severity())

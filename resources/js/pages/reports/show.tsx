@@ -1,8 +1,9 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { CheckCheck, Download, FileText, Layers, Package } from 'lucide-react';
+import { CheckCheck, History, Layers, Package, TriangleAlert } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { DocumentPanel, type DocumentPayload } from '@/components/documents/document-panel';
 import { AddAssetsDialog, ResolveLinesDialog } from '@/components/reports/line-editor';
+import { DeleteReportDialog, EditReportDialog } from '@/components/reports/report-actions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmButton } from '@/components/ui/confirm-button';
@@ -32,6 +33,16 @@ interface ReportLine {
   findings: string | null;
 }
 
+interface HistoryEntry {
+  id: number;
+  label: string;
+  tone: Tone;
+  description: string | null;
+  user: string | null;
+  at: string | null;
+  changes: { old?: Record<string, unknown>; new?: Record<string, unknown> } | null;
+}
+
 interface ReportDetail {
   id: string;
   number: string;
@@ -42,6 +53,8 @@ interface ReportDetail {
   statusLabel: string;
   statusTone: Tone;
   service: string | null;
+  serviceId: string;
+  equipmentLabel: string | null;
   notes: string | null;
   createdBy: string | null;
   finalizedBy: string | null;
@@ -55,16 +68,22 @@ export default function ReportShow({
   lines,
   files,
   categories,
+  serviceOptions,
+  history,
   can,
 }: {
   report: ReportDetail;
   lines: ReportLine[];
   files: DocumentPayload[];
   categories: { value: string; label: string }[];
+  serviceOptions: { value: string; label: string }[];
+  /** Null cuando el usuario no puede ver la auditoría. */
+  history: HistoryEntry[] | null;
   can: {
     finalize: boolean;
     update: boolean;
     cancel: boolean;
+    delete: boolean;
     upload: boolean;
     deleteDocuments: boolean;
   };
@@ -77,7 +96,10 @@ export default function ReportShow({
   const [seleccion, setSeleccion] = useState<number[]>([]);
   useEffect(() => setSeleccion([]), [lines]);
 
-  const editable = can.update && report.status === 'draft';
+  // Un informe final también se corrige (taller y superadministrador): el servidor
+  // lo autoriza con can.update y recalcula las piezas al guardar.
+  const editable = can.update;
+  const finalizado = report.status === 'final';
   const todasMarcadas = lines.length > 0 && seleccion.length === lines.length;
 
   return (
@@ -87,15 +109,20 @@ export default function ReportShow({
       breadcrumbs={[{ label: 'Informes', href: '/informes' }, { label: report.number }]}
       actions={
         <>
+          {can.update && <EditReportDialog report={report} serviceOptions={serviceOptions} />}
+
           {editable && <AddAssetsDialog reportId={report.id} />}
 
           {editable && (
             <ResolveLinesDialog
               reportId={report.id}
               lineIds={seleccion}
+              finalized={finalizado}
               onDone={() => setSeleccion([])}
             />
           )}
+
+          {can.delete && <DeleteReportDialog report={report} />}
 
           {can.finalize && (
           <ConfirmButton
@@ -114,6 +141,19 @@ export default function ReportShow({
       }
     >
       <Head title={`Informe N° ${report.number}`} />
+
+      {finalizado && editable && (
+        <div
+          role="note"
+          className="mb-5 flex items-start gap-2.5 rounded-xs border border-[var(--tone-warning-border,var(--border-default))] bg-[var(--tone-warning-bg,var(--surface-sunken))] px-3.5 py-2.5 text-[12px] text-[var(--text-secondary)]"
+        >
+          <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-[var(--tone-warning-fg,currentColor)]" aria-hidden />
+          <p>
+            Este informe ya está <strong>finalizado</strong>. Cualquier corrección recalcula el estado de sus
+            piezas y queda registrada en la auditoría.
+          </p>
+        </div>
+      )}
 
       {/* ================= Cabecera ================= */}
       <Panel className="mb-5">
@@ -306,7 +346,116 @@ export default function ReportShow({
           emptyHint="Adjunte aquí el informe firmado o el certificado del informe."
         />
       </div>
+
+      {/* ================= Historial de cambios (auditoría) ================= */}
+      {history && (
+        <Panel className="mt-5">
+          <PanelHeader
+            title="Historial de cambios"
+            description="Quién hizo qué sobre este informe, con lo que había antes."
+          />
+          {history.length === 0 ? (
+            <EmptyState icon={History} title="Sin cambios registrados" />
+          ) : (
+            <ul className="divide-y divide-[var(--border-subtle)]">
+              {history.map((entry) => (
+                <li key={entry.id} className="px-4 py-3 text-[12px]">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <Badge tone={entry.tone}>{entry.label}</Badge>
+                    <span className="text-[var(--text-muted)] tabular">
+                      {entry.at ? formatDateTime(entry.at) : '—'}
+                      {entry.user && ` · ${entry.user}`}
+                    </span>
+                  </div>
+                  {entry.description && <p className="mt-1.5">{entry.description}</p>}
+                  <ChangeDiff changes={entry.changes} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      )}
     </AppLayout>
+  );
+}
+
+const CAMPOS: Record<string, string> = {
+  number: 'Número',
+  inspected_at: 'Fecha de inspección',
+  service_id: 'Operación',
+  equipment_label: 'Equipo',
+  notes: 'Notas',
+  result: 'Resultado',
+  expires_at: 'Vencimiento',
+};
+
+const RESULTADOS: Record<string, string> = {
+  apto: 'Apto',
+  no_apto: 'No apto',
+  no_aplica: 'No aplica',
+  sin_procesar: 'Sin procesar',
+};
+
+interface LineaAntes {
+  equipo: string | null;
+  result: string;
+  expires_at: string | null;
+}
+
+/** Antes → después de lo que cambió, tal como lo guardó la auditoría. */
+function ChangeDiff({ changes }: { changes: HistoryEntry['changes'] }) {
+  const antes = changes?.old;
+  const despues = changes?.new;
+  if (!antes || !despues) return null;
+
+  const texto = (clave: string, valor: unknown) => {
+    if (valor === null || valor === '' || valor === undefined) return '—';
+    if (clave === 'result') return RESULTADOS[String(valor)] ?? String(valor);
+    if (clave === 'inspected_at' || clave === 'expires_at') return formatDate(String(valor));
+    return String(valor);
+  };
+
+  // Corrección de un dictamen: lo que había en cada equipo y lo que quedó.
+  const lineas = Array.isArray(antes.lines) ? (antes.lines as LineaAntes[]) : null;
+  if (lineas) {
+    return (
+      <div className="mt-2 rounded-xs bg-[var(--surface-sunken)] px-3 py-2 text-[11.5px]">
+        <ul className="space-y-1">
+          {lineas.map((linea, indice) => (
+            <li key={indice}>
+              <span className="font-medium">{linea.equipo ?? 'Equipo'}</span>{': '}
+              <span className="text-[var(--text-muted)] line-through">
+                {texto('result', linea.result)}
+                {linea.expires_at ? ` · vence ${formatDate(linea.expires_at)}` : ''}
+              </span>
+              {' → '}
+              <span className="font-medium">
+                {texto('result', despues.result)}
+                {despues.expires_at ? ` · vence ${formatDate(String(despues.expires_at))}` : ''}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  const claves = Object.keys(despues).filter((clave) => clave in antes);
+  if (claves.length === 0) return null;
+
+  return (
+    <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xs bg-[var(--surface-sunken)] px-3 py-2 text-[11.5px]">
+      {claves.map((clave) => (
+        <div key={clave} className="contents">
+          <dt className="text-[var(--text-secondary)]">{CAMPOS[clave] ?? clave}</dt>
+          <dd>
+            <span className="text-[var(--text-muted)] line-through">{texto(clave, antes[clave])}</span>
+            {' → '}
+            <span className="font-medium">{texto(clave, despues[clave])}</span>
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

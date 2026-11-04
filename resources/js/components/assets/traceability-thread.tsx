@@ -53,13 +53,18 @@ const icons: Record<string, LucideIcon> = {
   eye: Eye,
 };
 
+/*
+  «Todo» va al final y no es lo que se abre primero (pedido de Daniel,
+  04/11/2026): lo que el negocio quiere ver al entrar a un equipo son sus
+  inspecciones, después el taller y lo demás.
+*/
 const groups: { value: string; label: string }[] = [
-  { value: 'all', label: 'Todo' },
   { value: 'inspection', label: 'Inspecciones' },
   { value: 'reception', label: 'Taller' },
   { value: 'shipment', label: 'Envíos' },
   { value: 'document', label: 'Documentos' },
   { value: 'audit', label: 'Accesos' },
+  { value: 'all', label: 'Todo' },
 ];
 
 /**
@@ -70,7 +75,19 @@ const groups: { value: string; label: string }[] = [
  * pidió el negocio: quién, qué y cuándo.
  */
 export function TraceabilityThread({ events }: { events: TimelineEvent[] }) {
-  const [group, setGroup] = useState('all');
+  /*
+    El hilo llega diferido —primero vacío, después con datos—, así que la vista
+    por defecto se deriva de lo que hay en cada momento y sólo se fija cuando la
+    persona elige una. Fijarla en el primer render la dejaría en «Todo».
+  */
+  const [choice, setChoice] = useState<string | null>(null);
+  const defaultGroup = useMemo(
+    () =>
+      groups.find((option) => option.value !== 'all' && events.some((event) => event.kind === option.value))
+        ?.value ?? 'all',
+    [events],
+  );
+  const group = choice ?? defaultGroup;
 
   const visible = useMemo(
     () => (group === 'all' ? events : events.filter((event) => event.kind === group)),
@@ -102,7 +119,7 @@ export function TraceabilityThread({ events }: { events: TimelineEvent[] }) {
             <button
               key={option.value}
               type="button"
-              onClick={() => setGroup(option.value)}
+              onClick={() => setChoice(option.value)}
               aria-pressed={group === option.value}
               className={cn(
                 'rounded-xs px-2.5 py-1 text-[11.5px] font-medium transition-colors',
