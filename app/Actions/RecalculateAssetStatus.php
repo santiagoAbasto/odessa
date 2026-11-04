@@ -9,6 +9,7 @@ use App\Models\Asset;
 use App\Models\Reception;
 use App\Support\RecertificationWindow;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -141,10 +142,11 @@ class RecalculateAssetStatus
         $asset->forceFill([
             'status' => $status,
             'expires_at' => $vence,
-            // Derivada del vencimiento: última fecha en la que el cliente puede
-            // despachar el equipo y todavía recibirlo certificado. Sin fecha o
-            // ya no apta, no hay plazo que derivar.
-            'send_by_at' => $status === AssetStatus::Unfit ? null : $this->sendBy($asset, $vence),
+            // Derivada de los vencimientos: última fecha en la que el cliente
+            // puede despachar el equipo y todavía recibirlo certificado. Cada
+            // certificación cuenta con los días de taller de su servicio y vale
+            // la más próxima. Sin fecha o ya no apto, no hay plazo que derivar.
+            'send_by_at' => $status === AssetStatus::Unfit ? null : $this->sendBy($asset, $vigentes),
             // El informe determinante es el último dictamen formal, que es lo
             // que la ficha rotula "último informe con dictamen".
             'current_inspection_report_id' => $masReciente->inspection_report_id,
@@ -273,47 +275,60 @@ class RecalculateAssetStatus
     }
 
     /**
-     * Fecha límite de envío para el vencimiento que se acaba de fijar.
+     * Fecha límite de envío: la más próxima entre las certificaciones vigentes.
      *
-     * El tiempo de reparación sale del tipo de equipo cuando tiene uno propio;
-     * el margen de seguridad es de la operación.
+     * Cada una (COS, COC…) resta a su vencimiento los días de taller de SU
+     * servicio y el margen. La más próxima no es siempre la que vence primero:
+     * una certificación que vence más tarde pero tarda mucho más en hacerse
+     * puede obligar a mandar antes el equipo. Una sin fecha no acota.
+     *
+     * @param  Collection<int, object>  $vigentes  Una línea por servicio, por id de servicio.
      */
-    private function sendBy(Asset $asset, ?Carbon $expiresAt): ?Carbon
+    private function sendBy(Asset $asset, Collection $vigentes): ?Carbon
     {
-        if ($expiresAt === null) {
+        $conFecha = $vigentes->filter(fn ($l) => $l->expires_at !== null);
+
+        if ($conFecha->isEmpty()) {
             return null;
         }
 
-        return (new RecertificationWindow(
-            expiresAt: $expiresAt,
-            turnaroundDays: $this->turnaroundDays($asset),
-            safetyMarginDays: (int) config('odessa.recertification.safety_margin_days'),
-        ))->sendBy();
+        $diasPorServicio = DB::table('services')
+            ->whereIn('id', $conFecha->keys()->filter()->all())
+            ->pluck('turnaround_days', 'id');
+        $diasDelTipo = $this->typeTurnaround($asset);
+        $margen = (int) config('odessa.recertification.safety_margin_days');
+
+        return $conFecha
+            ->map(fn ($l, $servicioId) => (new RecertificationWindow(
+                expiresAt: Carbon::parse($l->expires_at),
+                turnaroundDays: RecertificationWindow::turnaround($diasPorServicio[$servicioId] ?? null, $diasDelTipo),
+                safetyMarginDays: $margen,
+            ))->sendBy())
+            ->sortBy(fn (Carbon $fecha) => $fecha->getTimestamp())
+            ->first();
     }
 
     /**
-     * Días de taller para el tipo de equipo de esta pieza.
+     * Días de taller que cargó el negocio para el tipo de equipo, o null.
      *
      * Se consulta la columna directamente en vez de navegar la relación: este
      * recálculo corre en lote sobre miles de piezas y con la relación sin
      * cargar provocaría una consulta por pieza —o directamente una excepción,
      * porque la carga perezosa está deshabilitada fuera de producción—.
      */
-    private function turnaroundDays(Asset $asset): int
+    private function typeTurnaround(Asset $asset): ?int
     {
-        $default = (int) config('odessa.recertification.turnaround_days');
-
         if ($asset->catalog_item_id === null) {
-            return $default;
+            return null;
         }
 
         if ($asset->relationLoaded('catalogItem')) {
-            return $asset->catalogItem?->turnaroundDays() ?? $default;
+            return $asset->catalogItem?->turnaround_days;
         }
 
-        return (int) (DB::table('catalog_items')
-            ->where('id', $asset->catalog_item_id)
-            ->value('turnaround_days') ?? $default);
+        $dias = DB::table('catalog_items')->where('id', $asset->catalog_item_id)->value('turnaround_days');
+
+        return $dias === null ? null : (int) $dias;
     }
 
     private function resolveStatus(InspectionResult $result, ?Carbon $expiresAt): AssetStatus

@@ -12,8 +12,9 @@ entre organizaciones y auditoría de cada cambio.
   edición y baja con motivo y auditoría, y borradores que el cliente no ve.
 - **Aptitud derivada**: el estado de un equipo se calcula a partir de sus
   inspecciones; nunca se asigna a mano.
-- **Fecha límite de envío**: vencimiento menos días de taller y margen de
-  seguridad, para que el equipo no pierda la certificación mientras se repara.
+- **Fecha límite de envío**: por cada certificación (COS, COC…), su vencimiento
+  menos los días de taller de ese servicio y un margen de seguridad; el equipo
+  toma la fecha más próxima, para que no pierda la certificación mientras se repara.
 - **Taller**: envíos del cliente, recepción, reparación, liberación y despacho.
 - **Reportes y Excel** de vencimientos, por empresa y por equipo.
 - **Documentos privados**, usuarios, roles y registro de auditoría.

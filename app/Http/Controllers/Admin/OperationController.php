@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\RecalculateServiceAssets;
 use App\Http\Controllers\Controller;
 use App\Models\Service;
 use App\Support\ActivityLogger;
@@ -80,6 +81,12 @@ class OperationController extends Controller
         $before = $service->only(array_keys($data));
 
         $service->update($data);
+
+        // Los días de taller fijan «mandar antes de», que se guarda en cada pieza:
+        // si cambiaron, se rehace después de responder para no demorar la pantalla.
+        if ($service->wasChanged('turnaround_days')) {
+            dispatch(fn () => app(RecalculateServiceAssets::class)($service))->afterResponse();
+        }
 
         ActivityLogger::log(
             action: 'operation.updated',

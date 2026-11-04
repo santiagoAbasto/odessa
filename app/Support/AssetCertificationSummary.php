@@ -43,7 +43,7 @@ class AssetCertificationSummary
         return $this->types ??= Service::query()
             ->where('determines_fitness', true)
             ->orderBy('id')
-            ->get(['id', 'code', 'name'])
+            ->get(['id', 'code', 'name', 'turnaround_days'])
             ->keyBy('id');
     }
 
@@ -53,6 +53,7 @@ class AssetCertificationSummary
      *     certifications: array<int, array<string, mixed>>,
      *     nextExpiry: ?Carbon,
      *     nextType: ?string,
+     *     nextSendBy: ?Carbon,
      * }> Por id de equipo. `certifications` va por id de operación, el que
      *    vence antes primero; los equipos sin ninguna dan listas vacías.
      */
@@ -97,6 +98,19 @@ class AssetCertificationSummary
             }
         }
 
+        // La fecha límite de un conjunto también la acota su componente más
+        // apurado: se toma la ya calculada en cada componente (por servicio).
+        // ponytail: sólo hijos directos; un set dentro de otro set no propaga su
+        // plazo hacia arriba. Subir un nivel más cuando haga falta.
+        $hijos = $assets->isEmpty() ? collect() : DB::table('assets')
+            ->whereIn('parent_id', $assets->keys()->all())
+            ->whereNull('deleted_at')
+            ->whereNotNull('send_by_at')
+            ->selectRaw('parent_id, min(send_by_at) as primero')
+            ->groupBy('parent_id')
+            ->pluck('primero', 'parent_id');
+        $margen = (int) config('odessa.recertification.safety_margin_days');
+
         $resumen = [];
 
         foreach ($assets as $id => $asset) {
@@ -110,13 +124,33 @@ class AssetCertificationSummary
             $vence = $proxima ? Carbon::parse($proxima['expiresAt']) : null;
             $tipo = $proxima['code'] ?? null;
 
+            // «Mandar antes de»: cada certificación apta resta a su vencimiento los
+            // días de taller de SU servicio (o los del tipo de equipo, o el valor
+            // por defecto) y el margen; vale la más próxima. Es la misma regla
+            // que guarda RecalculateAssetStatus en `send_by_at`.
+            $diasDelTipo = $asset->catalogItem?->turnaround_days;
+            $enviarAntes = collect($certificaciones)
+                ->filter(fn (array $c) => $c['isApt'] && $c['expiresAt'] !== null)
+                ->map(fn (array $c, int $servicioId) => (new RecertificationWindow(
+                    expiresAt: Carbon::parse($c['expiresAt']),
+                    turnaroundDays: RecertificationWindow::turnaround($types->get($servicioId)?->turnaround_days, $diasDelTipo),
+                    safetyMarginDays: $margen,
+                ))->sendBy())
+                ->sortBy(fn (Carbon $fecha) => $fecha->getTimestamp())
+                ->first();
+
+            if (($hijo = $hijos[$id] ?? null) !== null) {
+                $limiteHijo = Carbon::parse($hijo)->startOfDay();
+                $enviarAntes = $enviarAntes === null || $limiteHijo->lt($enviarAntes) ? $limiteHijo : $enviarAntes;
+            }
+
             // Un conjunto vence cuando vence su componente más próximo.
             if ($asset->composite_expires_at !== null && ($vence === null || $asset->composite_expires_at->lt($vence))) {
                 $vence = $asset->composite_expires_at->copy();
                 $tipo = 'Componentes';
             }
 
-            $resumen[$id] = ['certifications' => $certificaciones, 'nextExpiry' => $vence, 'nextType' => $tipo];
+            $resumen[$id] = ['certifications' => $certificaciones, 'nextExpiry' => $vence, 'nextType' => $tipo, 'nextSendBy' => $enviarAntes];
         }
 
         return $resumen;
@@ -156,25 +190,5 @@ class AssetCertificationSummary
         }
 
         return $celdas;
-    }
-
-    /**
-     * Última fecha de envío para ese vencimiento: vencimiento − días de taller
-     * del tipo de equipo (los que el negocio va cargando; si falta, el valor
-     * por defecto) − margen de seguridad. Es la misma regla de la ficha y de
-     * los avisos; acá se aplica al vencimiento calculado de las inspecciones.
-     */
-    public function sendBy(Asset $asset, ?Carbon $expiresAt): ?Carbon
-    {
-        if ($expiresAt === null) {
-            return null;
-        }
-
-        return (new RecertificationWindow(
-            expiresAt: $expiresAt,
-            turnaroundDays: $asset->catalogItem?->turnaroundDays()
-                ?? (int) config('odessa.recertification.turnaround_days'),
-            safetyMarginDays: (int) config('odessa.recertification.safety_margin_days'),
-        ))->sendBy();
     }
 }

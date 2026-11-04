@@ -45,6 +45,20 @@ class RecertificationWindow
     ) {}
 
     /**
+     * Días de taller que cuenta una certificación (pedido del 04/11/2026: «mandar
+     * antes de» depende de los servicios que tenga el equipo).
+     *
+     * Vale lo que se cargó en la operación (Admin → Operaciones); si esa no
+     * tiene tiempo propio, el del tipo de equipo; si tampoco, el valor por
+     * defecto. Es el único lugar donde se decide, para que la ficha, los avisos
+     * y las planillas den siempre la misma fecha.
+     */
+    public static function turnaround(?int $serviceDays, ?int $typeDays): int
+    {
+        return $serviceDays ?? $typeDays ?? (int) config('odessa.recertification.turnaround_days');
+    }
+
+    /**
      * Días totales de anticipación con los que hay que mandar el equipo.
      */
     public function leadTimeDays(): int

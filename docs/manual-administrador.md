@@ -126,7 +126,7 @@ ODESSA_RECERT_NOTICE_DAYS=30
 
 **`ODESSA_DEFAULT_VALIDITY_DAYS`** es la vigencia por defecto cuando el servicio no define la suya.
 
-**Los avisos de recertificación** no se guían por el vencimiento sino por la fecha límite de envío: `vencimiento − días de taller − margen`. Un equipo puede estar todavía certificado y ya fuera de tiempo para mandarlo. `ODESSA_TURNAROUND_DAYS` es lo que tarda el taller (cada producto o operación puede pisarlo), `ODESSA_SAFETY_MARGIN_DAYS` cubre transporte e imprevistos, y `ODESSA_RECERT_NOTICE_DAYS` es con cuánta anticipación a esa fecha se empieza a avisar. Los avisos salen a las 07:00, una vez por equipo y vencimiento, y no se mandan si el equipo ya está en el taller.
+**Los avisos de recertificación** no se guían por el vencimiento sino por la fecha límite de envío: `vencimiento − días de taller − margen`, calculada por cada certificación (COS, COC…) con los días de taller de su servicio: el equipo toma la fecha más próxima, que no siempre es la del que vence primero. Un equipo puede estar todavía certificado y ya fuera de tiempo para mandarlo. Los días de cada servicio se cargan en Admin → Operaciones (al cambiarlos, las fechas de los equipos se recalculan solas). `ODESSA_TURNAROUND_DAYS` es lo que tarda el taller cuando ni el servicio ni el tipo de equipo tienen días propios, `ODESSA_SAFETY_MARGIN_DAYS` cubre transporte e imprevistos, y `ODESSA_RECERT_NOTICE_DAYS` es con cuánta anticipación a esa fecha se empieza a avisar. Los avisos salen a las 07:00, una vez por equipo y vencimiento, y no se mandan si el equipo ya está en el taller.
 
 Tras cambiar cualquiera de estos valores en el servidor: `php artisan config:cache` y vaciar el opcache (ver `deploy/elserver/NOTAS-SERVIDOR.md`).
 

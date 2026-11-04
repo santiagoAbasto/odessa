@@ -190,7 +190,7 @@ class AssetController extends Controller
                     $asset->status->label(),
                     $vence?->format('d/m/Y'),
                     $vence ? (int) today()->diffInDays($vence, false) : null,
-                    $summary->sendBy($asset, $vence)?->format('d/m/Y'),
+                    $resumen['nextSendBy']?->format('d/m/Y'),
                     ...$summary->cells($resumen['certifications']),
                     $asset->currentReport?->number,
                     $asset->currentReport?->inspected_at?->format('d/m/Y'),

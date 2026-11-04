@@ -293,7 +293,7 @@ function OperationDialog({
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Demora estimada"
-            hint={`Vacío usa ${defaults.turnaroundDays}.`}
+            hint={`Define «mandar antes de». Vacío usa el del tipo de equipo, o ${defaults.turnaroundDays} si no tiene.`}
             error={errors.turnaround_days}
           >
             {(props) => (

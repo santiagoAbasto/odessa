@@ -283,7 +283,7 @@ class OrganizationReportController extends Controller
             foreach ($tanda as $a) {
                 $resumen = $resumenes[$a->getKey()];
                 $vence = $resumen['nextExpiry'];
-                $mandar = $certificaciones->sendBy($a, $vence);
+                $mandar = $resumen['nextSendBy'];
 
                 $filas[] = [
                     $vence?->toDateString() ?? '9999-12-31',

@@ -241,16 +241,26 @@ class Asset extends Model
     /**
      * Ventana de recertificación de esta pieza.
      *
-     * El tiempo de reparación sale del tipo de equipo cuando lo tiene propio;
-     * una válvula y un preventor no tardan lo mismo.
+     * La fecha límite la fija RecalculateAssetStatus por servicio (cada
+     * certificación con sus días de taller; vale la más próxima) y queda en
+     * `send_by_at`. Acá se deduce de ahí el tiempo de taller, en vez de volver a
+     * calcularlo con otra regla: así los avisos y la pantalla no pueden
+     * discrepar. Sin fecha guardada, rige el tipo de equipo o el valor por defecto.
      */
     public function recertificationWindow(): RecertificationWindow
     {
+        $margen = (int) config('odessa.recertification.safety_margin_days');
+
+        if ($this->expires_at !== null && $this->send_by_at !== null) {
+            $diasDeTaller = max(0, (int) $this->send_by_at->diffInDays($this->expires_at, false) - $margen);
+
+            return new RecertificationWindow($this->expires_at, $diasDeTaller, $margen);
+        }
+
         return new RecertificationWindow(
             expiresAt: $this->expires_at,
-            turnaroundDays: $this->catalogItem?->turnaroundDays()
-                ?? (int) config('odessa.recertification.turnaround_days'),
-            safetyMarginDays: (int) config('odessa.recertification.safety_margin_days'),
+            turnaroundDays: RecertificationWindow::turnaround(null, $this->catalogItem?->turnaround_days),
+            safetyMarginDays: $margen,
         );
     }
 
