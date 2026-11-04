@@ -238,9 +238,11 @@ cargada así desde el 08/10/2026, para que corra cada minuto:
 - Si alguna de las dos variables está vacía, la ruta responde 404: no queda
   abierta por olvido. Acepta hasta 10 llamadas por minuto.
 
-Para cambiar la clave: editarla con `nano .env`, correr `config:cache`, vaciar
-el opcache (punto 2) y recién ahí actualizarla en el panel. Saltear el opcache
-da un 401 con la clave correcta: es lo que pasó el 08/10/2026.
+Para cambiar la clave: editarla con `nano .env` y recién ahí actualizarla en el
+panel. Con la config sin cachear (guía vigente: `docs/DESPLIEGUE-PASO-A-PASO.md`,
+paso 7) el valor nuevo se toma solo; si hubiera una copia cacheada, antes
+`php artisan config:clear`. Con la config cacheada y sin vaciar el opcache da un
+401 con la clave correcta: es lo que pasó el 08/10/2026.
 
 ### Cómo saber si está andando
 
@@ -295,8 +297,9 @@ Ojo: la primera vez que corra, manda de una vez todo lo que se haya acumulado.
    `MAIL_MAILER=smtp`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`,
    `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`. Para el puerto 587 va
    `MAIL_SCHEME=smtp`; para el 465, `MAIL_SCHEME=smtps`.
-5. `php artisan config:cache` y **vaciar el opcache** (punto 2: no hay botón
-   para reiniciar PHP-FPM).
+5. Con la config sin cachear (guía vigente: `docs/DESPLIEGUE-PASO-A-PASO.md`,
+   paso 7) el `.env` nuevo se toma solo; si hubiera una copia cacheada,
+   `php artisan config:clear`. No correr `config:cache`.
 6. **Prueba de envío** (reemplazar el correo):
 
    ```bash
@@ -309,6 +312,9 @@ Ojo: la primera vez que corra, manda de una vez todo lo que se haya acumulado.
 ---
 
 ## Despliegue, paso a paso
+
+> La guía vigente, con respaldo y verificación, es `docs/DESPLIEGUE-PASO-A-PASO.md`.
+> Esta sección es el resumen; ahí se explica por qué la config no se cachea.
 
 `deploy/empaquetar.sh` arma el paquete y **ya incluye `vendor/` resuelto**
 contra la plataforma correcta (`config.platform.php` en `composer.json` está
@@ -323,10 +329,9 @@ cd /www/odessaoil.com/sistema.odessaoil.com
 # 2. Base de datos
 php artisan migrate --force
 
-# 3. Cachés
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+# 3. Limpiar cachés viejas (la config se deja SIN cachear a propósito)
+php artisan route:clear
+php artisan view:clear
 
 # 4. Vaciar el opcache  <-- ver punto 2, no es opcional
 ```

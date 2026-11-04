@@ -128,7 +128,7 @@ ODESSA_RECERT_NOTICE_DAYS=30
 
 **Los avisos de recertificación** no se guían por el vencimiento sino por la fecha límite de envío: `vencimiento − días de taller − margen`, calculada por cada certificación (COS, COC…) con los días de taller de su servicio: el equipo toma la fecha más próxima, que no siempre es la del que vence primero. Un equipo puede estar todavía certificado y ya fuera de tiempo para mandarlo. Los días de cada servicio se cargan en Admin → Operaciones (al cambiarlos, las fechas de los equipos se recalculan solas). `ODESSA_TURNAROUND_DAYS` es lo que tarda el taller cuando ni el servicio ni el tipo de equipo tienen días propios, `ODESSA_SAFETY_MARGIN_DAYS` cubre transporte e imprevistos, y `ODESSA_RECERT_NOTICE_DAYS` es con cuánta anticipación a esa fecha se empieza a avisar. Los avisos salen a las 07:00, una vez por equipo y vencimiento, y no se mandan si el equipo ya está en el taller.
 
-Tras cambiar cualquiera de estos valores en el servidor: `php artisan config:cache` y vaciar el opcache (ver `deploy/elserver/NOTAS-SERVIDOR.md`).
+Tras cambiar cualquiera de estos valores en el `.env` del servidor no hay que cachear nada: la configuración se deja **sin cachear a propósito** y el cambio se toma solo. Si no se viera reflejado, `php artisan config:clear`. **No correr `config:cache`**: sin reciclar PHP-FPM da un falso problema de credenciales (ver el paso 7 de `docs/DESPLIEGUE-PASO-A-PASO.md`).
 
 La vigencia por servicio se configura en la tabla `services`, columna `validity_days`.
 

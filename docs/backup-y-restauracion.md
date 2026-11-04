@@ -119,10 +119,10 @@ tar -xzf ~/backups/docs-2026-10-20.tar.gz -C storage/app
 Comprobar con `ls -l storage/app/documents` que los archivos quedaron del
 mismo dueño que el resto de `storage/`: si no, la web no los puede leer.
 
-**4. Regenerar cachés, vaciar el opcache y levantar**
+**4. Limpiar cachés, vaciar el opcache y levantar**
 
 ```bash
-php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan up
+php artisan config:clear && php artisan route:clear && php artisan view:clear && php artisan up
 ```
 
 Sin vaciar el opcache (punto 2 de las notas del servidor), la web puede seguir
