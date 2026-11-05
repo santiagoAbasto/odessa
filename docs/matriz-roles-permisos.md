@@ -1,6 +1,6 @@
 # Matriz de roles y permisos
 
-> **Actualizado el 12/08/2026** con la definición confirmada por el negocio. La versión anterior manejaba ocho roles derivados de la auditoría; el negocio confirmó que son cuatro.
+> Los cuatro roles los confirmó el negocio el 12/08/2026 (la versión anterior manejaba ocho roles derivados de la auditoría). **Matriz revisada el 05/11/2026** contra el código: `App\Support\Permissions::roleMatrix()` es la fuente de verdad.
 
 ## Los cuatro roles
 
@@ -31,6 +31,8 @@ Leyenda: ● permiso otorgado · — sin permiso
 | `assets.delete` | ● | — | — | — |
 | `assets.export` | ● | ● | ● | ● |
 | `assets.external_certification` | ● | — | ● | — |
+| `products.view` | ● | ● | — | — |
+| `products.manage` | ● | — | — | — |
 | `sets.view` | ● | ● | ● | ● |
 | `sets.manage` | ● | ● | — | — |
 | `reports.view` | ● | ● | ● | ● |
@@ -38,17 +40,20 @@ Leyenda: ● permiso otorgado · — sin permiso
 | `reports.update` | ● | ● | — | — |
 | `reports.finalize` | ● | ● | — | — |
 | `reports.cancel` | ● | ● | — | — |
+| `reports.delete` | ● | ● | — | — |
 | `reports.export` | ● | ● | ● | ● |
 | `documents.view` | ● | ● | ● | ● |
 | `documents.upload` | ● | ● | — | — |
 | `documents.delete` | ● | ● | — | — |
-| `receptions.view` | ● | ● | — | — |
+| `receptions.view` | ● | ● | ● | ● |
 | `receptions.create` | ● | ● | — | — |
 | `receptions.update` | ● | ● | — | — |
 | `receptions.release` | ● | ● | — | — |
 | `receptions.dispatch` | ● | ● | — | — |
+| `receptions.revert` | ● | — | — | — |
+| `receptions.authorize_repair` | ● | ● | ● | — |
 | `shipments.view` | ● | ● | ● | ● |
-| `shipments.create` | ● | — | ● | — |
+| `shipments.create` | ● | ● | ● | — |
 | `shipments.authorize` | ● | ● | — | — |
 | `comments.view` | ● | ● | ● | ● |
 | `comments.create` | ● | ● | ● | — |
@@ -63,9 +68,26 @@ Leyenda: ● permiso otorgado · — sin permiso
 | `audit.view` | ● | ● | — | — |
 | `settings.manage` | ● | — | — | — |
 
-## La única diferencia entre los dos roles de cliente
+## La diferencia entre los dos roles de cliente
 
-`shipments.create`. Ambos consultan exactamente lo mismo; sólo el operador puede declarar los equipos que envía al taller.
+Cliente · Consulta sólo lee: ve sus equipos, informes, documentos, envíos y dónde está cada equipo en el taller (`receptions.view`). Cliente · Operador consulta lo mismo y además puede:
+
+- declarar los equipos que envía al taller (`shipments.create`);
+- comentar (`comments.create`);
+- contestar si autoriza una reparación (`receptions.authorize_repair`), porque se le cobra a él;
+- cargar a mano, en la ficha de sus equipos, la certificación que ya traían de otra empresa (`assets.external_certification`).
+
+El taller **no** tiene `assets.external_certification`: esa carga es del operador del cliente y del superadministrador.
+
+## Qué permiso cubre cada acción del taller
+
+| Acción | Permiso |
+|---|---|
+| Empezar, aprobar o rechazar un trabajo, consultar al cliente, marcar sin solución | `receptions.release` |
+| **Cancelar un trabajo** (el cliente avisó que no se hace; no toca la aptitud) | `receptions.release` |
+| **Eliminar una recepción repetida** (en espera y sin iniciar) | `receptions.update` |
+| Despachar | `receptions.dispatch` |
+| Deshacer un dictamen cargado por error | `receptions.revert` (sólo superadministrador) |
 
 ## Dónde se aplica cada permiso
 

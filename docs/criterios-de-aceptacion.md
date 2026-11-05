@@ -2,7 +2,7 @@
 
 Cada criterio indica la prueba que lo verifica. Estado a 28 de octubre de 2026: **340 pruebas, 1054 aserciones, todas en verde** (`php artisan test`).
 
-Las tablas detallan los criterios originales, ya alineados con el circuito del taller y los cuatro roles definidos por el negocio el 27/09/2026. Lo que se agregó después está agrupado por archivo de pruebas al final.
+Las tablas detallan los criterios originales, ya alineados con el circuito del taller (revisado por el negocio el 27/09/2026) y con los cuatro roles que el negocio confirmó el 12/08/2026. Lo que se agregó después está agrupado por archivo de pruebas al final.
 
 ## Instalación y arranque
 
