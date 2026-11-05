@@ -41,7 +41,9 @@ export default function ReportsIndex({
   const [creating, setCreating] = useState(false);
   const filterDefinitions = useMemo<FilterDefinition[]>(
     () => [
-      { key: 'search', label: 'Número de informe', type: 'text' },
+      { key: 'search', label: 'Informe, serie o referencia', type: 'text' },
+      { key: 'serial', label: 'Nº de serie', type: 'text' },
+      { key: 'client_reference', label: 'Referencia del cliente', type: 'text' },
       { key: 'status', label: 'Estado', type: 'select', options: statusOptions },
       // Sólo para el personal interno: un cliente ve únicamente lo suyo.
       ...(organizationOptions.length > 0
@@ -86,6 +88,18 @@ export default function ReportsIndex({
         cell: ({ row }) => (
           <span className="text-[12.5px]">{row.original.equipment ?? '—'}</span>
         ),
+      },
+      // Lo que se inspeccionó, equipo por equipo: sin esto un informe con
+      // varios equipos obligaba a abrirlo para saber cuáles eran.
+      {
+        id: 'serials',
+        header: 'Nº de serie',
+        cell: ({ row }) => <ValueList values={row.original.serials} mono />,
+      },
+      {
+        id: 'clientReferences',
+        header: 'Ref. cliente',
+        cell: ({ row }) => <ValueList values={row.original.clientReferences} />,
       },
       {
         id: 'inspectedAt',
@@ -156,7 +170,7 @@ export default function ReportsIndex({
               baseUrl="/informes"
               filters={filters}
               definitions={filterDefinitions}
-              searchPlaceholder="Número de informe…"
+              searchPlaceholder="Nº de informe, serie o referencia del cliente…"
             />
           }
           emptyState={
@@ -174,6 +188,28 @@ export default function ReportsIndex({
         />
       </Panel>
     </AppLayout>
+  );
+}
+
+/**
+ * Valores de todos los equipos de un informe en una celda: los primeros a la
+ * vista y el resto detrás de «+N» (con la lista completa al pasar el mouse),
+ * para que un informe con cientos de piezas no rompa la tabla.
+ */
+function ValueList({ values, mono = false }: { values: string[]; mono?: boolean }) {
+  if (values.length === 0) return <span className="text-[var(--text-secondary)]">—</span>;
+
+  const visibles = values.slice(0, 3);
+  const resto = values.length - visibles.length;
+
+  return (
+    <span
+      className={mono ? 'block max-w-[220px] font-mono text-[12px]' : 'block max-w-[200px] text-[12.5px]'}
+      title={values.join(', ')}
+    >
+      {visibles.join(', ')}
+      {resto > 0 && <span className="ml-1 text-[var(--text-secondary)]">+{resto}</span>}
+    </span>
   );
 }
 

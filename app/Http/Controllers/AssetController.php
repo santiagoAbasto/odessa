@@ -242,6 +242,9 @@ class AssetController extends Controller
                 'files' => $line->inspectionReport->documents->map(fn ($d) => $d->toPayload())->all(),
             ]);
 
+        // Mismo cálculo que usan las planillas: ver AssetCertificationSummary.
+        $certificaciones = (new AssetCertificationSummary)->forAssets([$asset])[$asset->getKey()]['certifications'] ?? [];
+
         ActivityLogger::log('asset.viewed', $asset, "Consulta de la pieza {$asset->displayName()}");
 
         return Inertia::render('assets/show', [
@@ -326,7 +329,12 @@ class AssetController extends Controller
             'history' => $history,
             // Próximo vencimiento por tipo de certificación (anual/COS, COC…),
             // para verlos los dos en la cabecera en vez de uno solo.
-            'certifications' => $this->certifications($asset),
+            'certifications' => array_values($certificaciones),
+            // Operaciones para las que se puede cargar a mano la certificación
+            // que el equipo ya traía de otra empresa (sin generar un informe).
+            'externalServices' => $request->user()->can('certifyExternally', $asset)
+                ? $this->externalServices($asset, array_keys($certificaciones))
+                : [],
             /*
              * Hilo completo de trazabilidad: envíos, recepciones, hitos del
              * taller, inspecciones, documentos y auditoría, en una sola línea
@@ -344,6 +352,7 @@ class AssetController extends Controller
                 'upload' => $request->user()->can(Permissions::DOCUMENTS_UPLOAD),
                 'deleteDocuments' => $request->user()->can(Permissions::DOCUMENTS_DELETE),
                 'edit' => $request->user()->can('update', $asset),
+                'externalCertification' => $request->user()->can('certifyExternally', $asset),
             ],
             // Catálogos del formulario. Diferidos: sólo hacen falta al editar.
             'catalogs' => Inertia::defer(fn () => $this->editCatalogs($asset)),
@@ -351,22 +360,23 @@ class AssetController extends Controller
     }
 
     /**
-     * Próximo vencimiento por cada tipo de certificación que da aptitud
-     * (COS anual, COC de conformidad…). Para cada operación determinante se
-     * toma su línea final más reciente, así la cabecera muestra los dos plazos
-     * a la vez en lugar del único que guarda el estado del equipo.
+     * Operaciones que certifican y que Odessa le habilitó a la empresa del
+     * equipo, donde todavía no hay ninguna certificación (ni de Odessa ni
+     * cargada a mano): las que se pueden cargar por primera vez.
      *
-     * Es de sólo lectura: se deriva del historial y no cambia cómo se calcula
-     * la aptitud. La operacional (que no da aptitud) no entra.
-     *
-     * @return list<array<string, mixed>>
+     * @param  list<int|string>  $conCertificacion  Ids de operación que ya tienen una.
+     * @return list<array{id: int, code: string, name: string}>
      */
-    private function certifications(Asset $asset): array
+    private function externalServices(Asset $asset, array $conCertificacion): array
     {
-        // Mismo cálculo que usan las planillas: ver AssetCertificationSummary.
-        return array_values(
-            (new AssetCertificationSummary)->forAssets([$asset])[$asset->getKey()]['certifications'] ?? []
-        );
+        return $asset->organization->operations()
+            ->where('services.is_active', true)
+            ->where('services.determines_fitness', true)
+            ->whereNotIn('services.id', $conCertificacion)
+            ->orderBy('services.name')
+            ->get()
+            ->map(fn (Service $s) => ['id' => $s->getKey(), 'code' => $s->code, 'name' => $s->clientName()])
+            ->all();
     }
 
     /**

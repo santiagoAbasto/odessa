@@ -82,6 +82,13 @@ class RegisterDirectReception
                 ]);
             }
 
+            // Ya está en el taller: un segundo ingreso la duplicaría.
+            if ($asset->receptions()->whereNull('dispatched_at')->exists()) {
+                throw ValidationException::withMessages([
+                    'asset_public_id' => 'Esa pieza ya está en el taller, con una recepción abierta. Se puede volver a ingresar cuando se despache.',
+                ]);
+            }
+
             return $asset;
         }
 

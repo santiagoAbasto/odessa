@@ -33,6 +33,13 @@ class RecalculateServiceAssets
             ->when($service, fn ($q) => $q->whereRaw('coalesce(l.service_id, r.service_id) = ?', [$service->getKey()]))
             ->distinct()
             ->pluck('l.asset_id')
+            // También las que traen esa certificación cargada a mano (de otra
+            // empresa): sus días de taller también cuentan para el plazo.
+            ->merge(DB::table('asset_external_certifications')
+                ->when($service, fn ($q) => $q->where('service_id', $service->getKey()))
+                ->pluck('asset_id'))
+            ->unique()
+            ->values()
             ->all();
 
         $hechas = 0;

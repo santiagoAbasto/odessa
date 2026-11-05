@@ -75,7 +75,11 @@ class RecalculateAssetStatus
             ->orderByDesc('l.id')
             ->get(['l.service_id', 'r.service_id as report_service_id', 'l.result', 'l.expires_at', 'l.inspection_report_id', 'r.inspected_at', 'r.finalized_at']);
 
-        if ($lineas->isEmpty()) {
+        // Lo que el equipo ya traía certificado de otra empresa, cargado a mano en
+        // su ficha: cuenta como una certificación apta más, sin informe de Odessa.
+        $externas = $this->externalCertifications($asset);
+
+        if ($lineas->isEmpty() && $externas->isEmpty()) {
             // Sin ningún informe, un rechazo devuelto sin reparar sigue siendo
             // un hecho: la pieza no está sin dictaminar, está no apta.
             $sinReparar = $this->wasReturnedUnrepairedAfter($asset, null);
@@ -90,16 +94,18 @@ class RecalculateAssetStatus
             return;
         }
 
-        // La inspección determinante más reciente: fija qué informe mostrar y
-        // el corte para la regla de "devuelto sin reparar".
-        $masReciente = $lineas->first();
+        // La inspección determinante más reciente: fija el corte para la regla de
+        // "devuelto sin reparar". El informe a mostrar es siempre uno de Odessa.
+        $masReciente = $lineas->concat($externas)->sortByDesc('inspected_at')->first();
+        $ultimoInforme = $lineas->first()?->inspection_report_id;
 
         // Una línea por tipo de operación: la más reciente de cada una (vienen
         // ordenadas de nueva a vieja, así que la primera de cada tipo manda).
         // Las que no tienen operación identificable caen todas en un mismo
-        // grupo para que igual cuenten.
+        // grupo para que igual cuenten. Las cargadas a mano van al final: si
+        // Odessa ya certificó esa operación, rige su informe.
         $porTipo = [];
-        foreach ($lineas as $linea) {
+        foreach ($lineas->concat($externas) as $linea) {
             $tipo = $linea->service_id ?? $linea->report_service_id ?? 0;
             $porTipo[$tipo] ??= $linea;
         }
@@ -133,7 +139,7 @@ class RecalculateAssetStatus
                 'send_by_at' => null,
                 // El informe sigue siendo el último dictamen formal: se conserva
                 // para que la ficha no pierda el rastro de dónde viene.
-                'current_inspection_report_id' => $masReciente->inspection_report_id,
+                'current_inspection_report_id' => $ultimoInforme,
             ])->save();
 
             return;
@@ -149,8 +155,30 @@ class RecalculateAssetStatus
             'send_by_at' => $status === AssetStatus::Unfit ? null : $this->sendBy($asset, $vigentes),
             // El informe determinante es el último dictamen formal, que es lo
             // que la ficha rotula "último informe con dictamen".
-            'current_inspection_report_id' => $masReciente->inspection_report_id,
+            'current_inspection_report_id' => $ultimoInforme,
         ])->save();
+    }
+
+    /**
+     * Certificaciones que el equipo traía de otra empresa, con la misma forma
+     * que las líneas de informe para que el cálculo las trate igual.
+     *
+     * @return Collection<int, object>
+     */
+    private function externalCertifications(Asset $asset): Collection
+    {
+        return DB::table('asset_external_certifications')
+            ->where('asset_id', $asset->getKey())
+            ->get(['service_id', 'certified_at', 'expires_at'])
+            ->map(fn ($e) => (object) [
+                'service_id' => $e->service_id,
+                'report_service_id' => null,
+                'result' => InspectionResult::Apto->value,
+                'expires_at' => $e->expires_at,
+                'inspection_report_id' => null,
+                'inspected_at' => $e->certified_at,
+                'finalized_at' => null,
+            ]);
     }
 
     /**

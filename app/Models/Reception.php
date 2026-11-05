@@ -60,6 +60,7 @@ class Reception extends Model
             'repaired_at' => 'datetime',
             'repair_failed_at' => 'datetime',
             'unrepairable_at' => 'datetime',
+            'cancelled_at' => 'datetime',
             'dispatched_at' => 'datetime',
         ];
     }
@@ -216,8 +217,10 @@ class Reception extends Model
         'awaiting_client' => 'Esperando al cliente',
         'repair_declined' => 'Sin reparar · a devolver',
         'unrepairable' => 'Sin solución · a devolver',
+        'cancelled' => 'Cancelada · a devolver',
         'dispatched' => 'Despachada',
         'returned_unrepaired' => 'Despachada sin reparar',
+        'returned_cancelled' => 'Devuelta sin trabajar',
     ];
 
     public const STAGE_DESCRIPTIONS = [
@@ -228,8 +231,10 @@ class Reception extends Model
         'awaiting_client' => 'Se le pidió al cliente que autorice la reparación. El equipo espera su respuesta.',
         'repair_declined' => 'El cliente no autorizó la reparación. Se le devuelve como está, sin certificar.',
         'unrepairable' => 'El taller determinó que no tiene solución. Se devuelve sin certificar.',
+        'cancelled' => 'Se canceló el trabajo. Se devuelve como está y su aptitud no cambia.',
         'dispatched' => 'Se envió al cliente.',
         'returned_unrepaired' => 'Se le devolvió al cliente sin reparar. El equipo quedó no apto.',
+        'returned_cancelled' => 'Se canceló el trabajo y se le devolvió al cliente sin trabajar. Su aptitud no cambió.',
     ];
 
     /**
@@ -244,8 +249,13 @@ class Reception extends Model
             // Ya despachada: importa distinguir si salió reparada o como
             // estaba, porque son dos cosas muy distintas para el cliente y
             // para cualquiera que audite después.
+            $this->dispatched_at !== null && $this->cancelled_at !== null => 'returned_cancelled',
             $this->dispatched_at !== null && $this->leavesUnrepaired() => 'returned_unrepaired',
             $this->dispatched_at !== null => 'dispatched',
+
+            // Cancelada: gana sobre todo lo que había avanzado, porque el
+            // trabajo ya no se hace aunque haya estado empezado o rechazado.
+            $this->cancelled_at !== null => 'cancelled',
 
             $this->unrepairable_at !== null => 'unrepairable',
 
@@ -279,6 +289,8 @@ class Reception extends Model
             // certificada, porque el equipo se fue no apto.
             'returned_unrepaired' => 'danger',
             'rejected', 'repair_declined', 'unrepairable' => 'danger',
+            // Un trabajo que el cliente decidió no hacer: no es un error.
+            'cancelled' => 'info',
             'awaiting_client', 'in_progress' => 'warning',
             default => 'neutral',
         };
@@ -319,6 +331,12 @@ class Reception extends Model
     public function isUnrepairable(): bool
     {
         return $this->unrepairable_at !== null;
+    }
+
+    /** El trabajo se canceló: vuelve al cliente como está, sin tocar su aptitud. */
+    public function isCancelled(): bool
+    {
+        return $this->cancelled_at !== null;
     }
 
     /** Sale sin reparar: el cliente no autorizó, o el taller determinó que no tenía arreglo. */
@@ -367,7 +385,9 @@ class Reception extends Model
             return false;
         }
 
-        return $this->leavesUnrepaired()
+        // Cancelada: sale como está, en la etapa en que estuviera.
+        return $this->isCancelled()
+            || $this->leavesUnrepaired()
             || ($this->isResolved() && ! $this->wasRejected());
     }
 
@@ -376,6 +396,7 @@ class Reception extends Model
     {
         return $this->promised_at !== null
             && $this->released_at === null
+            && $this->cancelled_at === null
             && $this->promised_at->isPast();
     }
 
@@ -395,7 +416,8 @@ class Reception extends Model
      */
     public function scopeOpen(Builder $query): Builder
     {
-        return $query->whereNull('released_at')->whereNull('dispatched_at');
+        // Una cancelada ya no es trabajo: sólo espera el camión.
+        return $query->whereNull('released_at')->whereNull('dispatched_at')->whereNull('cancelled_at');
     }
 
     /** Recibida y sin tocar. Es la cola real de entrada. */
@@ -420,6 +442,7 @@ class Reception extends Model
     {
         return $query->where('outcome', self::OUTCOME_REJECTED)
             ->whereNull('unrepairable_at')
+            ->whereNull('cancelled_at')
             ->whereNull('dispatched_at')
             // No está esperando al cliente (consultada y sin respuesta).
             ->where(fn (Builder $q) => $q
@@ -441,6 +464,7 @@ class Reception extends Model
     {
         return $query->whereNotNull('repair_requested_at')
             ->whereNull('repair_decision')
+            ->whereNull('cancelled_at')
             ->whereNull('dispatched_at');
     }
 
@@ -458,6 +482,7 @@ class Reception extends Model
             ->where(fn (Builder $q) => $q
                 ->where('repair_decision', self::REPAIR_DECLINED)
                 ->orWhereNotNull('unrepairable_at')
+                ->orWhereNotNull('cancelled_at')
                 ->orWhere(fn (Builder $i) => $i
                     ->whereNotNull('released_at')
                     // En SQL, NULL != 'rejected' no es verdadero: sin esto una
@@ -470,6 +495,7 @@ class Reception extends Model
     public function scopeOverdue(Builder $query): Builder
     {
         return $query->whereNull('released_at')
+            ->whereNull('cancelled_at')
             ->whereNotNull('promised_at')
             ->whereDate('promised_at', '<', today());
     }

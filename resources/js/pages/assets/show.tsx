@@ -1,6 +1,10 @@
-import { Deferred, Head, Link } from '@inertiajs/react';
+import { Deferred, Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { EditAssetDialog, type EditCatalogs } from '@/components/assets/edit-asset-dialog';
+import {
+  ExternalCertificationDialog,
+  type ExternalServiceOption,
+} from '@/components/assets/external-certification-dialog';
 import { AddComponentsDialog, RemoveComponentButton } from '@/components/assets/set-components';
 import { TraceabilityThread, type TimelineEvent } from '@/components/assets/traceability-thread';
 import { DocumentPanel, type DocumentPayload } from '@/components/documents/document-panel';
@@ -11,11 +15,14 @@ import {
   History,
   Info,
   Pencil,
+  Plus,
   Puzzle,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ConfirmButton } from '@/components/ui/confirm-button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Panel, PanelHeader } from '@/components/ui/panel';
@@ -52,6 +59,13 @@ interface Certification {
   isApt: boolean;
   expiresAt: string | null;
   inspectedAt: string | null;
+  /** Cargada a mano en la ficha: la certificó otra empresa, no Odessa. */
+  external: boolean;
+  /** Sólo en las cargadas a mano. */
+  externalId?: number;
+  serviceId?: number;
+  certifiedBy?: string;
+  certificateNumber?: string | null;
 }
 
 interface ComponentRow {
@@ -118,6 +132,7 @@ export default function AssetShow({
   asset,
   history,
   certifications,
+  externalServices,
   documents,
   categories,
   can,
@@ -127,9 +142,11 @@ export default function AssetShow({
   asset: AssetDetail;
   history: HistoryEntry[];
   certifications: Certification[];
+  /** Operaciones donde se puede cargar a mano la certificación de otra empresa. Vacío si no puede. */
+  externalServices: ExternalServiceOption[];
   documents: DocumentPayload[];
   categories: { value: string; label: string }[];
-  can: { upload: boolean; deleteDocuments: boolean; edit: boolean };
+  can: { upload: boolean; deleteDocuments: boolean; edit: boolean; externalCertification: boolean };
   timeline?: TimelineEvent[];
   catalogs?: EditCatalogs;
 }) {
@@ -420,17 +437,35 @@ export default function AssetShow({
           fecha. El "Vencimiento" de arriba es el de la inspección más reciente;
           acá se ven los dos.
         */}
-        {certifications.length > 0 && (
+        {(certifications.length > 0 || externalServices.length > 0) && (
           <div className="border-t border-[var(--border-subtle)] px-4 py-3">
-            <p className="mb-2 text-[11px] font-medium text-[var(--text-secondary)]">
-              Vencimientos por certificación
-            </p>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="text-[11px] font-medium text-[var(--text-secondary)]">
+                Vencimientos por certificación
+              </p>
+              {/*
+                Primera carga: el equipo ya viene certificado por otra empresa.
+                No se crea un informe; se registra acá y queda en la auditoría.
+              */}
+              {can.externalCertification && externalServices.length > 0 && (
+                <ExternalCertificationDialog assetId={asset.id} services={externalServices}>
+                  <Button variant="secondary" size="sm">
+                    <Plus aria-hidden />
+                    Cargar certificación de otra empresa
+                  </Button>
+                </ExternalCertificationDialog>
+              )}
+            </div>
             <ul className="flex flex-wrap gap-2">
               {certifications.map((cert) => (
                 <li
                   key={cert.code}
-                  className="inline-flex items-center gap-2 rounded-xs border border-[var(--border-subtle)] bg-[var(--surface-sunken)] px-2.5 py-1.5"
-                  title={cert.name}
+                  className="inline-flex flex-wrap items-center gap-2 rounded-xs border border-[var(--border-subtle)] bg-[var(--surface-sunken)] px-2.5 py-1.5"
+                  title={
+                    cert.external
+                      ? `${cert.name} · certificada por ${cert.certifiedBy}${cert.certificateNumber ? ` (N° ${cert.certificateNumber})` : ''}`
+                      : cert.name
+                  }
                 >
                   <span className="font-mono text-[11px] font-semibold text-[var(--text-primary)]">
                     {cert.code}
@@ -447,6 +482,48 @@ export default function AssetShow({
                     </span>
                   ) : (
                     <Badge tone="danger">{cert.result}</Badge>
+                  )}
+                  {cert.external && (
+                    <>
+                      <Badge tone="info">Otra empresa · {cert.certifiedBy}</Badge>
+                      {can.externalCertification && cert.externalId !== undefined && (
+                        <span className="inline-flex items-center gap-1">
+                          <ExternalCertificationDialog
+                            assetId={asset.id}
+                            services={externalServices}
+                            current={{
+                              serviceId: cert.serviceId ?? 0,
+                              code: cert.code,
+                              name: cert.name,
+                              certifiedBy: cert.certifiedBy ?? '',
+                              certificateNumber: cert.certificateNumber ?? null,
+                              inspectedAt: cert.inspectedAt,
+                              expiresAt: cert.expiresAt,
+                            }}
+                          >
+                            <Button variant="ghost" size="sm" aria-label={`Editar la certificación ${cert.code}`}>
+                              <Pencil aria-hidden />
+                            </Button>
+                          </ExternalCertificationDialog>
+                          <ConfirmButton
+                            variant="ghost"
+                            size="sm"
+                            destructive
+                            aria-label={`Quitar la certificación ${cert.code}`}
+                            title={`Quitar la certificación ${cert.code}`}
+                            description="Se quita de la ficha la certificación cargada a mano. El estado del equipo se recalcula."
+                            confirmLabel="Quitar"
+                            onConfirm={() =>
+                              router.delete(`/activos/${asset.id}/certificaciones-externas/${cert.externalId}`, {
+                                preserveScroll: true,
+                              })
+                            }
+                          >
+                            <Trash2 aria-hidden />
+                          </ConfirmButton>
+                        </span>
+                      )}
+                    </>
                   )}
                 </li>
               ))}

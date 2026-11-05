@@ -94,6 +94,36 @@ class AssetCertificationSummary
                     'isApt' => $linea->result === InspectionResult::Apto->value,
                     'expiresAt' => $linea->expires_at ? Carbon::parse($linea->expires_at)->toDateString() : null,
                     'inspectedAt' => $linea->inspected_at ? Carbon::parse($linea->inspected_at)->toDateString() : null,
+                    'external' => false,
+                ];
+            }
+
+            // Las que el equipo ya traía de otra empresa, cargadas a mano en su
+            // ficha. Valen sólo donde Odessa todavía no certificó esa operación:
+            // si lo hizo, rige su informe (misma regla que RecalculateAssetStatus).
+            $externas = DB::table('asset_external_certifications')
+                ->whereIn('asset_id', $assets->keys()->all())
+                ->get(['id', 'asset_id', 'service_id', 'certified_by', 'certificate_number', 'certified_at', 'expires_at']);
+
+            foreach ($externas as $e) {
+                if (! $types->has($e->service_id) || isset($porEquipo[$e->asset_id][$e->service_id])) {
+                    continue;
+                }
+
+                $servicio = $types->get($e->service_id);
+
+                $porEquipo[$e->asset_id][$e->service_id] = [
+                    'code' => $servicio->code,
+                    'name' => $servicio->name,
+                    'result' => InspectionResult::Apto->label(),
+                    'isApt' => true,
+                    'expiresAt' => Carbon::parse($e->expires_at)->toDateString(),
+                    'inspectedAt' => Carbon::parse($e->certified_at)->toDateString(),
+                    'external' => true,
+                    'externalId' => $e->id,
+                    'serviceId' => $e->service_id,
+                    'certifiedBy' => $e->certified_by,
+                    'certificateNumber' => $e->certificate_number,
                 ];
             }
         }
@@ -186,7 +216,9 @@ class AssetCertificationSummary
 
         foreach ($this->types() as $id => $tipo) {
             $c = $certifications[$id] ?? null;
-            array_push($celdas, $fecha($c['inspectedAt'] ?? null), $fecha($c['expiresAt'] ?? null), $c['result'] ?? null);
+            // La cargada a mano no es un informe de Odessa: la planilla lo aclara.
+            $resultado = isset($c['result']) ? $c['result'].(($c['external'] ?? false) ? ' (otra empresa)' : '') : null;
+            array_push($celdas, $fecha($c['inspectedAt'] ?? null), $fecha($c['expiresAt'] ?? null), $resultado);
         }
 
         return $celdas;

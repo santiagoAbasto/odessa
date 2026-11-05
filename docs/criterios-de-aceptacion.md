@@ -175,6 +175,10 @@ Cada archivo agrupa los criterios de un tema; el nombre de cada prueba dice qué
 | Trazabilidad | `TraceabilityTest` | 11 |
 | Visibilidad del cliente dueño | `OwningClientVisibilityTest` | 8 |
 | Administración de organizaciones | `OrganizationAdminTest` | 7 |
+| Un equipo en camino o en el taller no se vuelve a enviar; eliminar una recepción repetida | `EquipoEnCircuitoTest` | 12 |
+| Cancelar un trabajo en el taller sin tocar la aptitud | `CancelarTrabajoTest` | 10 |
+| Informes: buscar por serie, referencia del cliente o código, y ver las series de todos sus equipos | `InformesBusquedaTest` | 3 |
+| Certificación de otra empresa cargada a mano en la ficha | `CertificacionExternaTest` | 14 |
 
 ## Criterios no cubiertos por pruebas automatizadas
 

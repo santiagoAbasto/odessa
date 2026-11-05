@@ -32,6 +32,17 @@ class ReceptionPolicy
     }
 
     /**
+     * Eliminar una recepción cargada de más (el equipo se recibió dos veces).
+     * Sólo en espera y sin iniciar: una que ya se trabajó tiene historia.
+     */
+    public function discard(User $user, Reception $reception): bool
+    {
+        return $user->can(Permissions::RECEPTIONS_UPDATE)
+            && $user->canAccessOrganization($reception->organization_id)
+            && $reception->stage() === 'pending';
+    }
+
+    /**
      * Cubre todo el trabajo del taller sobre una recepción: empezar,
      * dictaminar, mandar a reparar y dar la reparación por terminada.
      *

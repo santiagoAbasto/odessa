@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AssetController;
+use App\Http\Controllers\AssetExternalCertificationController;
 use App\Http\Controllers\AssetSetController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\PasswordChangeController;
@@ -108,6 +109,16 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/activos/{asset}', [AssetController::class, 'update'])
         ->middleware('permission:'.Permissions::ASSETS_UPDATE)
         ->name('assets.update');
+
+    // Certificación que el equipo ya traía de otra empresa, cargada a mano en la
+    // ficha (sin informe). Cliente · Operador y superadmin; la regla fina la
+    // pone AssetPolicy::certifyExternally.
+    Route::middleware('permission:'.Permissions::ASSETS_EXTERNAL_CERTIFICATION)->group(function () {
+        Route::post('/activos/{asset}/certificaciones-externas', [AssetExternalCertificationController::class, 'store'])
+            ->name('assets.external_certifications.store');
+        Route::delete('/activos/{asset}/certificaciones-externas/{certification}', [AssetExternalCertificationController::class, 'destroy'])
+            ->name('assets.external_certifications.destroy');
+    });
 
     // Armado de un set: qué piezas se pueden tildar, agregarlas y quitarlas.
     Route::middleware('permission:'.Permissions::ASSETS_UPDATE)->group(function () {
@@ -234,7 +245,15 @@ Route::middleware(['auth'])->group(function () {
                 ->name('receptions.request_repair');
             Route::post('/recepciones/{reception}/sin-solucion', [ReceptionController::class, 'markUnrepairable'])
                 ->name('receptions.unrepairable');
+            // El cliente avisó que el trabajo no se hace: vuelve como está.
+            Route::post('/recepciones/{reception}/cancelar', [ReceptionController::class, 'cancel'])
+                ->name('receptions.cancel');
         });
+
+        // Borrar una recepción de más (equipo recibido dos veces), en espera y sin iniciar.
+        Route::post('/recepciones/{reception}/eliminar', [ReceptionController::class, 'discard'])
+            ->middleware('permission:'.Permissions::RECEPTIONS_UPDATE)
+            ->name('receptions.discard');
 
         /*
          * Contestar la consulta de reparación queda FUERA del grupo anterior:

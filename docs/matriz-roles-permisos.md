@@ -30,6 +30,7 @@ Leyenda: ● permiso otorgado · — sin permiso
 | `assets.update` | ● | ● | — | — |
 | `assets.delete` | ● | — | — | — |
 | `assets.export` | ● | ● | ● | ● |
+| `assets.external_certification` | ● | — | ● | — |
 | `sets.view` | ● | ● | ● | ● |
 | `sets.manage` | ● | ● | — | — |
 | `reports.view` | ● | ● | ● | ● |

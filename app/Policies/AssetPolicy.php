@@ -39,6 +39,13 @@ class AssetPolicy
             && $user->canAccessOrganization($asset->organization_id);
     }
 
+    /** Cargar a mano la certificación que el equipo ya traía de otra empresa. */
+    public function certifyExternally(User $user, Asset $asset): bool
+    {
+        return $user->can(Permissions::ASSETS_EXTERNAL_CERTIFICATION)
+            && $user->canAccessOrganization($asset->organization_id);
+    }
+
     public function delete(User $user, Asset $asset): bool
     {
         return $user->can(Permissions::ASSETS_DELETE)

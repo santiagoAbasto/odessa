@@ -52,6 +52,25 @@ class AuthorizeShipment
 
         $arrived = array_map('intval', $arrivedItemIds);
 
+        /*
+         * Un equipo que ya tiene una recepción abierta en el taller no puede
+         * recibirse otra vez: quedaría duplicado. Se avisa cuál es para que el
+         * taller lo destilde, o elimine primero la recepción de más.
+         */
+        $repetidos = Reception::query()
+            ->whereNull('dispatched_at')
+            ->whereIn('asset_id', $shipment->items()->whereIn('id', $arrived)->whereNotNull('asset_id')->pluck('asset_id'))
+            ->with('asset:id,description,serial_number,code')
+            ->get();
+
+        if ($repetidos->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'arrived' => 'Ya está en el taller, con una recepción abierta: '
+                    .$repetidos->map(fn (Reception $r) => $r->asset->serial_number ?: $r->asset->code ?: $r->asset->description)->implode(', ')
+                    .'. Destílelo, o elimine antes la recepción repetida (en espera y sin iniciar).',
+            ]);
+        }
+
         /** @var list<array{name: string, serial: ?string, reason: string}> $missing */
         $missing = [];
 

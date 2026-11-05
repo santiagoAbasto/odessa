@@ -38,6 +38,8 @@ class AuditActions
         'asset.deleted' => ['Dio de baja una pieza', 'Piezas', 'danger'],
         'asset.components_added' => ['Agregó piezas a un set', 'Piezas', 'success'],
         'asset.component_removed' => ['Quitó una pieza de un set', 'Piezas', 'warning'],
+        'asset.external_certification_saved' => ['Cargó a mano una certificación de otra empresa', 'Piezas', 'warning'],
+        'asset.external_certification_removed' => ['Quitó una certificación cargada a mano', 'Piezas', 'danger'],
         'asset.status_recalculated' => ['Se recalculó el estado de una pieza', 'Piezas', 'neutral'],
         'asset.exported' => ['Descargó el listado en Excel', 'Piezas', 'warning'],
         'recertification.notified' => ['Se avisó al cliente de una recertificación', 'Piezas', 'warning'],
@@ -71,6 +73,8 @@ class AuditActions
         // Histórico: antes de separar aprobación de rechazo.
         'reception.released' => ['Liberó un equipo terminado', 'Taller', 'success'],
         'reception.dispatched' => ['Despachó un equipo al cliente', 'Taller', 'success'],
+        'reception.cancelled' => ['Canceló el trabajo de un equipo', 'Taller', 'warning'],
+        'reception.deleted' => ['Eliminó una recepción en espera', 'Taller', 'danger'],
 
         // --- Documentos ---
         'document.uploaded' => ['Subió un archivo', 'Documentos', 'success'],

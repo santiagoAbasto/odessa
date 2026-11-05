@@ -55,14 +55,34 @@ class InspectionReportController extends Controller
         $this->authorize('viewAny', InspectionReport::class);
 
         $filters = TableQuery::filters($request, [
-            'search', 'status', 'date_from', 'date_to', 'equipment', 'organization',
+            'search', 'status', 'date_from', 'date_to', 'equipment', 'organization', 'serial', 'client_reference',
         ]);
 
+        // Informes que incluyen un equipo cuyo dato (serie, referencia…) coincide.
+        $deEquipo = fn (Builder $q, string $columna, string $v) => $q
+            ->whereHas('assets', fn (Builder $a) => $a->where("assets.{$columna}", 'like', TableQuery::like($v)));
+
         $query = InspectionReport::query()
-            ->with(['assetSet:id,name', 'organization:id,name'])
+            ->with([
+                'assetSet:id,name',
+                'organization:id,name',
+                // Todos los equipos del informe: la lista muestra sus series y
+                // referencias, no sólo cuántos son.
+                'assets' => fn ($a) => $a->select('assets.id', 'assets.serial_number', 'assets.client_reference', 'assets.code'),
+            ])
             ->withCount(['assets', 'documents'])
+            // El buscador sirve para ubicar un informe por lo que se inspeccionó:
+            // número de informe, o serie, referencia del cliente o código de
+            // cualquiera de sus equipos.
             ->when($filters['search'] ?? null, fn (Builder $q, string $v) => $q
-                ->where('number', 'like', TableQuery::like($v)))
+                ->where(fn (Builder $i) => $i
+                    ->where('number', 'like', TableQuery::like($v))
+                    ->orWhereHas('assets', fn (Builder $a) => $a
+                        ->where('assets.serial_number', 'like', TableQuery::like($v))
+                        ->orWhere('assets.client_reference', 'like', TableQuery::like($v))
+                        ->orWhere('assets.code', 'like', TableQuery::like($v)))))
+            ->when($filters['serial'] ?? null, fn (Builder $q, string $v) => $deEquipo($q, 'serial_number', $v))
+            ->when($filters['client_reference'] ?? null, fn (Builder $q, string $v) => $deEquipo($q, 'client_reference', $v))
             ->when($filters['status'] ?? null, fn (Builder $q, string $v) => $q->where('status', $v))
             ->tap(fn (Builder $q) => TableQuery::scopeToOrganization($q, $filters['organization'] ?? null))
             ->when($filters['equipment'] ?? null, fn (Builder $q, string $v) => $q
@@ -81,6 +101,10 @@ class InspectionReportController extends Controller
                 // De qué cliente es el informe.
                 'organization' => $r->organization?->name,
                 'equipment' => $r->equipmentName(),
+                // Todas las series del informe (el código si el equipo no tiene
+                // serie) y las referencias del cliente, sin repetir.
+                'serials' => $r->assets->map(fn (Asset $a) => $a->serial_number ?: $a->code)->filter()->unique()->values()->all(),
+                'clientReferences' => $r->assets->pluck('client_reference')->filter()->unique()->values()->all(),
                 'inspectedAt' => $r->inspected_at?->toDateString(),
                 'assetsCount' => $r->assets_count,
                 'filesCount' => $r->documents_count,

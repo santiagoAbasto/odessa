@@ -115,6 +115,7 @@ class ReceptionController extends Controller
             'repairDecisionNotes' => $r->repair_decision_notes,
             'unrepairableAt' => $r->unrepairable_at?->toIso8601String(),
             'unrepairableNotes' => $r->unrepairable_notes,
+            'cancelReason' => $r->cancel_reason,
             'dispatchedAt' => $r->dispatched_at?->toIso8601String(),
             'reportNumber' => $r->inspectionReport?->number,
             'reportId' => $r->inspectionReport?->public_id,
@@ -160,6 +161,11 @@ class ReceptionController extends Controller
                     // Deshacer un dictamen cargado por error: sólo superadmin,
                     // sólo aprobado/rechazado y antes de que siga avanzando.
                     'revert' => in_array($stage, ['approved', 'rejected'], true) && $user->can('revert', $r),
+                    // Cancelar: el cliente avisó que el trabajo no se hace. En
+                    // cualquier etapa abierta; lo que ya está para salir no.
+                    'cancel' => $release && ! $r->isDispatchable(),
+                    // Borrar una recepción de más: sólo en espera y sin iniciar.
+                    'discard' => $user->can('discard', $r),
                 ];
             })(),
         ]);
@@ -438,6 +444,30 @@ class ReceptionController extends Controller
         $stages->markUnrepairable($reception, $data['unrepairable_notes'] ?? null);
 
         return back()->with('success', 'Pieza marcada sin solución. Queda lista para devolver, no apta.');
+    }
+
+    /** El cliente avisó que el trabajo no se hace: vuelve como está, sin tocar su aptitud. */
+    public function cancel(Request $request, Reception $reception, ChangeReceptionStage $stages): RedirectResponse
+    {
+        $this->authorize('release', $reception);
+
+        $data = $request->validate(['cancel_reason' => ['nullable', 'string', 'max:500']]);
+
+        $stages->cancel($reception, $data['cancel_reason'] ?? null);
+
+        return back()->with('success', 'Trabajo cancelado. El equipo queda listo para despachar y su aptitud no cambia.');
+    }
+
+    /** Borra una recepción de más —el equipo se recibió dos veces— si sigue en espera. */
+    public function discard(Request $request, Reception $reception, ChangeReceptionStage $stages): RedirectResponse
+    {
+        $this->authorize('discard', $reception);
+
+        $data = $request->validate(['reason' => ['nullable', 'string', 'max:500']]);
+
+        $stages->discard($reception, $data['reason'] ?? null);
+
+        return back()->with('success', 'Recepción eliminada.');
     }
 
     public function dispatchReception(Request $request, Reception $reception, ChangeReceptionStage $stages): RedirectResponse

@@ -84,6 +84,10 @@ export interface ReportRow {
   /** Empresa dueña del informe. Null para un cliente. */
   organization: string | null;
   equipment: string | null;
+  /** Series de todos los equipos del informe (el código, si no tienen serie). */
+  serials: string[];
+  /** Referencias del cliente de esos equipos. */
+  clientReferences: string[];
   inspectedAt: string | null;
   assetsCount: number;
   filesCount: number;
@@ -110,8 +114,11 @@ export interface ReceptionRow {
     | 'repair_declined'
     /* El taller puede determinar que no tiene solución: vuelve sin certificar. */
     | 'unrepairable'
+    /* El cliente avisó que el trabajo no se hace: vuelve como está, sin tocar su aptitud. */
+    | 'cancelled'
     | 'dispatched'
-    | 'returned_unrepaired';
+    | 'returned_unrepaired'
+    | 'returned_cancelled';
   stageLabel: string;
   stageTone: Tone;
   startedAt: string | null;
@@ -128,6 +135,7 @@ export interface ReceptionRow {
   repairDecisionNotes: string | null;
   unrepairableAt: string | null;
   unrepairableNotes: string | null;
+  cancelReason: string | null;
   dispatchedAt: string | null;
   reportNumber: string | null;
   reportId: string | null;
@@ -158,5 +166,9 @@ export interface ReceptionRow {
     dispatch: boolean;
     /** Deshacer un dictamen cargado por error. Sólo superadmin. */
     revert: boolean;
+    /** Cancelar el trabajo (aviso del cliente): pasa a «listo para despachar» sin tocar la aptitud. */
+    cancel: boolean;
+    /** Borrar una recepción repetida, en espera y sin iniciar. */
+    discard: boolean;
   };
 }

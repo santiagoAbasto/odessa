@@ -406,6 +406,97 @@ class ChangeReceptionStage
         return $reception;
     }
 
+    /**
+     * Cancela el trabajo: el cliente avisó que no se hace.
+     *
+     * El equipo pasa directo a «listo para despachar» y vuelve como está, en
+     * cualquier etapa en que estuviera (pendiente, en proceso, rechazada o
+     * esperando al cliente). NO toca la aptitud —no se recalcula nada—: cancelar
+     * no es un dictamen, y el equipo conserva la certificación que ya tenía.
+     * Lo que sí exige es el motivo, que es lo que después explica por qué salió
+     * sin trabajarse.
+     *
+     * No se cancela lo que ya está para salir (aprobado, sin solución, sin
+     * autorización): ahí no queda nada por cancelar.
+     */
+    public function cancel(Reception $reception, ?string $reason): Reception
+    {
+        if ($reception->isDispatched()) {
+            throw ValidationException::withMessages([
+                'cancel_reason' => 'Esta recepción ya fue despachada.',
+            ]);
+        }
+
+        if ($reception->isCancelled()) {
+            throw ValidationException::withMessages([
+                'cancel_reason' => 'Este trabajo ya estaba cancelado.',
+            ]);
+        }
+
+        if ($reception->isDispatchable()) {
+            throw ValidationException::withMessages([
+                'cancel_reason' => 'El equipo ya está listo para despachar: no hay trabajo que cancelar.',
+            ]);
+        }
+
+        if (blank($reason)) {
+            throw ValidationException::withMessages([
+                'cancel_reason' => 'Indique por qué se cancela el trabajo.',
+            ]);
+        }
+
+        DB::transaction(function () use ($reception, $reason) {
+            $reception->forceFill([
+                'cancelled_at' => now(),
+                'cancelled_by' => Auth::id(),
+                'cancel_reason' => $reason,
+            ])->save();
+        });
+
+        ActivityLogger::log(
+            action: 'reception.cancelled',
+            subject: $reception,
+            description: 'Se canceló el trabajo: el equipo vuelve sin tocar su aptitud',
+            new: ['reason' => $reason],
+        );
+
+        return $reception;
+    }
+
+    /**
+     * Borra una recepción cargada de más —el equipo se recibió dos veces— mientras
+     * esté en espera y sin iniciar. Una que ya se empezó a trabajar tiene
+     * historia y no se borra: se cancela o se sigue su curso.
+     *
+     * Es baja lógica y deja el motivo en la auditoría.
+     */
+    public function discard(Reception $reception, ?string $reason): Reception
+    {
+        if ($reception->stage() !== 'pending') {
+            throw ValidationException::withMessages([
+                'reason' => 'Sólo se elimina una recepción en espera y sin iniciar.',
+            ]);
+        }
+
+        if (blank($reason)) {
+            throw ValidationException::withMessages([
+                'reason' => 'Indique por qué se elimina la recepción.',
+            ]);
+        }
+
+        // Se registra antes de borrar: después el sujeto ya no se resuelve.
+        ActivityLogger::log(
+            action: 'reception.deleted',
+            subject: $reception,
+            description: 'Se eliminó una recepción en espera, sin iniciar',
+            new: ['reason' => $reason],
+        );
+
+        $reception->delete();
+
+        return $reception;
+    }
+
     public function dispatch(Reception $reception, ?string $note = null): Reception
     {
         if ($reception->isDispatched()) {

@@ -3,10 +3,12 @@ import type { ColumnDef } from '@tanstack/react-table';
 import {
   AlertTriangle,
   Ban,
+  CircleOff,
   MessageSquareQuote,
   PackageCheck,
   PackagePlus,
   Play,
+  Trash2,
   Truck,
   Undo2,
   Warehouse,
@@ -230,6 +232,7 @@ export default function Receptions({
         cell: ({ row }) => {
           // El motivo más reciente es lo que explica todo lo que sigue.
           const note =
+            row.original.cancelReason ??
             row.original.unrepairableNotes ??
             (row.original.outcome === 'rejected' ? row.original.outcomeNotes : null);
 
@@ -329,6 +332,40 @@ export default function Receptions({
                 description="El equipo se le devuelve al cliente sin reparar y queda no apto. Se le avisa a la organización por correo."
                 notesLabel="Por qué no tiene solución"
                 confirmLabel="Marcar sin solución"
+              />
+            )}
+
+            {/*
+              El cliente llama y avisa que ese trabajo no se hace. Se cancela
+              con su motivo y el equipo pasa directo a «listo para despachar»:
+              no es un dictamen, así que su aptitud no cambia.
+            */}
+            {row.original.can.cancel && (
+              <NotesActionButton
+                url={`/taller/recepciones/${row.original.id}/cancelar`}
+                field="cancel_reason"
+                icon={CircleOff}
+                label="Cancelar trabajo"
+                title="Cancelar el trabajo"
+                description="El cliente avisó que no se hace. El equipo pasa a «Listas para despachar» y vuelve como está: su aptitud no cambia."
+                notesLabel="Motivo de la cancelación"
+                confirmLabel="Cancelar el trabajo"
+                maxLength={500}
+              />
+            )}
+
+            {/* Recibido dos veces: se borra la recepción repetida mientras siga en espera. */}
+            {row.original.can.discard && (
+              <NotesActionButton
+                url={`/taller/recepciones/${row.original.id}/eliminar`}
+                field="reason"
+                icon={Trash2}
+                label="Eliminar"
+                title="Eliminar la recepción"
+                description="Para una recepción cargada de más (el equipo se recibió dos veces) que sigue en espera y sin iniciar. Queda registrado en la auditoría."
+                notesLabel="Por qué se elimina"
+                confirmLabel="Eliminar recepción"
+                maxLength={500}
               />
             )}
 

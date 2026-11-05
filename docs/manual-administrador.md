@@ -38,7 +38,24 @@ En los dos casos se despacha como *Despachada sin reparar*, y el equipo queda **
 
 **La respuesta del cliente** la carga él desde el panel o, si contestó por correo, teléfono o WhatsApp, la transcribe el taller. En ese caso la evidencia es obligatoria: es lo que justifica el cobro si después se discute. El canal no se elige, se deduce de quién la carga.
 
+**Cancelar el trabajo.** Si el cliente avisa (por teléfono, por ejemplo) que ese trabajo no se hace, el botón *Cancelar trabajo* —con motivo obligatorio— lo pasa directo a *Listas para despachar* como *Cancelada · a devolver*, desde *Pendiente*, *En proceso*, *Rechazada* o *Esperando al cliente*. **No toca la aptitud**: el equipo vuelve con la certificación que ya tenía. Se despacha como *Devuelta sin trabajar*. Lo que ya está listo para salir no se cancela.
+
+**Un equipo recibido dos veces.** Una recepción *en espera y sin iniciar* se puede **eliminar** con su motivo (queda en la auditoría). Una ya empezada no: se cancela o sigue su curso.
+
+**Un equipo no se envía dos veces.** Mientras un equipo está en camino (en un envío remitido que el taller todavía no recibió) o dentro del taller, el cliente no lo puede incluir en otro envío, y el taller no puede darle un segundo ingreso: hasta que se despache. Si el taller recibe un envío con un equipo que ya tiene una recepción abierta, el sistema avisa cuál es.
+
 No se salta un hito ni se repite uno cumplido, y no se puede despachar un rechazado sobre el que nadie decidió. Cada acción pide confirmación y registra quién y cuándo. Las filas fuera de plazo —pasada la fecha comprometida— aparecen marcadas.
+
+## Certificación que el equipo ya traía de otra empresa
+
+En la ficha del equipo (*Activos → el equipo*), bloque *Vencimientos por certificación*, botón **Cargar certificación de otra empresa**. Es para la **primera carga**: el equipo ya viene certificado por otra empresa y Odessa no emitió ningún informe, así que no se crea uno.
+
+Se carga la operación (sólo las que certifican y que Odessa le habilitó a esa empresa), la empresa que certificó, el número de certificado si lo tiene, la fecha de certificación y el vencimiento. Cuenta para el estado, el vencimiento y «mandar antes de» como cualquier certificación apta, y se ve marcada *Otra empresa*. En las planillas figura como «Apto (otra empresa)».
+
+- La pueden cargar el **Cliente · Operador** (sobre sus equipos) y el **superadministrador**; el taller no.
+- Una por equipo y operación: cargarla de nuevo la **edita**. También se puede quitar.
+- **Sólo donde Odessa todavía no certificó esa operación.** Cuando Odessa emite su informe, rige el informe y la carga manual deja de valer.
+- Queda en la auditoría y en la trazabilidad del equipo como *carga manual de otra empresa*, con el antes y el después de cada cambio.
 
 ## Cerrar un informe FMR
 

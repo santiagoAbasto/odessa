@@ -29,6 +29,13 @@ final class Permissions
 
     public const ASSETS_EXPORT = 'assets.export';
 
+    /**
+     * Cargar a mano, en la ficha del equipo, la certificación que ya traía de
+     * otra empresa (sin generar un informe). Cliente · Operador y
+     * superadministrador, por pedido del negocio del 05/11/2026; el taller no.
+     */
+    public const ASSETS_EXTERNAL_CERTIFICATION = 'assets.external_certification';
+
     // --- Catálogo de productos ------------------------------------------
     public const PRODUCTS_VIEW = 'products.view';
 
@@ -192,6 +199,8 @@ final class Permissions
             self::COMMENTS_CREATE,
             // La reparación se le cobra al cliente: la decisión es suya.
             self::RECEPTIONS_AUTHORIZE_REPAIR,
+            // Carga la certificación que sus equipos ya traían de otra empresa.
+            self::ASSETS_EXTERNAL_CERTIFICATION,
         ];
 
         /**

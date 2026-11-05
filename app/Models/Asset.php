@@ -209,6 +209,44 @@ class Asset extends Model
         });
     }
 
+    /**
+     * Equipos que ya están en camino al taller o dentro de él.
+     *
+     * Hasta que el taller los despache de vuelta no se pueden mandar otra vez:
+     * ni en otro envío, ni dándoles un segundo ingreso. Es lo que evita que el
+     * mismo equipo se reciba dos veces (05/11/2026).
+     *
+     *  - en el taller: tiene una recepción que todavía no se despachó;
+     *  - en camino: figura en un envío remitido que el taller aún no recibió y
+     *    que no se marcó como «no llegó».
+     */
+    public function scopeInCircuit(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q
+            ->whereHas('receptions', fn (Builder $r) => $r->whereNull('dispatched_at'))
+            ->orWhereHas('shipmentItems', fn (Builder $i) => $i
+                ->whereNull('not_arrived_at')
+                ->whereNull('reception_id')
+                ->whereHas('shipment', fn (Builder $s) => $s->where('status', Shipment::STATUS_SUBMITTED))));
+    }
+
+    /**
+     * Quita de la lista los que ya están en el circuito del taller (ver
+     * `scopeInCircuit`). Con los datos para avisarle a quien los quería mandar.
+     *
+     * @param  iterable<int>  $assetIds
+     * @return Collection<int, self>
+     */
+    public static function inCircuitAmong(iterable $assetIds): Collection
+    {
+        $ids = collect($assetIds)->filter()->unique()->values();
+
+        return $ids->isEmpty() ? collect() : self::query()
+            ->whereIn('assets.id', $ids->all())
+            ->inCircuit()
+            ->get(['assets.id', 'assets.description', 'assets.serial_number', 'assets.code']);
+    }
+
     public function scopeStatus(Builder $query, AssetStatus|string $status): Builder
     {
         return $query->where('status', $status instanceof AssetStatus ? $status->value : $status);

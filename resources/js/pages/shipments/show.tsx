@@ -380,7 +380,7 @@ function AddItemDialog({
         <form id="form-item" onSubmit={submit} className="flex flex-col gap-4" noValidate>
           <Field
             label="Pieza registrada"
-            hint="Escriba descripción, serie, código o número de parte. Si no está registrada, deje vacío y descríbala abajo."
+            hint="Escriba descripción, serie, código o número de parte. Los equipos que ya están en el taller o en camino no aparecen hasta que se los devuelvan. Si no está registrada, deje vacío y descríbala abajo."
             error={errors.asset_public_id}
           >
             {(props) => (

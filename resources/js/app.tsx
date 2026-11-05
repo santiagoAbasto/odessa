@@ -1,11 +1,31 @@
 import '../css/app.css';
 
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import { StrictMode, type ComponentType } from 'react';
-import { Toaster } from 'sonner';
+import { toast, Toaster } from 'sonner';
 
 const appName = import.meta.env.VITE_APP_NAME ?? 'Odessa Oil';
+
+/*
+  Lo que el servidor avisa. Los controladores responden con `with('success', …)`
+  y las reglas de negocio rechazan con errores de validación: sin esto la
+  pantalla no mostraba ni uno ni otro, y un botón que fallaba parecía no hacer
+  nada.
+*/
+router.on('success', (event) => {
+  const flash = (event.detail.page.props as { flash?: Record<string, string | null | undefined> }).flash ?? {};
+
+  for (const tipo of ['success', 'error', 'warning', 'info'] as const) {
+    if (flash[tipo]) toast[tipo](flash[tipo]);
+  }
+});
+
+router.on('error', (event) => {
+  const primero = Object.values(event.detail.errors)[0];
+
+  if (primero) toast.error(String(primero));
+});
 
 /**
  * Tema inicial antes del primer pintado.

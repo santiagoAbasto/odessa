@@ -266,6 +266,9 @@ class ShipmentController extends Controller
         $assets = Asset::query()
             ->forOrganization($shipment->organization_id)
             ->whereNotIn('assets.id', $yaDeclarados)
+            // Los que ya están en el taller o en camino no se vuelven a mandar
+            // hasta que se los devuelvan.
+            ->whereNot(fn (Builder $q) => $q->inCircuit())
             ->when(trim((string) $request->query('q')) !== '', fn ($q) => $q->matching(trim((string) $request->query('q'))))
             ->orderBy('assets.description')
             ->limit(self::SEARCH_LIMIT)
@@ -323,6 +326,14 @@ class ShipmentController extends Controller
                 return back()->withErrors(['asset_public_id' => 'La pieza seleccionada no existe.']);
             }
 
+            // Un equipo en el taller o en camino no se manda otra vez hasta
+            // que se lo devuelvan: si no, se recibe dos veces.
+            if (Asset::inCircuitAmong([$asset->getKey()])->isNotEmpty()) {
+                return back()->withErrors([
+                    'asset_public_id' => 'Ese equipo ya está en el taller o en camino. Podrá volver a enviarlo cuando se lo devuelvan.',
+                ]);
+            }
+
             $assetId = $asset->getKey();
         }
 
@@ -370,6 +381,18 @@ class ShipmentController extends Controller
     public function submit(Shipment $shipment): RedirectResponse
     {
         $this->authorize('submit', $shipment);
+
+        // Entre que se armó el borrador y se remite, el equipo pudo entrar en
+        // otro envío o en el taller: se vuelve a comprobar al mandarlo.
+        $enCircuito = Asset::inCircuitAmong($shipment->items()->whereNotNull('asset_id')->pluck('asset_id'));
+
+        if ($enCircuito->isNotEmpty()) {
+            return back()->withErrors([
+                'items' => 'Estos equipos ya están en el taller o en camino y no se pueden volver a enviar: '
+                    .$enCircuito->map(fn (Asset $a) => $a->serial_number ?: $a->code ?: $a->description)->implode(', ')
+                    .'. Quítelos del envío.',
+            ]);
+        }
 
         $shipment->forceFill([
             'status' => Shipment::STATUS_SUBMITTED,
