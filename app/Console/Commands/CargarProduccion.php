@@ -33,7 +33,7 @@ class CargarProduccion extends Command
     private const SUPERADMIN = 'dd@odessaoil.com';
 
     /** Series a dejar afuera (duplicadas / a pedido del cliente). */
-    private const EXCLUIR_SERIES = ['13838266'];
+    public const EXCLUIR_SERIES = ['13838266'];
 
     /** Tablas que la limpieza NO toca: migraciones, roles y el usuario que se conserva. */
     private const CONSERVAR = [
@@ -141,7 +141,7 @@ class CargarProduccion extends Command
      *
      * @return list<array<int, mixed>>
      */
-    private function leer(string $archivo): array
+    public function leer(string $archivo): array
     {
         if (str_ends_with(strtolower($archivo), '.json')) {
             return $this->leerJson($archivo);
